@@ -1,0 +1,398 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://celestianova.local/schemas/extension-descriptor.v1.schema.json",
+  "title": "Celestia Nova Extension Descriptor",
+  "description": "Schema for extension descriptor JSON files under Extensions/.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "name",
+    "file",
+    "version"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_.-]+$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "file": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "autostart": {
+      "type": "boolean"
+    },
+    "startupDelayMs": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "description": {
+      "type": "string"
+    },
+    "longDescription": {
+      "type": "string"
+    },
+    "dependencies": {
+      "description": "Build-level dependency extension IDs. Extensions whose headers/libraries this extension links against at compile time.",
+      "$ref": "#/$defs/stringArray"
+    },
+    "extensionDependencies": {
+      "description": "Runtime extension dependencies. Loaded (topologically) before this extension's StartupModule() is called. Declared in the descriptor or by a content pack injected via ContentForge. Credentials for backing services (e.g. RabbitMQOrchestrator) are always sourced via KeyForge after the dependency is loaded.",
+      "$ref": "#/$defs/extensionDependencyArray"
+    },
+    "publicIncludePaths": {
+      "$ref": "#/$defs/stringArray"
+    },
+    "targetName": {
+      "type": "string"
+    },
+    "projectName": {
+      "type": "string"
+    },
+    "outputName": {
+      "type": "string"
+    },
+    "linkNovaCore": {
+      "type": "boolean"
+    },
+    "extraIncludePaths": {
+      "$ref": "#/$defs/stringArray"
+    },
+    "extraCompileDefinitions": {
+      "$ref": "#/$defs/stringArray"
+    },
+    "exportsMacro": {
+      "type": "string"
+    },
+    "canvas": {
+      "$ref": "#/$defs/canvas"
+    },
+    "contentforge": {
+      "$ref": "#/$defs/contentforgeMetadata"
+    },
+    "optional": {
+      "$ref": "#/$defs/optionalExtensionData"
+    },
+    "_comment": {
+      "type": "string",
+      "description": "Optional human-readable annotation. Not parsed by any Celestia Nova tooling."
+    },
+    "_extensionDependencies_note": {
+      "type": "string",
+      "description": "Optional annotation explaining extensionDependencies intent. Not parsed."
+    }
+  },
+  "$defs": {
+    "stringArray": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "extensionDependencyArray": {
+      "type": "array",
+      "description": "Array of extension IDs that must be loaded before this descriptor's owner activates. The ExtensionRegistry resolves and loads these (and their transitive deps) topologically. Credentials for backing services are sourced via KeyForge after each dep loads.",
+      "items": {
+        "type": "string",
+        "description": "Extension ID (must match the 'id' field in the dependency's descriptor JSON).",
+        "pattern": "^[a-z0-9_.-]+$"
+      }
+    },
+    "contentforgeMetadata": {
+      "type": "object",
+      "description": "Metadata for content packs injected by ContentForge. Not required for regular extensions.",
+      "additionalProperties": false,
+      "properties": {
+        "injectedBy": {
+          "type": "string",
+          "description": "The extension ID that uses ContentForge to inject this content pack."
+        },
+        "contentType": {
+          "type": "string",
+          "description": "Logical type of the content, e.g. 'api-surface', 'ui-pack', 'data-schema'."
+        },
+        "routePrefix": {
+          "type": "string",
+          "description": "Optional HTTP route prefix for API content packs, e.g. '/api/v1/auth'."
+        }
+      }
+    },
+    "optionalExtensionData": {
+      "type": "object",
+      "description": "Extension-owned optional metadata. Core does not parse this object.",
+      "properties": {
+        "contentPacks": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "contentRoots": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "serviceCapabilities": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "healthEndpoints": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "contentEndpoints": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "telemetryStreams": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "grafanaDashboards": {
+          "$ref": "#/$defs/stringArray"
+        }
+      },
+      "additionalProperties": true
+    },
+    "canvas": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "menuDefinitions": {
+          "$ref": "#/$defs/menuDefinitions"
+        },
+        "requirements": {
+          "$ref": "#/$defs/requirements"
+        }
+      }
+    },
+    "menuDefinitions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "file",
+        "ownerExtensionId"
+      ],
+      "properties": {
+        "schema": {
+          "const": "canvas.menu.definitions.v1"
+        },
+        "file": {
+          "type": "string"
+        },
+        "ownerExtensionId": {
+          "type": "string"
+        }
+      }
+    },
+    "requirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "definitions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/requirementDefinition"
+          }
+        },
+        "resolver": {
+          "$ref": "#/$defs/requirementResolver"
+        }
+      }
+    },
+    "requirementDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "title",
+        "inputType",
+        "resolveMode",
+        "strategy"
+      ],
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "inputType": {
+          "type": "string"
+        },
+        "resolveMode": {
+          "type": "string"
+        },
+        "strategy": {
+          "type": "string"
+        },
+        "requestAction": {
+          "type": "string"
+        },
+        "responseCollectionPath": {
+          "type": "string"
+        },
+        "responseLabelPath": {
+          "type": "string"
+        },
+        "responseValuePath": {
+          "type": "string"
+        },
+        "requestStructName": {
+          "type": "string"
+        },
+        "outputStructName": {
+          "type": "string"
+        }
+      }
+    },
+    "requirementResolver": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "supportedKeys": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "descriptorResolutionStrategy": {
+          "$ref": "#/$defs/descriptorResolutionStrategy"
+        },
+        "resolverApi": {
+          "$ref": "#/$defs/resolverApi"
+        },
+        "defaultResponses": {
+          "type": "object",
+          "description": "Default value collections by requirement key.",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/defaultResponseItem"
+              }
+            }
+          }
+        }
+      }
+    },
+    "defaultResponseItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "displayName",
+        "name"
+      ],
+      "properties": {
+        "displayName": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      }
+    },
+    "descriptorResolutionStrategy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "self": {
+          "$ref": "#/$defs/strategyProvider"
+        },
+        "others": {
+          "$ref": "#/$defs/strategyOthers"
+        },
+        "fallback": {
+          "$ref": "#/$defs/strategyProvider"
+        },
+        "authoritativeRequirementSources": {
+          "type": "object",
+          "description": "Provider-owned declarations: which requirement keys this extension authoritatively serves.",
+          "additionalProperties": {
+            "$ref": "#/$defs/authoritativeRequirementRule"
+          }
+        }
+      }
+    },
+    "authoritativeRequirementRule": {
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "string",
+          "description": "Alias to provider-local requirement key."
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "sourceRequirementKey": {
+              "type": "string"
+            },
+            "allowedRequestors": {
+              "$ref": "#/$defs/stringArray"
+            },
+            "extensionId": {
+              "type": "string",
+              "description": "Optional self-assertion; if present it should match descriptor id."
+            }
+          }
+        }
+      ]
+    },
+    "strategyProvider": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "type": "string"
+        },
+        "extensionId": {
+          "type": "string"
+        }
+      }
+    },
+    "strategyOthers": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "type": "string"
+        },
+        "preferredExtensions": {
+          "$ref": "#/$defs/stringArray"
+        }
+      }
+    },
+    "resolverApi": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "typedMethod": {
+          "type": "string"
+        },
+        "cAbiBridge": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "export": {
+              "type": "string"
+            },
+            "requestPointer": {
+              "type": "string"
+            },
+            "resultPointer": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

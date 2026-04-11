@@ -1,0 +1,21 @@
+﻿{
+    "id":  "python3agent",
+    "name":  "Python3Agent",
+    "file":  "libPython3Agent.so",
+    "version":  "0.1.0",
+    "autostart":  false,
+    "startupDelayMs":  0,
+    "description":  "Agent for Python 3 runtime detection, environment setup, and package command handling.",
+    "longDescription":  "Python3Agent supplies Python-specific automation support for setup and orchestration flows, including interpreter validation, environment bootstrap helpers, and package management command execution.",
+    "dependencies":  [
+                         "canvascore",
+                         "terminalagent"
+                     ],
+    "publicIncludePaths":  [
+                               "Source"
+                           ],
+    "targetName":  "Python3Agent",
+    "projectName":  "Python3Agent",
+    "outputName":  "Python3Agent",
+    "linkNovaCore":  true
+}

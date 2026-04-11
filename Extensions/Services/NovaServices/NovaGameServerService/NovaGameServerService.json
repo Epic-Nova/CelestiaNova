@@ -1,0 +1,51 @@
+{
+  "id": "novagameserverservice",
+  "name": "NovaGameServerService",
+  "file": "libNovaGameServerService.so",
+  "version": "0.1.0",
+  "autostart": false,
+  "startupDelayMs": 0,
+  "description": "Service for game server lifecycle, signaling, and orchestrated runtime coordination.",
+  "longDescription": "NovaGameServerService orchestrates game-server-specific runtime actions, including provisioning handoff, environment-aware scaling hooks, and service lifecycle integration with core modules.",
+  "dependencies": [
+    "coreservice",
+    "signalcore",
+    "keyforge",
+    "coreorchestrator",
+    "contentforge",
+    "astrascalecore"
+  ],
+  "publicIncludePaths": [
+    "Source"
+  ],
+  "targetName": "NovaGameServerService",
+  "projectName": "NovaGameServerService",
+  "outputName": "NovaGameServerService",
+  "linkNovaCore": true,
+  "optional": {
+    "contentRoots": [
+      "Content"
+    ],
+    "contentPacks": [
+      "GameServerRuntimePack"
+    ],
+    "grafanaDashboards": [
+      "grafana://celestianova/gameserver-service"
+    ],
+    "healthEndpoints": [
+      "/api/v1/health/novagameserverservice"
+    ],
+    "contentEndpoints": [
+      "/api/v1/content/novagameserverservice",
+      "/api/v1/content/novagameserverservice/packs"
+    ],
+    "telemetryStreams": [
+      "novagameserver.instance.count"
+    ],
+    "serviceCapabilities": [
+      "gameserver.runtime.status",
+      "gameserver.lifecycle.actions",
+      "gameserver.health"
+    ]
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "id": "meshcore",
+  "name": "MeshCore",
+  "file": "libMeshCore.so",
+  "version": "0.1.0",
+  "autostart": true,
+  "startupDelayMs": 130,
+  "description": "Federation and remote-management core for host/client Celestia Nova mode.",
+  "longDescription": "MeshCore provides secure federation primitives between host-mode and client-mode Celestia Nova nodes, including trust registration, scoped remote operations, and cross-node discovery.",
+  "dependencies": [
+    "nexuscore",
+    "aegiscore",
+    "httpagent",
+    "terminalagent"
+  ],
+  "publicIncludePaths": [
+    "Source"
+  ],
+  "targetName": "MeshCore",
+  "projectName": "MeshCore",
+  "outputName": "MeshCore",
+  "linkNovaCore": true,
+  "optional": {
+    "contentPacks": [
+      "MeshClientMode"
+    ],
+    "healthEndpoints": [
+      "/api/v1/health/meshcore"
+    ],
+    "contentRoots": [
+      "Content"
+    ],
+    "telemetryStreams": [
+      "mesh.remote.calls",
+      "mesh.node.count"
+    ],
+    "grafanaDashboards": [
+      "grafana://celestianova/meshcore-federation"
+    ],
+    "serviceCapabilities": [
+      "mesh.discovery",
+      "mesh.remote.execute",
+      "mesh.node.list"
+    ]
+  }
+}

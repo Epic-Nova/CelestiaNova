@@ -29,6 +29,9 @@
 #include <windows.h>
 #endif
 
+// Export/import macros for shared library symbols
+#include "Core/ModuleAPI.h"
+
 // Third-party library includes
 #include "json.hpp"
 #include "ftxui/component/component.hpp"

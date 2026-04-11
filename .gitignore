@@ -1,7 +1,68 @@
+# Editor and IDE settings
 .vscode/
+.idea/
+*.code-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Primary build outputs
 Binaries/
-Content/Logs/*
 Intermediate/
-/.idea
-/.vscode
-/OLD
+Build/
+Install/
+cmake-build-*/
+
+# Runtime logs
+Content/Logs/*
+
+# CMake-generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+Testing/
+compile_commands.json
+_deps/
+
+# Visual Studio and MSBuild artifacts
+*.sln
+*.vcxproj*
+*.filters
+*.user
+*.obj
+*.pdb
+*.ilk
+*.idb
+*.ipch
+*.tlog
+*.lastbuildstate
+
+# Native binaries and libs
+*.o
+*.a
+*.so
+*.so.*
+*.dylib
+*.dll
+*.lib
+*.exp
+*.dSYM/
+
+# Ninja files
+.ninja_deps
+.ninja_log
+build.ninja
+
+# Per-extension build outputs
+Extensions/**/Binaries/
+Extensions/**/Intermediate/
+
+# Local environment folders
+.venv/
+venv/
+
+# Legacy local folders
+OLD/
+PlanningDocumentation/

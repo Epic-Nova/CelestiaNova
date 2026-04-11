@@ -1,0 +1,72 @@
+{
+    "id": "exampleplugin",
+    "name": "ExamplePlugin",
+    "file": "libExamplePlugin.so",
+    "version": "0.1.0",
+    "autostart": true,
+    "startupDelayMs": 100,
+    "description": "Demo extension used to validate loading, lifecycle, and extension metadata wiring.",
+    "longDescription": "ExamplePlugin is a reference extension that demonstrates descriptor fields, module lifecycle hooks, and dependency-ready build integration in the Celestia Nova extension system.",
+    "dependencies": [],
+    "extensionDependencies": [],
+    "publicIncludePaths": [
+        "Source"
+    ],
+    "targetName": "ExamplePlugin",
+    "projectName": "ExamplePlugin",
+    "outputName": "ExamplePlugin",
+    "linkNovaCore": true,
+    "canvas": {
+        "menuDefinitions": {
+            "schema": "canvas.menu.definitions.v1",
+            "file": "MenuDefinitions/ExamplePlugin_MenuDefinitions.json",
+            "ownerExtensionId": "exampleplugin"
+        },
+        "requirements": {
+            "definitions": [
+                {
+                    "key": "environment.target",
+                    "title": "Deployment Environment",
+                    "inputType": "ProviderSelect",
+                    "resolveMode": "ValueList",
+                    "strategy": "ApiRequest",
+                    "requestAction": "exampleplugin.environments.list",
+                    "responseCollectionPath": "environments",
+                    "responseLabelPath": "displayName",
+                    "responseValuePath": "name",
+                    "requestStructName": "CoreRequirementResolveRequest",
+                    "outputStructName": "CoreRequirementResolveResult"
+                }
+            ],
+            "resolver": {
+                "supportedKeys": [
+                    "environment.target"
+                ],
+                "descriptorResolutionStrategy": {
+                    "self": {
+                        "mode": "ExtensionRegistryById",
+                        "extensionId": "exampleplugin"
+                    },
+                    "others": {
+                        "mode": "ExtensionRegistryById",
+                        "preferredExtensions": [
+                            "astrascalecore",
+                            "contentforge"
+                        ]
+                    },
+                    "fallback": {
+                        "mode": "RegistryListDescriptors"
+                    }
+                },
+                "resolverApi": {
+                    "typedMethod": "ResolveRequirementForExample",
+                    "cAbiBridge": {
+                        "export": "ExamplePlugin_ResolveRequirement",
+                        "requestPointer": "CoreRequirementResolveRequest*",
+                        "resultPointer": "CoreRequirementResolveResult*"
+                    }
+                }
+            }
+        }
+    }
+}

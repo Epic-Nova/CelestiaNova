@@ -1,0 +1,51 @@
+{
+  "id": "postgresqlorchestrator",
+  "name": "PostgreSQLOrchestrator",
+  "file": "libPostgreSQLOrchestrator.so",
+  "version": "0.1.0",
+  "autostart": false,
+  "startupDelayMs": 0,
+  "description": "Database orchestrator for PostgreSQL installation, configuration, and secure integration workflows.",
+  "longDescription": "PostgreSQLOrchestrator handles PostgreSQL provisioning and lifecycle automation, including package/runtime setup, config hardening hooks, schema execution support, environment policy mapping, and health validation routines.",
+  "dependencies": [
+    "coreorchestrator",
+    "keyforge",
+    "signalcore",
+    "contentforge"
+  ],
+  "publicIncludePaths": [
+    "Source"
+  ],
+  "targetName": "PostgreSQLOrchestrator",
+  "projectName": "PostgreSQLOrchestrator",
+  "outputName": "PostgreSQLOrchestrator",
+  "linkNovaCore": true,
+  "optional": {
+    "contentRoots": [
+      "Content"
+    ],
+    "contentPacks": [
+      "PostgreSQLBootstrapPack",
+      "PostgreSQLPolicyPack"
+    ],
+    "grafanaDashboards": [
+      "grafana://celestianova/postgresql-orchestrator"
+    ],
+    "healthEndpoints": [
+      "/api/v1/health/postgresqlorchestrator"
+    ],
+    "contentEndpoints": [
+      "/api/v1/content/postgresqlorchestrator",
+      "/api/v1/content/postgresqlorchestrator/packs"
+    ],
+    "telemetryStreams": [
+      "postgresql.orchestrator.jobs"
+    ],
+    "serviceCapabilities": [
+      "postgresql.setup",
+      "postgresql.env.rules",
+      "postgresql.credentials.inject",
+      "postgresql.health"
+    ]
+  }
+}

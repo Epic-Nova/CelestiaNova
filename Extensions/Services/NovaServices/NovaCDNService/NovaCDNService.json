@@ -1,0 +1,50 @@
+{
+  "id": "novacdnservice",
+  "name": "NovaCDNService",
+  "file": "libNovaCDNService.so",
+  "version": "0.1.0",
+  "autostart": false,
+  "startupDelayMs": 0,
+  "description": "Service for CDN endpoint management, content delivery integration, and cache orchestration.",
+  "longDescription": "NovaCDNService handles CDN-oriented platform responsibilities including content endpoint wiring, cache/control integrations, and operational signaling for content distribution workflows.",
+  "dependencies": [
+    "coreservice",
+    "keyforge",
+    "signalcore",
+    "coreorchestrator",
+    "contentforge"
+  ],
+  "publicIncludePaths": [
+    "Source"
+  ],
+  "targetName": "NovaCDNService",
+  "projectName": "NovaCDNService",
+  "outputName": "NovaCDNService",
+  "linkNovaCore": true,
+  "optional": {
+    "contentRoots": [
+      "Content"
+    ],
+    "contentPacks": [
+      "CDNPolicyPack"
+    ],
+    "grafanaDashboards": [
+      "grafana://celestianova/cdn-service"
+    ],
+    "healthEndpoints": [
+      "/api/v1/health/novacdnservice"
+    ],
+    "contentEndpoints": [
+      "/api/v1/content/novacdnservice",
+      "/api/v1/content/novacdnservice/packs"
+    ],
+    "telemetryStreams": [
+      "novacdn.cache.hit"
+    ],
+    "serviceCapabilities": [
+      "cdn.routes.list",
+      "cdn.cache.apply",
+      "cdn.health"
+    ]
+  }
+}

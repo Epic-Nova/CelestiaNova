@@ -1,0 +1,21 @@
+﻿{
+    "id":  "gitagent",
+    "name":  "GitAgent",
+    "file":  "libGitAgent.so",
+    "version":  "0.1.0",
+    "autostart":  false,
+    "startupDelayMs":  0,
+    "description":  "Agent for Git installation, repository operations, and source control automation tasks.",
+    "longDescription":  "GitAgent exposes Git-aware actions to orchestrators and services, including installation checks, clone/fetch/pull support, branch-state checks, and scripted repository workflows used by automation flows.",
+    "dependencies":  [
+                         "canvascore",
+                         "terminalagent"
+                     ],
+    "publicIncludePaths":  [
+                               "Source"
+                           ],
+    "targetName":  "GitAgent",
+    "projectName":  "GitAgent",
+    "outputName":  "GitAgent",
+    "linkNovaCore":  true
+}

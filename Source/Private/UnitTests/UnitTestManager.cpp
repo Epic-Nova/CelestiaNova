@@ -6,7 +6,7 @@
 #include "UnitTests/PipInstallHelperTest.h"
 #include "UnitTests/RootAccessHelperTest.h"
 #include "UnitTests/UIComponentTest.h"
-#include <iostream>
+#include "Core/NovaLog.h"
 
 void UnitTestManager::Initialize(int argc, const char* argv[]) {
     // Parse command-line arguments for unit test flags
@@ -44,6 +44,6 @@ bool UnitTestManager::RunUnitTests() {
         }
     }
 
-    std::cerr << "Unit test with ID [" << unitTestId << "] not found." << std::endl;
+    NOVA_LOG((std::string("Unit test with ID [") + unitTestId + "] not found.").c_str(), LogType::Error);
     return false;
 }

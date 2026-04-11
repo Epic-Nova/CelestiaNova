@@ -5,8 +5,9 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include "Core/ModuleAPI.h"
 
-class UnitTestManager {
+class NOVA_CORE_API UnitTestManager {
 public:
     void Initialize(int argc, const char* argv[]);
     bool RunUnitTests();

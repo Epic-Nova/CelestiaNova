@@ -1,0 +1,21 @@
+﻿{
+    "id":  "nodeagent",
+    "name":  "NodeAgent",
+    "file":  "libNodeAgent.so",
+    "version":  "0.1.0",
+    "autostart":  false,
+    "startupDelayMs":  0,
+    "description":  "Agent for Node.js runtime detection, installation, and command execution support.",
+    "longDescription":  "NodeAgent manages Node.js runtime lifecycle tasks for Celestia Nova workflows, including runtime presence checks, package manager command routing, and command execution handoff through terminal facilities.",
+    "dependencies":  [
+                         "canvascore",
+                         "terminalagent"
+                     ],
+    "publicIncludePaths":  [
+                               "Source"
+                           ],
+    "targetName":  "NodeAgent",
+    "projectName":  "NodeAgent",
+    "outputName":  "NodeAgent",
+    "linkNovaCore":  true
+}

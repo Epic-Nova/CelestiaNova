@@ -1,0 +1,20 @@
+﻿{
+    "id":  "keyforge",
+    "name":  "KeyForge",
+    "file":  "libKeyForge.so",
+    "version":  "0.1.0",
+    "autostart":  true,
+    "startupDelayMs":  50,
+    "description":  "Secure secret vault and key orchestration core for configuration and credential injection.",
+    "longDescription":  "KeyForge manages protected secrets and key material used across Celestia Nova workflows, including encrypted storage integration, controlled retrieval, and secure injection into setup pipelines.",
+    "dependencies":  [
+                         "aegiscore"
+                     ],
+    "publicIncludePaths":  [
+                               "Source"
+                           ],
+    "targetName":  "KeyForge",
+    "projectName":  "KeyForge",
+    "outputName":  "KeyForge",
+    "linkNovaCore":  true
+}

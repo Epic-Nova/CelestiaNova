@@ -1,0 +1,22 @@
+﻿{
+    "id":  "nginxorchestrator",
+    "name":  "NginxOrchestrator",
+    "file":  "libNginxOrchestrator.so",
+    "version":  "0.1.0",
+    "autostart":  false,
+    "startupDelayMs":  0,
+    "description":  "Web server orchestrator for Nginx installation, config generation, and service controls.",
+    "longDescription":  "NginxOrchestrator provides Nginx deployment and management workflows, including package provisioning, config synthesis, secret-aware setup hooks, and runtime service operations.",
+    "dependencies":  [
+                         "coreorchestrator",
+                         "keyforge",
+                         "signalcore"
+                     ],
+    "publicIncludePaths":  [
+                               "Source"
+                           ],
+    "targetName":  "NginxOrchestrator",
+    "projectName":  "NginxOrchestrator",
+    "outputName":  "NginxOrchestrator",
+    "linkNovaCore":  true
+}

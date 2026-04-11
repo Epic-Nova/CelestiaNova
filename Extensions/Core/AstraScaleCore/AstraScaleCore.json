@@ -1,0 +1,104 @@
+{
+  "id": "astrascalecore",
+  "name": "AstraScaleCore",
+  "file": "libAstraScaleCore.so",
+  "version": "0.2.0",
+  "autostart": false,
+  "startupDelayMs": 0,
+  "description": "Environment-aware scaling core for policy-driven autoscale orchestration.",
+  "longDescription": "AstraScaleCore manages multi-environment scaling policy, injects setup UI surfaces for scaling decisions, and exposes a DB-orchestrator-backed persistence surface scaffold that services and orchestrators can share.",
+  "dependencies": [
+    "coreorchestrator",
+    "signalcore",
+    "keyforge",
+    "contentforge"
+  ],
+  "publicIncludePaths": [
+    "Source"
+  ],
+  "canvas": {
+    "requirements": {
+      "resolver": {
+        "descriptorResolutionStrategy": {
+          "authoritativeRequirementSources": {
+            "environment.target": {
+              "sourceRequirementKey": "environment.target",
+              "allowedRequestors": [
+                "*"
+              ]
+            },
+            "service.environment": {
+              "sourceRequirementKey": "environment.target",
+              "allowedRequestors": [
+                "*"
+              ]
+            }
+          }
+        },
+        "defaultResponses": {
+          "environment.target": {
+            "environments": [
+              {
+                "displayName": "Production",
+                "name": "production",
+                "description": "Astra-managed live environment"
+              },
+              {
+                "displayName": "Staging",
+                "name": "staging",
+                "description": "Astra-managed pre-release environment"
+              },
+              {
+                "displayName": "Development",
+                "name": "development",
+                "description": "Astra-managed development environment"
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "targetName": "AstraScaleCore",
+  "projectName": "AstraScaleCore",
+  "outputName": "AstraScaleCore",
+  "linkNovaCore": true,
+  "optional": {
+    "contentRoots": [
+      "Content"
+    ],
+    "contentPacks": [
+      "ScaleControlPanelPack",
+      "EnvironmentPolicyPack"
+    ],
+    "grafanaDashboards": [
+      "grafana://celestianova/astrascale-core"
+    ],
+    "healthEndpoints": [
+      "/api/v1/health/astrascalecore"
+    ],
+    "contentEndpoints": [
+      "/api/v1/content/astrascalecore",
+      "/api/v1/content/astrascalecore/policies",
+      "/api/v1/content/astrascalecore/environments",
+      "/api/v1/content/astrascalecore/persistence"
+    ],
+    "telemetryStreams": [
+      "astrascale.scale.actions",
+      "astrascale.policy.evals"
+    ],
+    "serviceCapabilities": [
+      "scaling.policy.apply",
+      "scaling.recommendations.list",
+      "environments.manage",
+      "environments.promote",
+      "environments.rollback",
+      "setup.surface.inject",
+      "secure.env.inject",
+      "lifecycle.gate.validate",
+      "persistence.store.read",
+      "persistence.store.write",
+      "persistence.surface.provide"
+    ]
+  }
+}

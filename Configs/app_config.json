@@ -6,5 +6,5 @@
     "requestRootForPip": true,
     "requestRootForVenv": true,
     "scrollableLogAlwaysVisible": false,
-    "verbose": false
+    "verbose": true
 }

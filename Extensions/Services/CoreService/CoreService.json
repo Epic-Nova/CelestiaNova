@@ -1,0 +1,54 @@
+{
+  "id": "coreservice",
+  "name": "CoreService",
+  "file": "libCoreService.so",
+  "version": "0.1.0",
+  "autostart": true,
+  "startupDelayMs": 180,
+  "description": "Core service host that coordinates foundational service runtime components.",
+  "longDescription": "CoreService is the shared runtime service layer for Celestia Nova, coordinating essential startup, lifecycle management, secure configuration injection, and content-surface resolution across service modules.",
+  "dependencies": [
+    "aegiscore",
+    "keyforge",
+    "signalcore",
+    "syncforge",
+    "coreorchestrator",
+    "contentforge"
+  ],
+  "publicIncludePaths": [
+    "Source"
+  ],
+  "targetName": "CoreService",
+  "projectName": "CoreService",
+  "outputName": "CoreService",
+  "linkNovaCore": true,
+  "optional": {
+    "contentRoots": [
+      "Content"
+    ],
+    "contentPacks": [
+      "ServiceRuntimeProfiles",
+      "EnvironmentDefaults"
+    ],
+    "grafanaDashboards": [
+      "grafana://celestianova/coreservice-runtime"
+    ],
+    "healthEndpoints": [
+      "/api/v1/health/coreservice"
+    ],
+    "contentEndpoints": [
+      "/api/v1/content/coreservice",
+      "/api/v1/content/coreservice/runtime-profiles"
+    ],
+    "telemetryStreams": [
+      "coreservice.runtime.health",
+      "coreservice.inject.requests"
+    ],
+    "serviceCapabilities": [
+      "service.runtime.status",
+      "service.env.catalog",
+      "service.config.inject",
+      "service.content.resolve"
+    ]
+  }
+}

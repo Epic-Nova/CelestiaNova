@@ -2,13 +2,14 @@
 
 #include "NovaMinimal.h"
 #include "Utils/CommandLineOptions.h"
+#include "Core/ModuleAPI.h"
 
 namespace Utils
 {
     /**
      * Utility class for parsing command line arguments.
      */
-    class CommandLineParsing
+    class NOVA_CORE_API CommandLineParsing
     {
     public:
         /**

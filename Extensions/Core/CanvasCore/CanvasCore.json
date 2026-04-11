@@ -1,0 +1,166 @@
+﻿{
+    "id": "canvascore",
+    "name": "CanvasCore",
+    "file": "libCanvasCore.so",
+    "version": "0.1.0",
+    "autostart": true,
+    "startupDelayMs": 20,
+    "description": "Shared interaction canvas for setup flows, prompts, and extension UI composition.",
+    "longDescription": "CanvasCore standardizes interactive workflow rendering for Celestia Nova, powering setup prompts, guided forms, and reusable extension UI primitives that keep orchestration experiences consistent.",
+    "dependencies": [],
+    "publicIncludePaths": [
+        "Source"
+    ],
+    "canvas": {
+        "menuDefinitions": {
+            "schema": "canvas.menu.definitions.v1",
+            "file": "MenuDefinitions/CanvasCore_MenuDefinitions.json",
+            "ownerExtensionId": "canvascore"
+        },
+        "requirements": {
+            "definitions": [
+                {
+                    "key": "catalog.extensions",
+                    "title": "Installed Extensions",
+                    "inputType": "ProviderSelect",
+                    "resolveMode": "ValueList",
+                    "strategy": "ApiRequest",
+                    "requestAction": "canvascore.catalog.extensions",
+                    "responseCollectionPath": "items",
+                    "responseLabelPath": "label",
+                    "responseValuePath": "value",
+                    "requestStructName": "CoreRequirementResolveRequest",
+                    "outputStructName": "CoreRequirementResolveResult"
+                },
+                {
+                    "key": "catalog.orchestrators",
+                    "title": "Installed Orchestrators",
+                    "inputType": "ProviderSelect",
+                    "resolveMode": "ValueList",
+                    "strategy": "ApiRequest",
+                    "requestAction": "canvascore.catalog.orchestrators",
+                    "responseCollectionPath": "items",
+                    "responseLabelPath": "label",
+                    "responseValuePath": "value",
+                    "requestStructName": "CoreRequirementResolveRequest",
+                    "outputStructName": "CoreRequirementResolveResult"
+                },
+                {
+                    "key": "catalog.services",
+                    "title": "Installed Services",
+                    "inputType": "ProviderSelect",
+                    "resolveMode": "ValueList",
+                    "strategy": "ApiRequest",
+                    "requestAction": "canvascore.catalog.services",
+                    "responseCollectionPath": "items",
+                    "responseLabelPath": "label",
+                    "responseValuePath": "value",
+                    "requestStructName": "CoreRequirementResolveRequest",
+                    "outputStructName": "CoreRequirementResolveResult"
+                },
+                {
+                    "key": "catalog.contentpacks.byProvider",
+                    "title": "Installed Content Packs",
+                    "inputType": "ProviderSelect",
+                    "resolveMode": "ValueList",
+                    "strategy": "ApiRequest",
+                    "requestAction": "canvascore.catalog.contentpacks",
+                    "responseCollectionPath": "items",
+                    "responseLabelPath": "label",
+                    "responseValuePath": "value",
+                    "requestStructName": "CoreRequirementResolveRequest",
+                    "outputStructName": "CoreRequirementResolveResult"
+                },
+                {
+                    "key": "catalog.interactions.byProvider",
+                    "title": "Provider Interactions",
+                    "inputType": "ProviderSelect",
+                    "resolveMode": "ValueList",
+                    "strategy": "ApiRequest",
+                    "requestAction": "canvascore.catalog.interactions.provider",
+                    "responseCollectionPath": "items",
+                    "responseLabelPath": "label",
+                    "responseValuePath": "value",
+                    "requestStructName": "CoreRequirementResolveRequest",
+                    "outputStructName": "CoreRequirementResolveResult"
+                },
+                {
+                    "key": "catalog.interactions.byContentPack",
+                    "title": "Content Pack Interactions",
+                    "inputType": "ProviderSelect",
+                    "resolveMode": "ValueList",
+                    "strategy": "ApiRequest",
+                    "requestAction": "canvascore.catalog.interactions.contentpack",
+                    "responseCollectionPath": "items",
+                    "responseLabelPath": "label",
+                    "responseValuePath": "value",
+                    "requestStructName": "CoreRequirementResolveRequest",
+                    "outputStructName": "CoreRequirementResolveResult"
+                },
+                {
+                    "key": "help.catalog.endpoints",
+                    "title": "Installed Catalog Endpoints",
+                    "inputType": "ProviderSelect",
+                    "resolveMode": "ValueList",
+                    "strategy": "ApiRequest",
+                    "requestAction": "canvascore.help.catalog.endpoints",
+                    "responseCollectionPath": "items",
+                    "responseLabelPath": "label",
+                    "responseValuePath": "value",
+                    "requestStructName": "CoreRequirementResolveRequest",
+                    "outputStructName": "CoreRequirementResolveResult"
+                },
+                {
+                    "key": "help.topics.byProvider",
+                    "title": "Help Topics By Extension",
+                    "inputType": "ProviderSelect",
+                    "resolveMode": "ValueList",
+                    "strategy": "ApiRequest",
+                    "requestAction": "canvascore.help.topics.provider",
+                    "responseCollectionPath": "items",
+                    "responseLabelPath": "label",
+                    "responseValuePath": "value",
+                    "requestStructName": "CoreRequirementResolveRequest",
+                    "outputStructName": "CoreRequirementResolveResult"
+                }
+            ],
+            "resolver": {
+                "supportedKeys": [
+                    "catalog.extensions",
+                    "catalog.orchestrators",
+                    "catalog.services",
+                    "catalog.contentpacks.byProvider",
+                    "catalog.interactions.byProvider",
+                    "catalog.interactions.byContentPack",
+                    "help.catalog.endpoints",
+                    "help.topics.byProvider"
+                ],
+                "descriptorResolutionStrategy": {
+                    "self": {
+                        "mode": "PluginRegistryById",
+                        "extensionId": "canvascore"
+                    },
+                    "others": {
+                        "mode": "RegistryListDescriptors",
+                        "preferredExtensions": []
+                    },
+                    "fallback": {
+                        "mode": "RegistryListDescriptors"
+                    }
+                },
+                "resolverApi": {
+                    "typedMethod": "ResolveRequirementForCanvasCore",
+                    "cAbiBridge": {
+                        "export": "CanvasCore_ResolveRequirement",
+                        "requestPointer": "CoreRequirementResolveRequest*",
+                        "resultPointer": "CoreRequirementResolveResult*"
+                    }
+                }
+            }
+        }
+    },
+    "targetName": "CanvasCore",
+    "projectName": "CanvasCore",
+    "outputName": "CanvasCore",
+    "linkNovaCore": true
+}

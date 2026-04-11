@@ -1,0 +1,51 @@
+{
+  "id": "novaauthenticationproviderservice",
+  "name": "NovaAuthenticationProviderService",
+  "file": "libNovaAuthenticationProviderService.so",
+  "version": "0.1.0",
+  "autostart": false,
+  "startupDelayMs": 0,
+  "description": "Service for authentication provider integration, validation, and account auth workflows.",
+  "longDescription": "NovaAuthenticationProviderService manages external and internal authentication provider pipelines, including provider registration, token validation handoff, secure authentication workflow integration, and auth content endpoints.",
+  "dependencies": [
+    "coreservice",
+    "aegiscore",
+    "keyforge",
+    "httpagent",
+    "contentforge"
+  ],
+  "publicIncludePaths": [
+    "Source"
+  ],
+  "targetName": "NovaAuthenticationProviderService",
+  "projectName": "NovaAuthenticationProviderService",
+  "outputName": "NovaAuthenticationProviderService",
+  "linkNovaCore": true,
+  "optional": {
+    "contentRoots": [
+      "Content"
+    ],
+    "contentPacks": [
+      "AuthProviderTemplates",
+      "AuthPolicyPack"
+    ],
+    "grafanaDashboards": [
+      "grafana://celestianova/auth-provider-service"
+    ],
+    "healthEndpoints": [
+      "/api/v1/health/novaauthenticationproviderservice"
+    ],
+    "contentEndpoints": [
+      "/api/v1/content/novaauthenticationproviderservice",
+      "/api/v1/content/novaauthenticationproviderservice/packs"
+    ],
+    "telemetryStreams": [
+      "novaauthprovider.validation.count"
+    ],
+    "serviceCapabilities": [
+      "authproviders.list",
+      "authproviders.sync",
+      "authproviders.health"
+    ]
+  }
+}

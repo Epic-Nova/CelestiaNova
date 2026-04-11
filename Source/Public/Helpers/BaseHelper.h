@@ -1,6 +1,7 @@
 #pragma once
 
 #include "NovaMinimal.h"
+#include "NovaPlatforms.h"
 #include <thread>
 #include <chrono>
 

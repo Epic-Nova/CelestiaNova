@@ -41,7 +41,7 @@ ifeq ($(UNAME_S), Darwin)
 else ifeq ($(UNAME_S), Linux)
     THIRD_PARTY_DIRECTORY := $(THIRD_PARTY_DIRECTORY)/Linux
     # Add Linux-specific libraries if needed
-    PLATFORM_LIBRARIES += -lsudo
+    PLATFORM_LIBRARIES +=
 else
     # Windows or other platforms
     $(warning Unsupported platform: $(UNAME_S))

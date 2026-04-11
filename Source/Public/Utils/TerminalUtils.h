@@ -1,13 +1,14 @@
 #pragma once
 
 #include "NovaMinimal.h"
+#include "Core/ModuleAPI.h"
 
 namespace Utils
 {
     /**
      * Utility class for terminal window management.
      */
-    class TerminalUtils
+    class NOVA_CORE_API TerminalUtils
     {
     public:
         /**

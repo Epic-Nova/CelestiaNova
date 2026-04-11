@@ -1,0 +1,22 @@
+﻿{
+    "id":  "astrojsorchestrator",
+    "name":  "AstroJSOrchestrator",
+    "file":  "libAstroJSOrchestrator.so",
+    "version":  "0.1.0",
+    "autostart":  false,
+    "startupDelayMs":  0,
+    "description":  "Framework orchestrator for Astro.js project setup, runtime wiring, and deployment handoff.",
+    "longDescription":  "AstroJSOrchestrator delivers Astro.js-specific setup automation, including project scaffold coordination, dependency install routing, and Docker-backed deployment preparation through shared orchestrator flows.",
+    "dependencies":  [
+                         "dockerorchestrator",
+                         "nodeagent",
+                         "coreorchestrator"
+                     ],
+    "publicIncludePaths":  [
+                               "Source"
+                           ],
+    "targetName":  "AstroJSOrchestrator",
+    "projectName":  "AstroJSOrchestrator",
+    "outputName":  "AstroJSOrchestrator",
+    "linkNovaCore":  true
+}

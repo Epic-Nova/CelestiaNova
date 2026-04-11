@@ -1,0 +1,18 @@
+{
+    "id": "astralogcore",
+    "name": "AstraLogCore",
+    "file": "libAstraLogCore.so",
+    "version": "0.1.0",
+    "autostart": true,
+    "startupDelayMs": 0,
+    "description": "Distributed audit logging extension for Celestia Nova.",
+    "longDescription": "AstraLogCore receives NOVA_LOG entries forwarded from all Celestia Nova instances, categorizes them by sender, severity, and timestamp, and optionally pushes them to a configured database via a DatabaseOrchestrator. Only instances holding a valid authoritative JWT (issued by NovaID through AegisCore and stored via KeyForge) may push to prevent duplication across the mesh.",
+    "dependencies": [],
+    "publicIncludePaths": [
+        "Source"
+    ],
+    "targetName": "AstraLogCore",
+    "projectName": "AstraLogCore",
+    "outputName": "AstraLogCore",
+    "linkNovaCore": true
+}

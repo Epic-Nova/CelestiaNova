@@ -15,7 +15,7 @@ namespace Core::FileOperations
     /**
      * Structure to hold file information
      */
-    struct FileInfo {
+    struct NOVA_CORE_API FileInfo {
         std::string path;
         std::string name;
         std::string extension;
@@ -46,7 +46,7 @@ namespace Core::FileOperations
     /**
      * Utility class for Nova file operations
      */
-    class NovaFileOperations 
+    class NOVA_CORE_API NovaFileOperations 
     {
     public:
         /**

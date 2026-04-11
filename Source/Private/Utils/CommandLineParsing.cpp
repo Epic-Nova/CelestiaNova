@@ -39,10 +39,10 @@ namespace Utils
     void CommandLineParsing::DisplayHelp(const std::unordered_map<std::string, std::string*>& optionMapping)
     {
         std::cout << "====================================================\n";
-        std::cout << " Nova Documentation Setup - Command Line Options\n";
+        std::cout << " Celestia Nova - Command Line Options\n";
         std::cout << "====================================================\n";
         std::cout << "Usage:\n";
-        std::cout << "  setup_documentation [options]\n\n";
+        std::cout << "  celestia_nova [options]\n\n";
         std::cout << "Available Options:\n";
 
         const int alignmentWidth = 40; // Set a fixed width for alignment

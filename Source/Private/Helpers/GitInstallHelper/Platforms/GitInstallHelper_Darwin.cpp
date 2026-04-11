@@ -1,3 +1,5 @@
+#ifdef __APPLE__
+
 #include "Helpers/GitInstallHelper/GitInstallHelper_Darwin.h"
 #include "Helpers/BrewInstallHelper.h"
 #include "Helpers/RootAccessHelper/RootAccessHelper.h"
@@ -264,3 +266,5 @@ namespace Core::Helpers
         return cloneSuccess;
     }
 }
+
+#endif

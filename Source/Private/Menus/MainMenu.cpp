@@ -63,6 +63,12 @@ namespace Menus
             Color::Black, Color::Yellow, Color::Yellow, Color::Black
         );
         
+        auto ExtensionsButton = makeCustomButton(
+            "🔌 Extensions",
+            *GetMenuActionCallback("Extensions"),
+            Color::Black, Color::Blue, Color::Blue, Color::White
+        );
+        
         auto HelpButton = makeCustomButton(
             "❓ Help", 
             *GetMenuActionCallback("ShowHelp"),
@@ -84,6 +90,8 @@ namespace Menus
             StartDocumentationWebpageButton,
             Renderer([] { return text(""); }),
             OptionsButton,
+            Renderer([] { return text(""); }),
+            ExtensionsButton,
             Renderer([] { return text(""); }),
             HelpButton,
             Renderer([] { return text(""); }),
@@ -198,7 +206,7 @@ namespace Menus
                 vbox({
                     create_wave_title(),
                     text(""),
-                    text("DOCUMENTATION SETUP") | color(subtitle_color) | center | ftxui::bold,
+                    text("CELESTIA NOVA") | color(subtitle_color) | center | ftxui::bold,
                     text(""),
                 }) | border | color(get_rainbow_color(0)),
 
@@ -211,7 +219,7 @@ namespace Menus
                         text("┌" + std::string(50, '-') + "┐") | color(get_rainbow_color(90)),
                         hbox({
                             text("│"),
-                            text("      Welcome to the Nova Documentation Setup!    ") | center,
+                            text("      Welcome to Celestia Nova!    ") | center,
                             text("│")
                         }) | color(Color::White),
                         hbox({

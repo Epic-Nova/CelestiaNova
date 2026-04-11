@@ -1,0 +1,51 @@
+{
+  "id": "novagatewayservice",
+  "name": "NovaGatewayService",
+  "file": "libNovaGatewayService.so",
+  "version": "0.1.0",
+  "autostart": false,
+  "startupDelayMs": 0,
+  "description": "Service extension for gateway routing, API edge policy, and ingress management.",
+  "longDescription": "NovaGatewayService provides gateway-level routing control, policy-aware ingress management, and status reporting for multi-service edge exposure.",
+  "dependencies": [
+    "coreservice",
+    "signalcore",
+    "keyforge",
+    "novaapiservice",
+    "httpagent",
+    "contentforge"
+  ],
+  "publicIncludePaths": [
+    "Source"
+  ],
+  "targetName": "NovaGatewayService",
+  "projectName": "NovaGatewayService",
+  "outputName": "NovaGatewayService",
+  "linkNovaCore": true,
+  "optional": {
+    "contentRoots": [
+      "Content"
+    ],
+    "contentPacks": [
+      "GatewayPolicyPack"
+    ],
+    "grafanaDashboards": [
+      "grafana://celestianova/gateway-service"
+    ],
+    "healthEndpoints": [
+      "/api/v1/health/novagatewayservice"
+    ],
+    "contentEndpoints": [
+      "/api/v1/content/novagatewayservice",
+      "/api/v1/content/novagatewayservice/policies"
+    ],
+    "telemetryStreams": [
+      "novagateway.route.count"
+    ],
+    "serviceCapabilities": [
+      "gateway.routes.list",
+      "gateway.policy.apply",
+      "gateway.health"
+    ]
+  }
+}

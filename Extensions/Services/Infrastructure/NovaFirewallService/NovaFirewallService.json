@@ -1,0 +1,50 @@
+{
+  "id": "novafirewallservice",
+  "name": "NovaFirewallService",
+  "file": "libNovaFirewallService.so",
+  "version": "0.1.0",
+  "autostart": false,
+  "startupDelayMs": 0,
+  "description": "Service extension for firewall policy orchestration and host enforcement.",
+  "longDescription": "NovaFirewallService exposes runtime-managed firewall configuration and policy health surfaces with secure change workflows and status integration.",
+  "dependencies": [
+    "coreservice",
+    "signalcore",
+    "keyforge",
+    "privilegeescalationagent",
+    "contentforge"
+  ],
+  "publicIncludePaths": [
+    "Source"
+  ],
+  "optional": {
+    "contentPacks": [
+      "FirewallPolicyPack"
+    ],
+    "contentRoots": [
+      "Content"
+    ],
+    "serviceCapabilities": [
+      "firewall.policy.apply",
+      "firewall.rules.list",
+      "firewall.health"
+    ],
+    "healthEndpoints": [
+      "/api/v1/health/novafirewallservice"
+    ],
+    "contentEndpoints": [
+      "/api/v1/content/novafirewallservice",
+      "/api/v1/content/novafirewallservice/policies"
+    ],
+    "telemetryStreams": [
+      "novafirewall.rule.count"
+    ],
+    "grafanaDashboards": [
+      "grafana://celestianova/firewall-service"
+    ]
+  },
+  "targetName": "NovaFirewallService",
+  "projectName": "NovaFirewallService",
+  "outputName": "NovaFirewallService",
+  "linkNovaCore": true
+}

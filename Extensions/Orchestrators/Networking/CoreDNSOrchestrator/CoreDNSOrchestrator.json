@@ -1,0 +1,45 @@
+{
+  "id": "corednsorchestrator",
+  "name": "CoreDNSOrchestrator",
+  "file": "libCoreDNSOrchestrator.so",
+  "version": "0.1.0",
+  "autostart": false,
+  "startupDelayMs": 0,
+  "description": "CoreDNS setup and configuration orchestrator.",
+  "longDescription": "CoreDNSOrchestrator handles DNS stack provisioning and configuration workflows for host deployments requiring managed DNS routing and policy controls.",
+  "dependencies": [
+    "coreorchestrator",
+    "keyforge",
+    "signalcore",
+    "dockerorchestrator"
+  ],
+  "publicIncludePaths": [
+    "Source"
+  ],
+  "targetName": "CoreDNSOrchestrator",
+  "projectName": "CoreDNSOrchestrator",
+  "outputName": "CoreDNSOrchestrator",
+  "linkNovaCore": true,
+  "optional": {
+    "contentPacks": [
+      "CoreDNSSetup"
+    ],
+    "healthEndpoints": [
+      "/api/v1/health/corednsorchestrator"
+    ],
+    "contentRoots": [
+      "Content"
+    ],
+    "telemetryStreams": [
+      "corednsorchestrator.actions"
+    ],
+    "grafanaDashboards": [
+      "grafana://celestianova/coredns-orchestrator"
+    ],
+    "serviceCapabilities": [
+      "coredns.install",
+      "coredns.configure",
+      "coredns.health"
+    ]
+  }
+}

@@ -1,0 +1,376 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://celestianova.local/schemas/canvas-menu-definitions.v1.schema.json",
+  "title": "Celestia Nova Canvas Menu Definitions",
+  "description": "Schema for data-driven CanvasCore menu files (PLUGINNAME_MenuDefinitions.json).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "ownerExtensionId",
+    "menus"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schema": {
+      "const": "canvas.menu.definitions.v1"
+    },
+    "ownerExtensionId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+$"
+    },
+    "menus": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/menuDefinition"
+      }
+    }
+  },
+  "$defs": {
+    "menuDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "sections"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "subtitle": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "pageRequirements": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sections": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/sectionDefinition"
+          }
+        },
+        "submitAction": {
+          "type": "string"
+        },
+        "cancelAction": {
+          "type": "string"
+        }
+      }
+    },
+    "sectionDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "fields"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/fieldDefinition"
+          }
+        }
+      }
+    },
+    "fieldDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "type"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/$defs/fieldType"
+        },
+        "defaultValue": {
+          "type": "string"
+        },
+        "requirementBinding": {
+          "$ref": "#/$defs/requirementBinding"
+        },
+        "structFields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/structFieldDefinition"
+          }
+        },
+        "dataRequirementKey": {
+          "type": "string"
+        },
+        "renderTemplate": {
+          "type": "string"
+        },
+        "validations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/validationDefinition"
+          }
+        },
+        "valueStorage": {
+          "$ref": "#/$defs/valueStorage"
+        },
+        "visibleIfField": {
+          "type": "string"
+        },
+        "visibleIfEquals": {
+          "type": "string"
+        },
+        "outputKey": {
+          "type": "string"
+        }
+      }
+    },
+    "fieldType": {
+      "type": "string",
+      "enum": [
+        "Bool",
+        "String",
+        "PasswordString",
+        "Integer",
+        "Float",
+        "ProviderSelect",
+        "ProviderMultiSelect",
+        "ToggleGroup",
+        "RadioGroup",
+        "Dropdown",
+        "SliderInt",
+        "SliderFloat",
+        "ActionButton",
+        "TextLabel",
+        "Paragraph",
+        "Separator",
+        "Spacer",
+        "Table",
+        "ProgressGauge",
+        "DirectionalGauge",
+        "SparklineGraph",
+        "Spinner",
+        "CanvasChart",
+        "StructObject",
+        "WindowPane",
+        "CollapsibleSection",
+        "ResizableSplit",
+        "TabContainer"
+      ]
+    },
+    "providerSource": {
+      "type": "string",
+      "enum": [
+        "AnyExtension",
+        "Core",
+        "Agent",
+        "Service",
+        "Orchestrator"
+      ]
+    },
+    "resolveMode": {
+      "type": "string",
+      "enum": [
+        "ProviderList",
+        "ValueList",
+        "StructuredObject"
+      ]
+    },
+    "resolverExecutionStrategy": {
+      "type": "string",
+      "enum": [
+        "RegistryLookup",
+        "ApiRequest",
+        "ContentQuery",
+        "Custom"
+      ]
+    },
+    "valueStorage": {
+      "type": "string",
+      "enum": [
+        "RuntimeOnly",
+        "ConfigJson",
+        "Session",
+        "SecretStore"
+      ]
+    },
+    "valueKind": {
+      "type": "string",
+      "enum": [
+        "Bool",
+        "String",
+        "Integer",
+        "Float",
+        "Object",
+        "Array"
+      ]
+    },
+    "validationKind": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Required",
+        "Min",
+        "Max",
+        "Regex",
+        "ExistingPath",
+        "ExistingDirectory"
+      ]
+    },
+    "requirementBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key"
+      ],
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/providerSource"
+        },
+        "resolveMode": {
+          "$ref": "#/$defs/resolveMode"
+        },
+        "allowMultiple": {
+          "type": "boolean"
+        },
+        "preferredResolverExtensionIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "requestStructName": {
+          "type": "string"
+        },
+        "strategy": {
+          "$ref": "#/$defs/resolverExecutionStrategy"
+        },
+        "requestAction": {
+          "type": "string"
+        },
+        "responseCollectionPath": {
+          "type": "string"
+        },
+        "responseLabelPath": {
+          "type": "string"
+        },
+        "responseValuePath": {
+          "type": "string"
+        },
+        "contextBindings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/resolveContextBinding"
+          }
+        },
+        "outputStructName": {
+          "type": "string"
+        }
+      }
+    },
+    "resolveContextBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requestKey"
+      ],
+      "properties": {
+        "requestKey": {
+          "type": "string"
+        },
+        "fromFieldId": {
+          "type": "string"
+        },
+        "fallbackValue": {
+          "type": "string"
+        }
+      }
+    },
+    "structFieldDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "valueKind"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "valueKind": {
+          "$ref": "#/$defs/valueKind"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "defaultValue": {
+          "type": "string"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/structFieldDefinition"
+          }
+        }
+      }
+    },
+    "validationDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/validationKind"
+        },
+        "argument": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

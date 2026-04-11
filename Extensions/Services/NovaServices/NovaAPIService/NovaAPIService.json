@@ -1,0 +1,56 @@
+{
+  "id": "novaapiservice",
+  "name": "NovaAPIService",
+  "file": "libNovaAPIService.so",
+  "version": "0.1.0",
+  "autostart": false,
+  "startupDelayMs": 0,
+  "description": "Primary API service exposing platform endpoints and integration surfaces.",
+  "longDescription": "NovaAPIService serves as the main platform API runtime, exposing operational endpoints, content-pack routes, and service-to-service integration flows backed by security and orchestration dependencies.",
+  "dependencies": [
+    "coreservice",
+    "keyforge",
+    "aegiscore",
+    "httpagent",
+    "contentforge",
+    "nexuscore",
+    "astrascalecore"
+  ],
+  "publicIncludePaths": [
+    "Source"
+  ],
+  "targetName": "NovaAPIService",
+  "projectName": "NovaAPIService",
+  "outputName": "NovaAPIService",
+  "linkNovaCore": true,
+  "optional": {
+    "contentRoots": [
+      "Content"
+    ],
+    "contentPacks": [
+      "AuthAPI",
+      "ServiceOpsAPI",
+      "AdminUIPack"
+    ],
+    "grafanaDashboards": [
+      "grafana://celestianova/novaapi-overview"
+    ],
+    "healthEndpoints": [
+      "/api/v1/health/novaapiservice"
+    ],
+    "contentEndpoints": [
+      "/api/v1/content/novaapiservice",
+      "/api/v1/content/novaapiservice/packs"
+    ],
+    "telemetryStreams": [
+      "novaapi.request.count",
+      "novaapi.content.resolve.latency"
+    ],
+    "serviceCapabilities": [
+      "api.routes.list",
+      "api.content.resolve",
+      "api.deploy.surface",
+      "api.health"
+    ]
+  }
+}

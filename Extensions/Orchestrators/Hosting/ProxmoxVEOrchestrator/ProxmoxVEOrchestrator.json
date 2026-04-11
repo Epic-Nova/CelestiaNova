@@ -1,0 +1,23 @@
+﻿{
+    "id":  "proxmoxveorchestrator",
+    "name":  "ProxmoxVEOrchestrator",
+    "file":  "libProxmoxVEOrchestrator.so",
+    "version":  "0.1.0",
+    "autostart":  false,
+    "startupDelayMs":  0,
+    "description":  "Hosting orchestrator for Proxmox VE node integration and infrastructure provisioning tasks.",
+    "longDescription":  "ProxmoxVEOrchestrator provides workflows for integrating and managing Proxmox VE environments, including host connectivity, privileged provisioning actions, and orchestrated deployment alignment.",
+    "dependencies":  [
+                         "coreorchestrator",
+                         "privilegeescalationagent",
+                         "httpagent",
+                         "terminalagent"
+                     ],
+    "publicIncludePaths":  [
+                               "Source"
+                           ],
+    "targetName":  "ProxmoxVEOrchestrator",
+    "projectName":  "ProxmoxVEOrchestrator",
+    "outputName":  "ProxmoxVEOrchestrator",
+    "linkNovaCore":  true
+}

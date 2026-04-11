@@ -1,0 +1,22 @@
+﻿{
+    "id":  "apacheorchestrator",
+    "name":  "ApacheOrchestrator",
+    "file":  "libApacheOrchestrator.so",
+    "version":  "0.1.0",
+    "autostart":  false,
+    "startupDelayMs":  0,
+    "description":  "Web server orchestrator for Apache installation, vhost configuration, and service controls.",
+    "longDescription":  "ApacheOrchestrator manages Apache-centric setup and operations, covering package/runtime setup, configuration templates, certificate/secret integration hooks, and service lifecycle controls.",
+    "dependencies":  [
+                         "coreorchestrator",
+                         "keyforge",
+                         "signalcore"
+                     ],
+    "publicIncludePaths":  [
+                               "Source"
+                           ],
+    "targetName":  "ApacheOrchestrator",
+    "projectName":  "ApacheOrchestrator",
+    "outputName":  "ApacheOrchestrator",
+    "linkNovaCore":  true
+}

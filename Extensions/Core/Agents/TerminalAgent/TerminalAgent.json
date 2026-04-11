@@ -1,0 +1,21 @@
+﻿{
+    "id":  "terminalagent",
+    "name":  "TerminalAgent",
+    "file":  "libTerminalAgent.so",
+    "version":  "0.1.0",
+    "autostart":  false,
+    "startupDelayMs":  0,
+    "description":  "Agent that executes shell commands and bridges terminal I/O for extensions.",
+    "longDescription":  "TerminalAgent provides command execution primitives for extension workflows, including process launch, shell command routing, and result capture needed by higher-level automation modules.",
+    "dependencies":  [
+                         "canvascore",
+                         "privilegeescalationagent"
+                     ],
+    "publicIncludePaths":  [
+                               "Source"
+                           ],
+    "targetName":  "TerminalAgent",
+    "projectName":  "TerminalAgent",
+    "outputName":  "TerminalAgent",
+    "linkNovaCore":  true
+}

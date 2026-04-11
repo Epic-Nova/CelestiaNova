@@ -1,0 +1,665 @@
+{
+  "$schema": "./CanvasMenuDefinitions.schema.json",
+  "schema": "canvas.menu.definitions.v1",
+  "ownerExtensionId": "canvascore",
+  "menus": [
+    {
+      "id": "main",
+      "title": "Main Menu",
+      "subtitle": "CanvasCore launch navigation",
+      "icon": "HOME",
+      "pageRequirements": [],
+      "sections": [
+        {
+          "id": "main_navigation",
+          "title": "Navigation",
+          "description": "Core application menus are owned by CanvasCore and rendered in this order.",
+          "fields": [
+            {
+              "id": "openExtensions",
+              "label": "Extensions",
+              "description": "List all installed extensions.",
+              "type": "ActionButton",
+              "defaultValue": "extensions",
+              "validations": [],
+              "valueStorage": "RuntimeOnly",
+              "outputKey": "navigation.main.extensions"
+            },
+            {
+              "id": "openOptions",
+              "label": "Options",
+              "description": "App-level settings only. Extension-specific settings are located in extension menus.",
+              "type": "ActionButton",
+              "defaultValue": "options",
+              "validations": [],
+              "valueStorage": "RuntimeOnly",
+              "outputKey": "navigation.main.options"
+            },
+            {
+              "id": "openOrchestrators",
+              "label": "Orchestrators",
+              "description": "Interact with installed orchestrators (excluding CoreOrchestrator).",
+              "type": "ActionButton",
+              "defaultValue": "orchestrators",
+              "validations": [],
+              "valueStorage": "RuntimeOnly",
+              "outputKey": "navigation.main.orchestrators"
+            },
+            {
+              "id": "openServices",
+              "label": "Services",
+              "description": "Interact with installed services (excluding CoreService).",
+              "type": "ActionButton",
+              "defaultValue": "services",
+              "validations": [],
+              "valueStorage": "RuntimeOnly",
+              "outputKey": "navigation.main.services"
+            },
+            {
+              "id": "openHelp",
+              "label": "Help",
+              "description": "Extension-participating help generated from installed capabilities and endpoints.",
+              "type": "ActionButton",
+              "defaultValue": "help",
+              "validations": [],
+              "valueStorage": "RuntimeOnly",
+              "outputKey": "navigation.main.help"
+            }
+          ]
+        }
+      ],
+      "submitAction": "menu.navigate",
+      "cancelAction": "menu.back"
+    },
+    {
+      "id": "extensions",
+      "title": "Extensions",
+      "subtitle": "Installed extension interaction catalog",
+      "icon": "EXTENSIONS",
+      "pageRequirements": [
+        "catalog.extensions"
+      ],
+      "sections": [
+        {
+          "id": "extension_catalog",
+          "title": "Installed Extensions",
+          "description": "Select an extension, optional content pack, and an interaction action.",
+          "fields": [
+            {
+              "id": "selectedExtension",
+              "label": "Extension",
+              "description": "All installed extensions are listed dynamically.",
+              "type": "ProviderSelect",
+              "requirementBinding": {
+                "key": "catalog.extensions",
+                "source": "AnyExtension",
+                "resolveMode": "ValueList",
+                "allowMultiple": false,
+                "strategy": "ApiRequest",
+                "requestAction": "canvascore.catalog.extensions",
+                "responseCollectionPath": "items",
+                "responseLabelPath": "label",
+                "responseValuePath": "value",
+                "preferredResolverExtensionIds": [
+                  "canvascore"
+                ],
+                "requestStructName": "CoreRequirementResolveRequest",
+                "outputStructName": "CoreRequirementResolveResult"
+              },
+              "validations": [
+                {
+                  "kind": "Required",
+                  "argument": "",
+                  "message": "Select an extension"
+                }
+              ],
+              "valueStorage": "ConfigJson",
+              "outputKey": "extensions.selected.id"
+            },
+            {
+              "id": "selectedExtensionContentPack",
+              "label": "Content Pack",
+              "description": "Installed content packs for the selected extension.",
+              "type": "ProviderSelect",
+              "requirementBinding": {
+                "key": "catalog.contentpacks.byProvider",
+                "source": "AnyExtension",
+                "resolveMode": "ValueList",
+                "allowMultiple": false,
+                "strategy": "ApiRequest",
+                "requestAction": "canvascore.catalog.contentpacks",
+                "responseCollectionPath": "items",
+                "responseLabelPath": "label",
+                "responseValuePath": "value",
+                "preferredResolverExtensionIds": [
+                  "canvascore"
+                ],
+                "requestStructName": "CoreRequirementResolveRequest",
+                "outputStructName": "CoreRequirementResolveResult",
+                "contextBindings": [
+                  {
+                    "requestKey": "providerId",
+                    "fromFieldId": "selectedExtension"
+                  }
+                ]
+              },
+              "validations": [],
+              "valueStorage": "ConfigJson",
+              "outputKey": "extensions.selected.contentPack"
+            },
+            {
+              "id": "selectedExtensionInteraction",
+              "label": "Interaction",
+              "description": "Provider-level interactions defined by extension or core fallback surfaces.",
+              "type": "ProviderSelect",
+              "requirementBinding": {
+                "key": "catalog.interactions.byProvider",
+                "source": "AnyExtension",
+                "resolveMode": "ValueList",
+                "allowMultiple": false,
+                "strategy": "ApiRequest",
+                "requestAction": "canvascore.catalog.interactions.provider",
+                "responseCollectionPath": "items",
+                "responseLabelPath": "label",
+                "responseValuePath": "value",
+                "preferredResolverExtensionIds": [
+                  "canvascore"
+                ],
+                "requestStructName": "CoreRequirementResolveRequest",
+                "outputStructName": "CoreRequirementResolveResult",
+                "contextBindings": [
+                  {
+                    "requestKey": "providerId",
+                    "fromFieldId": "selectedExtension"
+                  }
+                ]
+              },
+              "validations": [],
+              "valueStorage": "ConfigJson",
+              "outputKey": "extensions.selected.interaction"
+            },
+            {
+              "id": "selectedExtensionPackInteraction",
+              "label": "Content Pack Interaction",
+              "description": "Content-pack scoped interactions for the selected extension.",
+              "type": "ProviderSelect",
+              "requirementBinding": {
+                "key": "catalog.interactions.byContentPack",
+                "source": "AnyExtension",
+                "resolveMode": "ValueList",
+                "allowMultiple": false,
+                "strategy": "ApiRequest",
+                "requestAction": "canvascore.catalog.interactions.contentpack",
+                "responseCollectionPath": "items",
+                "responseLabelPath": "label",
+                "responseValuePath": "value",
+                "preferredResolverExtensionIds": [
+                  "canvascore"
+                ],
+                "requestStructName": "CoreRequirementResolveRequest",
+                "outputStructName": "CoreRequirementResolveResult",
+                "contextBindings": [
+                  {
+                    "requestKey": "providerId",
+                    "fromFieldId": "selectedExtension"
+                  },
+                  {
+                    "requestKey": "contentPackId",
+                    "fromFieldId": "selectedExtensionContentPack"
+                  }
+                ]
+              },
+              "validations": [],
+              "valueStorage": "ConfigJson",
+              "outputKey": "extensions.selected.contentPackInteraction"
+            }
+          ]
+        }
+      ],
+      "submitAction": "menu.extensions.interact",
+      "cancelAction": "menu.back"
+    },
+    {
+      "id": "options",
+      "title": "Options",
+      "subtitle": "Application settings only",
+      "icon": "SETTINGS",
+      "pageRequirements": [],
+      "sections": [
+        {
+          "id": "app_options",
+          "title": "App Settings",
+          "description": "Extension-specific settings are handled in extension menus.",
+          "fields": [
+            {
+              "id": "verboseLogging",
+              "label": "Verbose Logging",
+              "description": "Enable verbose logging output for the app runtime.",
+              "type": "Bool",
+              "defaultValue": "false",
+              "validations": [],
+              "valueStorage": "ConfigJson",
+              "outputKey": "app.options.verboseLogging"
+            },
+            {
+              "id": "scrollableLogAlwaysVisible",
+              "label": "Scrollable Log Always Visible",
+              "description": "Keep the log panel visible while interacting with menus.",
+              "type": "Bool",
+              "defaultValue": "true",
+              "validations": [],
+              "valueStorage": "ConfigJson",
+              "outputKey": "app.options.scrollableLogAlwaysVisible"
+            }
+          ]
+        }
+      ],
+      "submitAction": "app.options.apply",
+      "cancelAction": "menu.back"
+    },
+    {
+      "id": "orchestrators",
+      "title": "Orchestrators",
+      "subtitle": "Installed orchestrators and their interaction surfaces",
+      "icon": "ORCHESTRATOR",
+      "pageRequirements": [
+        "catalog.orchestrators"
+      ],
+      "sections": [
+        {
+          "id": "orchestrator_catalog",
+          "title": "Orchestrator Interactions",
+          "description": "CoreOrchestrator is excluded from this catalog.",
+          "fields": [
+            {
+              "id": "selectedOrchestrator",
+              "label": "Orchestrator",
+              "description": "Select an installed orchestrator to inspect interactions.",
+              "type": "ProviderSelect",
+              "requirementBinding": {
+                "key": "catalog.orchestrators",
+                "source": "Orchestrator",
+                "resolveMode": "ValueList",
+                "allowMultiple": false,
+                "strategy": "ApiRequest",
+                "requestAction": "canvascore.catalog.orchestrators",
+                "responseCollectionPath": "items",
+                "responseLabelPath": "label",
+                "responseValuePath": "value",
+                "preferredResolverExtensionIds": [
+                  "canvascore"
+                ],
+                "requestStructName": "CoreRequirementResolveRequest",
+                "outputStructName": "CoreRequirementResolveResult"
+              },
+              "validations": [
+                {
+                  "kind": "Required",
+                  "argument": "",
+                  "message": "Select an orchestrator"
+                }
+              ],
+              "valueStorage": "ConfigJson",
+              "outputKey": "orchestrators.selected.id"
+            },
+            {
+              "id": "selectedOrchestratorContentPack",
+              "label": "Content Pack",
+              "description": "Installed content packs for the selected orchestrator.",
+              "type": "ProviderSelect",
+              "requirementBinding": {
+                "key": "catalog.contentpacks.byProvider",
+                "source": "Orchestrator",
+                "resolveMode": "ValueList",
+                "allowMultiple": false,
+                "strategy": "ApiRequest",
+                "requestAction": "canvascore.catalog.contentpacks",
+                "responseCollectionPath": "items",
+                "responseLabelPath": "label",
+                "responseValuePath": "value",
+                "preferredResolverExtensionIds": [
+                  "canvascore"
+                ],
+                "requestStructName": "CoreRequirementResolveRequest",
+                "outputStructName": "CoreRequirementResolveResult",
+                "contextBindings": [
+                  {
+                    "requestKey": "providerId",
+                    "fromFieldId": "selectedOrchestrator"
+                  }
+                ]
+              },
+              "validations": [],
+              "valueStorage": "ConfigJson",
+              "outputKey": "orchestrators.selected.contentPack"
+            },
+            {
+              "id": "selectedOrchestratorInteraction",
+              "label": "Interaction",
+              "description": "Provider interactions. Falls back to CoreOrchestrator-defined surfaces when needed.",
+              "type": "ProviderSelect",
+              "requirementBinding": {
+                "key": "catalog.interactions.byProvider",
+                "source": "Orchestrator",
+                "resolveMode": "ValueList",
+                "allowMultiple": false,
+                "strategy": "ApiRequest",
+                "requestAction": "canvascore.catalog.interactions.provider",
+                "responseCollectionPath": "items",
+                "responseLabelPath": "label",
+                "responseValuePath": "value",
+                "preferredResolverExtensionIds": [
+                  "canvascore"
+                ],
+                "requestStructName": "CoreRequirementResolveRequest",
+                "outputStructName": "CoreRequirementResolveResult",
+                "contextBindings": [
+                  {
+                    "requestKey": "providerId",
+                    "fromFieldId": "selectedOrchestrator"
+                  }
+                ]
+              },
+              "validations": [],
+              "valueStorage": "ConfigJson",
+              "outputKey": "orchestrators.selected.interaction"
+            },
+            {
+              "id": "selectedOrchestratorPackInteraction",
+              "label": "Content Pack Interaction",
+              "description": "If a pack is selected, interact at the content-pack scope.",
+              "type": "ProviderSelect",
+              "requirementBinding": {
+                "key": "catalog.interactions.byContentPack",
+                "source": "Orchestrator",
+                "resolveMode": "ValueList",
+                "allowMultiple": false,
+                "strategy": "ApiRequest",
+                "requestAction": "canvascore.catalog.interactions.contentpack",
+                "responseCollectionPath": "items",
+                "responseLabelPath": "label",
+                "responseValuePath": "value",
+                "preferredResolverExtensionIds": [
+                  "canvascore"
+                ],
+                "requestStructName": "CoreRequirementResolveRequest",
+                "outputStructName": "CoreRequirementResolveResult",
+                "contextBindings": [
+                  {
+                    "requestKey": "providerId",
+                    "fromFieldId": "selectedOrchestrator"
+                  },
+                  {
+                    "requestKey": "contentPackId",
+                    "fromFieldId": "selectedOrchestratorContentPack"
+                  }
+                ]
+              },
+              "validations": [],
+              "valueStorage": "ConfigJson",
+              "outputKey": "orchestrators.selected.contentPackInteraction"
+            }
+          ]
+        }
+      ],
+      "submitAction": "menu.orchestrators.interact",
+      "cancelAction": "menu.back"
+    },
+    {
+      "id": "services",
+      "title": "Services",
+      "subtitle": "Installed services and their interaction surfaces",
+      "icon": "SERVICE",
+      "pageRequirements": [
+        "catalog.services"
+      ],
+      "sections": [
+        {
+          "id": "service_catalog",
+          "title": "Service Interactions",
+          "description": "CoreService is excluded from this catalog.",
+          "fields": [
+            {
+              "id": "selectedService",
+              "label": "Service",
+              "description": "Select an installed service to inspect interactions.",
+              "type": "ProviderSelect",
+              "requirementBinding": {
+                "key": "catalog.services",
+                "source": "Service",
+                "resolveMode": "ValueList",
+                "allowMultiple": false,
+                "strategy": "ApiRequest",
+                "requestAction": "canvascore.catalog.services",
+                "responseCollectionPath": "items",
+                "responseLabelPath": "label",
+                "responseValuePath": "value",
+                "preferredResolverExtensionIds": [
+                  "canvascore"
+                ],
+                "requestStructName": "CoreRequirementResolveRequest",
+                "outputStructName": "CoreRequirementResolveResult"
+              },
+              "validations": [
+                {
+                  "kind": "Required",
+                  "argument": "",
+                  "message": "Select a service"
+                }
+              ],
+              "valueStorage": "ConfigJson",
+              "outputKey": "services.selected.id"
+            },
+            {
+              "id": "selectedServiceContentPack",
+              "label": "Content Pack",
+              "description": "Installed content packs for the selected service.",
+              "type": "ProviderSelect",
+              "requirementBinding": {
+                "key": "catalog.contentpacks.byProvider",
+                "source": "Service",
+                "resolveMode": "ValueList",
+                "allowMultiple": false,
+                "strategy": "ApiRequest",
+                "requestAction": "canvascore.catalog.contentpacks",
+                "responseCollectionPath": "items",
+                "responseLabelPath": "label",
+                "responseValuePath": "value",
+                "preferredResolverExtensionIds": [
+                  "canvascore"
+                ],
+                "requestStructName": "CoreRequirementResolveRequest",
+                "outputStructName": "CoreRequirementResolveResult",
+                "contextBindings": [
+                  {
+                    "requestKey": "providerId",
+                    "fromFieldId": "selectedService"
+                  }
+                ]
+              },
+              "validations": [],
+              "valueStorage": "ConfigJson",
+              "outputKey": "services.selected.contentPack"
+            },
+            {
+              "id": "selectedServiceInteraction",
+              "label": "Interaction",
+              "description": "Provider interactions. Falls back to CoreService-defined surfaces when needed.",
+              "type": "ProviderSelect",
+              "requirementBinding": {
+                "key": "catalog.interactions.byProvider",
+                "source": "Service",
+                "resolveMode": "ValueList",
+                "allowMultiple": false,
+                "strategy": "ApiRequest",
+                "requestAction": "canvascore.catalog.interactions.provider",
+                "responseCollectionPath": "items",
+                "responseLabelPath": "label",
+                "responseValuePath": "value",
+                "preferredResolverExtensionIds": [
+                  "canvascore"
+                ],
+                "requestStructName": "CoreRequirementResolveRequest",
+                "outputStructName": "CoreRequirementResolveResult",
+                "contextBindings": [
+                  {
+                    "requestKey": "providerId",
+                    "fromFieldId": "selectedService"
+                  }
+                ]
+              },
+              "validations": [],
+              "valueStorage": "ConfigJson",
+              "outputKey": "services.selected.interaction"
+            },
+            {
+              "id": "selectedServicePackInteraction",
+              "label": "Content Pack Interaction",
+              "description": "If a pack is selected, interact at the content-pack scope.",
+              "type": "ProviderSelect",
+              "requirementBinding": {
+                "key": "catalog.interactions.byContentPack",
+                "source": "Service",
+                "resolveMode": "ValueList",
+                "allowMultiple": false,
+                "strategy": "ApiRequest",
+                "requestAction": "canvascore.catalog.interactions.contentpack",
+                "responseCollectionPath": "items",
+                "responseLabelPath": "label",
+                "responseValuePath": "value",
+                "preferredResolverExtensionIds": [
+                  "canvascore"
+                ],
+                "requestStructName": "CoreRequirementResolveRequest",
+                "outputStructName": "CoreRequirementResolveResult",
+                "contextBindings": [
+                  {
+                    "requestKey": "providerId",
+                    "fromFieldId": "selectedService"
+                  },
+                  {
+                    "requestKey": "contentPackId",
+                    "fromFieldId": "selectedServiceContentPack"
+                  }
+                ]
+              },
+              "validations": [],
+              "valueStorage": "ConfigJson",
+              "outputKey": "services.selected.contentPackInteraction"
+            }
+          ]
+        }
+      ],
+      "submitAction": "menu.services.interact",
+      "cancelAction": "menu.back"
+    },
+    {
+      "id": "help",
+      "title": "Help",
+      "subtitle": "Installed extension help participation and endpoint catalog",
+      "icon": "HELP",
+      "pageRequirements": [
+        "help.catalog.endpoints",
+        "catalog.extensions"
+      ],
+      "sections": [
+        {
+          "id": "help_catalog",
+          "title": "Help Sources",
+          "description": "Each extension can participate through declared endpoints, capabilities, and content packs.",
+          "fields": [
+            {
+              "id": "helpCatalogEndpoint",
+              "label": "Installed Catalog Endpoint",
+              "description": "Endpoints that gather installed extension/service state.",
+              "type": "ProviderSelect",
+              "requirementBinding": {
+                "key": "help.catalog.endpoints",
+                "source": "Core",
+                "resolveMode": "ValueList",
+                "allowMultiple": false,
+                "strategy": "ApiRequest",
+                "requestAction": "canvascore.help.catalog.endpoints",
+                "responseCollectionPath": "items",
+                "responseLabelPath": "label",
+                "responseValuePath": "value",
+                "preferredResolverExtensionIds": [
+                  "canvascore"
+                ],
+                "requestStructName": "CoreRequirementResolveRequest",
+                "outputStructName": "CoreRequirementResolveResult"
+              },
+              "validations": [],
+              "valueStorage": "ConfigJson",
+              "outputKey": "help.catalog.endpoint"
+            },
+            {
+              "id": "helpExtension",
+              "label": "Extension",
+              "description": "Choose which extension contributes help content.",
+              "type": "ProviderSelect",
+              "requirementBinding": {
+                "key": "catalog.extensions",
+                "source": "AnyExtension",
+                "resolveMode": "ValueList",
+                "allowMultiple": false,
+                "strategy": "ApiRequest",
+                "requestAction": "canvascore.catalog.extensions",
+                "responseCollectionPath": "items",
+                "responseLabelPath": "label",
+                "responseValuePath": "value",
+                "preferredResolverExtensionIds": [
+                  "canvascore"
+                ],
+                "requestStructName": "CoreRequirementResolveRequest",
+                "outputStructName": "CoreRequirementResolveResult"
+              },
+              "validations": [
+                {
+                  "kind": "Required",
+                  "argument": "",
+                  "message": "Select an extension"
+                }
+              ],
+              "valueStorage": "ConfigJson",
+              "outputKey": "help.extension.id"
+            },
+            {
+              "id": "helpTopic",
+              "label": "Topic",
+              "description": "Extension-contributed help topics (capabilities, packs, and endpoints).",
+              "type": "ProviderSelect",
+              "requirementBinding": {
+                "key": "help.topics.byProvider",
+                "source": "AnyExtension",
+                "resolveMode": "ValueList",
+                "allowMultiple": false,
+                "strategy": "ApiRequest",
+                "requestAction": "canvascore.help.topics.provider",
+                "responseCollectionPath": "items",
+                "responseLabelPath": "label",
+                "responseValuePath": "value",
+                "preferredResolverExtensionIds": [
+                  "canvascore"
+                ],
+                "requestStructName": "CoreRequirementResolveRequest",
+                "outputStructName": "CoreRequirementResolveResult",
+                "contextBindings": [
+                  {
+                    "requestKey": "providerId",
+                    "fromFieldId": "helpExtension"
+                  }
+                ]
+              },
+              "validations": [],
+              "valueStorage": "ConfigJson",
+              "outputKey": "help.topic.id"
+            }
+          ]
+        }
+      ],
+      "submitAction": "menu.help.interact",
+      "cancelAction": "menu.back"
+    }
+  ]
+}

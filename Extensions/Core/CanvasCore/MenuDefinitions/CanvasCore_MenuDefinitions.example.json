@@ -1,0 +1,201 @@
+{
+  "$schema": "./CanvasMenuDefinitions.schema.json",
+  "schema": "canvas.menu.definitions.v1",
+  "ownerExtensionId": "canvascore",
+  "menus": [
+    {
+      "id": "main",
+      "title": "Main Menu",
+      "subtitle": "Placeholder during CanvasCore migration",
+      "icon": "HOME",
+      "pageRequirements": [],
+      "sections": [],
+      "submitAction": "menu.noop",
+      "cancelAction": "menu.back"
+    },
+    {
+      "id": "options",
+      "title": "Options",
+      "subtitle": "Placeholder during CanvasCore migration",
+      "icon": "SETTINGS",
+      "pageRequirements": [],
+      "sections": [],
+      "submitAction": "menu.noop",
+      "cancelAction": "menu.back"
+    },
+    {
+      "id": "installation",
+      "title": "Installation",
+      "subtitle": "Placeholder during CanvasCore migration",
+      "icon": "TOOLS",
+      "pageRequirements": [],
+      "sections": [],
+      "submitAction": "menu.noop",
+      "cancelAction": "menu.back"
+    },
+    {
+      "id": "help",
+      "title": "Help",
+      "subtitle": "Placeholder during CanvasCore migration",
+      "icon": "HELP",
+      "pageRequirements": [],
+      "sections": [],
+      "submitAction": "menu.noop",
+      "cancelAction": "menu.back"
+    },
+    {
+      "id": "novaapi_content_setup",
+      "title": "NovaAPI Content Setup",
+      "subtitle": "Configure content and framework providers",
+      "icon": "API",
+      "pageRequirements": [
+        "content.injection",
+        "framework.target",
+        "environment.target"
+      ],
+      "sections": [
+        {
+          "id": "content_provider",
+          "title": "Content and Framework Providers",
+          "description": "All dynamic options are resolved through extension requirement resolvers.",
+          "fields": [
+            {
+              "id": "contentInjectionProvider",
+              "label": "Content Source Provider",
+              "description": "Resolved dynamically from resolver extensions bound to content.injection.",
+              "type": "ProviderSelect",
+              "requirementBinding": {
+                "key": "content.injection",
+                "source": "AnyExtension",
+                "resolveMode": "ProviderList",
+                "allowMultiple": false,
+                "strategy": "RegistryLookup",
+                "preferredResolverExtensionIds": [
+                  "contentforge"
+                ],
+                "requestStructName": "FContentInjectionRequest",
+                "outputStructName": "FContentInjectionSelection"
+              },
+              "validations": [
+                {
+                  "kind": "Required",
+                  "argument": "",
+                  "message": "Please choose a provider"
+                }
+              ],
+              "valueStorage": "ConfigJson",
+              "outputKey": "novaApi.content.provider"
+            },
+            {
+              "id": "targetFrameworkProvider",
+              "label": "Target Framework Provider",
+              "description": "Resolved from orchestrator framework providers through the resolver registry.",
+              "type": "ProviderSelect",
+              "requirementBinding": {
+                "key": "framework.target",
+                "source": "Orchestrator",
+                "resolveMode": "ProviderList",
+                "allowMultiple": false,
+                "strategy": "RegistryLookup",
+                "preferredResolverExtensionIds": [
+                  "contentforge"
+                ],
+                "requestStructName": "FFrameworkTargetRequest",
+                "outputStructName": "FFrameworkTargetSelection"
+              },
+              "validations": [],
+              "valueStorage": "ConfigJson",
+              "outputKey": "novaApi.content.frameworkProvider"
+            },
+            {
+              "id": "targetEnvironment",
+              "label": "Target Environment",
+              "description": "Example universal dynamic list: AstraScaleCore may resolve this key by API lookup, but any extension can implement the same contract.",
+              "type": "ProviderSelect",
+              "requirementBinding": {
+                "key": "environment.target",
+                "source": "AnyExtension",
+                "resolveMode": "ValueList",
+                "allowMultiple": false,
+                "strategy": "ApiRequest",
+                "requestAction": "astrascale.environments.list",
+                "responseCollectionPath": "environments",
+                "responseLabelPath": "displayName",
+                "responseValuePath": "name",
+                "preferredResolverExtensionIds": [
+                  "astrascalecore"
+                ],
+                "requestStructName": "FEnvironmentLookupRequest",
+                "outputStructName": "FEnvironmentSelection",
+                "contextBindings": [
+                  {
+                    "requestKey": "frameworkProvider",
+                    "fromFieldId": "targetFrameworkProvider"
+                  },
+                  {
+                    "requestKey": "fallbackEnvironment",
+                    "fallbackValue": "production"
+                  }
+                ]
+              },
+              "validations": [
+                {
+                  "kind": "Required",
+                  "argument": "",
+                  "message": "Select a target environment"
+                }
+              ],
+              "valueStorage": "ConfigJson",
+              "outputKey": "novaApi.content.environment"
+            },
+            {
+              "id": "apiBasePath",
+              "label": "API Base Path",
+              "description": "Base route where content should be mounted.",
+              "type": "String",
+              "defaultValue": "/api/v1",
+              "validations": [
+                {
+                  "kind": "Required",
+                  "argument": "",
+                  "message": "API base path is required"
+                }
+              ],
+              "valueStorage": "ConfigJson",
+              "outputKey": "novaApi.content.basePath"
+            },
+            {
+              "id": "deploymentContext",
+              "label": "Deployment Context",
+              "description": "Struct input that CanvasCore constructs and returns to extension code.",
+              "type": "StructObject",
+              "structFields": [
+                {
+                  "id": "region",
+                  "label": "Region",
+                  "description": "Deployment region",
+                  "valueKind": "String",
+                  "required": true,
+                  "defaultValue": "eu-central-1"
+                },
+                {
+                  "id": "replicas",
+                  "label": "Replicas",
+                  "description": "Desired replica count",
+                  "valueKind": "Integer",
+                  "required": true,
+                  "defaultValue": "2"
+                }
+              ],
+              "validations": [],
+              "valueStorage": "ConfigJson",
+              "outputKey": "novaApi.content.deploymentContext"
+            }
+          ]
+        }
+      ],
+      "submitAction": "service.novaapi.configureContent",
+      "cancelAction": "menu.back"
+    }
+  ]
+}

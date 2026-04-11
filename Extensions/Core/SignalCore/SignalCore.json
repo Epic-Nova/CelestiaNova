@@ -1,0 +1,21 @@
+﻿{
+    "id":  "signalcore",
+    "name":  "SignalCore",
+    "file":  "libSignalCore.so",
+    "version":  "0.1.0",
+    "autostart":  true,
+    "startupDelayMs":  80,
+    "description":  "Notification and telemetry core for security events, host updates, and operational signals.",
+    "longDescription":  "SignalCore provides event-driven notification pathways used by services and orchestrators, including CVE alert routing, host-status messaging, and extension-visible operational signals.",
+    "dependencies":  [
+                         "aegiscore",
+                         "canvascore"
+                     ],
+    "publicIncludePaths":  [
+                               "Source"
+                           ],
+    "targetName":  "SignalCore",
+    "projectName":  "SignalCore",
+    "outputName":  "SignalCore",
+    "linkNovaCore":  true
+}

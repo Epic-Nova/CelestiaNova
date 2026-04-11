@@ -1,0 +1,53 @@
+{
+  "id": "nexuscore",
+  "name": "NexusCore",
+  "file": "libNexusCore.so",
+  "version": "0.1.0",
+  "autostart": true,
+  "startupDelayMs": 110,
+  "description": "Service-side extension registry and status aggregation core for frontend and API consumption.",
+  "longDescription": "NexusCore aggregates extension metadata, service capabilities, and health surfaces into a normalized status payload for service APIs and frontend status pages.",
+  "dependencies": [
+    "coreservice",
+    "aegiscore",
+    "keyforge",
+    "signalcore",
+    "httpagent"
+  ],
+  "publicIncludePaths": [
+    "Source"
+  ],
+  "targetName": "NexusCore",
+  "projectName": "NexusCore",
+  "outputName": "NexusCore",
+  "linkNovaCore": true,
+  "optional": {
+    "contentRoots": [
+      "Content"
+    ],
+    "contentPacks": [
+      "NexusStatusAPI"
+    ],
+    "grafanaDashboards": [
+      "grafana://celestianova/nexuscore-overview"
+    ],
+    "healthEndpoints": [
+      "/api/v1/health/nexuscore"
+    ],
+    "contentEndpoints": [
+      "/api/v1/content/nexuscore",
+      "/api/v1/content/nexuscore/index"
+    ],
+    "telemetryStreams": [
+      "nexus.requests",
+      "nexus.snapshot.size"
+    ],
+    "serviceCapabilities": [
+      "extensions.list",
+      "services.list",
+      "status.snapshot",
+      "contentpacks.list",
+      "status.routing.policy"
+    ]
+  }
+}

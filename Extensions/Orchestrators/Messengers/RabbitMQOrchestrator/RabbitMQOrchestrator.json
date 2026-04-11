@@ -1,0 +1,22 @@
+﻿{
+    "id":  "rabbitmqorchestrator",
+    "name":  "RabbitMQOrchestrator",
+    "file":  "libRabbitMQOrchestrator.so",
+    "version":  "0.1.0",
+    "autostart":  false,
+    "startupDelayMs":  0,
+    "description":  "Messaging orchestrator for RabbitMQ installation, broker configuration, and queue topology setup.",
+    "longDescription":  "RabbitMQOrchestrator automates broker lifecycle and messaging setup tasks, including install and config stages, secure credential handling, and queue/exchange bootstrap workflows.",
+    "dependencies":  [
+                         "coreorchestrator",
+                         "keyforge",
+                         "signalcore"
+                     ],
+    "publicIncludePaths":  [
+                               "Source"
+                           ],
+    "targetName":  "RabbitMQOrchestrator",
+    "projectName":  "RabbitMQOrchestrator",
+    "outputName":  "RabbitMQOrchestrator",
+    "linkNovaCore":  true
+}

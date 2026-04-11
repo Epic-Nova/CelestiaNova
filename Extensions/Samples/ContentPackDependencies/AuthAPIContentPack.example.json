@@ -1,0 +1,29 @@
+{
+    "_comment": "Reference example: an AuthAPI content pack injected by NovaAPIServices via ContentForge. Demonstrates extensionDependencies to declare a required extension backend. The ExtensionRegistry resolves and starts RabbitMQOrchestrator (and, by its own extensionDependencies, any of its required credentials from KeyForge) before this content pack's owning extension activates.",
+
+    "id": "auth-api-content-pack",
+    "name": "AuthAPI Content Pack",
+    "version": "0.1.0",
+    "description": "Auth API content pack injected by NovaAPIServices via ContentForge. Requires a message queue backend.",
+    "longDescription": "This content pack is registered through ContentForge by the NovaAPIServices extension. It declares extensionDependencies to ensure the required backing services are loaded before it activates. Credentials for those services are sourced via KeyForge — not hardcoded here.",
+
+    "dependencies": [
+        "novaapiservice"
+    ],
+
+    "extensionDependencies": [
+        "rabbitmq-orchestrator"
+    ],
+
+    "_extensionDependencies_note": "The ExtensionRegistry will load RabbitMQOrchestrator (and its own transitive deps) before this pack activates. RabbitMQOrchestrator itself declares KeyForge as a dependency so credentials are available at startup.",
+
+    "publicIncludePaths": [],
+    "autostart": false,
+    "startupDelayMs": 0,
+
+    "contentforge": {
+        "injectedBy": "novaapiservice",
+        "contentType": "api-surface",
+        "routePrefix": "/api/v1/auth"
+    }
+}

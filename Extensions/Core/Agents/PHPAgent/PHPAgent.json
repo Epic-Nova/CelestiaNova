@@ -1,0 +1,21 @@
+﻿{
+    "id":  "phpagent",
+    "name":  "PHPAgent",
+    "file":  "libPHPAgent.so",
+    "version":  "0.1.0",
+    "autostart":  false,
+    "startupDelayMs":  0,
+    "description":  "Agent for PHP runtime detection, installation, and command execution support.",
+    "longDescription":  "PHPAgent provides PHP runtime orchestration capabilities required by framework workflows, including version checks, package installation hooks, and command execution pipelines.",
+    "dependencies":  [
+                         "canvascore",
+                         "terminalagent"
+                     ],
+    "publicIncludePaths":  [
+                               "Source"
+                           ],
+    "targetName":  "PHPAgent",
+    "projectName":  "PHPAgent",
+    "outputName":  "PHPAgent",
+    "linkNovaCore":  true
+}

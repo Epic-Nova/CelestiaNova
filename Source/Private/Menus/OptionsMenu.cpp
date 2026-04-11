@@ -36,6 +36,7 @@ namespace Menus
                 options_.requestRootForPip = configJson.value("requestRootForPip", true);
                 options_.requestRootForVenv = configJson.value("requestRootForVenv", true);
                 options_.scrollableLogAlwaysVisible = configJson.value("scrollableLogAlwaysVisible", false);
+                options_.disableMousePartyMode = configJson.value("disableMousePartyMode", false);
                 options_.mkdocsProjectPath = configJson.value("mkdocsProjectPath", "I am a Diosaur, rawr!");
 
                 NOVA_LOG("Configuration loaded successfully.", LogType::Log);
@@ -62,6 +63,7 @@ namespace Menus
             configJson["requestRootForPip"] = options_.requestRootForPip;
             configJson["requestRootForVenv"] = options_.requestRootForVenv;
             configJson["scrollableLogAlwaysVisible"] = options_.scrollableLogAlwaysVisible;
+            configJson["disableMousePartyMode"] = options_.disableMousePartyMode;
             configJson["mkdocsProjectPath"] = options_.mkdocsProjectPath;
 
             std::ofstream configFile(configPath);
@@ -107,6 +109,7 @@ namespace Menus
         auto requestRootForPipCheckbox = makeStyledCheckbox("Request Root for Pip", &options_.requestRootForPip);
         auto requestRootForVenvCheckbox = makeStyledCheckbox("Request Root for Virtual Environment", &options_.requestRootForVenv);
         auto scrollableLogAlwaysVisibleCheckbox = makeStyledCheckbox("Scrollable Log Always Visible", &options_.scrollableLogAlwaysVisible);
+        auto disableMousePartyModeCheckbox = makeStyledCheckbox("Disable Mouse Party Mode (Light Party)", &options_.disableMousePartyMode);
 
         // Create text box for string options with better styling
         auto mkdocsProjectPathTextBox = makeStyledInput("MkDocs Project Path", &options_.mkdocsProjectPath);
@@ -131,6 +134,7 @@ namespace Menus
                     requestRootForPipCheckbox,
                     requestRootForVenvCheckbox,
                     scrollableLogAlwaysVisibleCheckbox,
+                    disableMousePartyModeCheckbox,
                 }),
             }),
             
@@ -276,6 +280,10 @@ namespace Menus
             auto scrollableLog = Utils::ScrollableLog::Create();
             scrollableLog->SetAlwaysVisible(true);
             NOVA_LOG("Scrollable log visibility set to always visible", LogType::Log);
+        });
+
+        optionManager_->RegisterOption("disableMousePartyMode", options_.disableMousePartyMode ? new std::string("true") : new std::string("false"), []() {
+            NOVA_LOG("Mouse Party Mode (Light Party) disabled", LogType::Log);
         });
 
         optionManager_->RegisterOption("mkdocsProjectPath", &options_.mkdocsProjectPath, [this]() {

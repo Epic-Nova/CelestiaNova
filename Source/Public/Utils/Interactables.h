@@ -2,6 +2,7 @@
 
 #include "NovaMinimal.h"
 #include "Utils/CommandLineOptions.h"
+#include "Core/ModuleAPI.h"
 
 // Forward declarations
 namespace Menus {
@@ -14,30 +15,41 @@ namespace Utils
 
     /**
      * Utility class for registering menu callbacks.
+     *
+     * @deprecated Superseded by metadata-driven CanvasCore actions and the
+     *   IExtensionCliProvider pattern. Do not add new callbacks here.
+     *   Remove after legacy menus (MainMenu et al.) are fully retired.
      */
-    class Interactables
+    class [[deprecated("Superseded by metadata-driven CanvasCore actions. "
+                       "Remove after legacy menus are fully retired.")]]
+    NOVA_CORE_API Interactables
     {
     public:
         /**
          * Register all menu callbacks.
+         * @deprecated See class deprecation notice.
          */
-        static void RegisterMenuCallbacks(std::shared_ptr<MainMenu> mainMenu, 
+        [[deprecated("Use CanvasCore menu definitions and IExtensionCliProvider instead.")]]
+        static void RegisterMenuCallbacks(std::shared_ptr<MainMenu> mainMenu,
                                           CommandLineOptionsStruct cmdOptions,
                                           const std::string& contentFolderPath);
-        
+
     private:
-        static void RegisterInstallRequirementsCallback(std::shared_ptr<MainMenu> mainMenu, 
+        [[deprecated]] static void RegisterInstallRequirementsCallback(std::shared_ptr<MainMenu> mainMenu,
                                                        CommandLineOptionsStruct cmdOptions,
                                                        const std::string& contentFolderPath);
-        
-        static void RegisterOptionsCallback(std::shared_ptr<MainMenu> mainMenu, 
+        [[deprecated]] static void RegisterExtensionsCallback(std::shared_ptr<MainMenu> mainMenu,
+                               CommandLineOptionsStruct cmdOptions,
+                               const std::string& contentFolderPath);
+
+        [[deprecated]] static void RegisterOptionsCallback(std::shared_ptr<MainMenu> mainMenu,
                                             CommandLineOptionsStruct cmdOptions);
-        
-        static void RegisterStartDocumentationCallback(std::shared_ptr<MainMenu> mainMenu,
+
+        [[deprecated]] static void RegisterStartDocumentationCallback(std::shared_ptr<MainMenu> mainMenu,
                                                       const std::string& contentFolderPath);
-        
-        static void RegisterHelpCallback(std::shared_ptr<MainMenu> mainMenu);
-        
-        static void RegisterQuitCallback(std::shared_ptr<MainMenu> mainMenu);
+
+        [[deprecated]] static void RegisterHelpCallback(std::shared_ptr<MainMenu> mainMenu);
+
+        [[deprecated]] static void RegisterQuitCallback(std::shared_ptr<MainMenu> mainMenu);
     };
 }

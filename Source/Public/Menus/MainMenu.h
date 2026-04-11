@@ -6,13 +6,14 @@
 #include <map>
 #include <memory>
 #include <string>
+#include "Core/ModuleAPI.h"
 
 namespace Menus
 {
     /**
      * Main menu for the application.
      */
-    class MainMenu : public BaseMenu
+    class NOVA_CORE_API MainMenu : public BaseMenu
     {
     public:
         /**

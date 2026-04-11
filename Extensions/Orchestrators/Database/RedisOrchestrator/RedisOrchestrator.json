@@ -1,0 +1,44 @@
+{
+  "id": "redisorchestrator",
+  "name": "RedisOrchestrator",
+  "file": "libRedisOrchestrator.so",
+  "version": "0.1.0",
+  "autostart": false,
+  "startupDelayMs": 0,
+  "description": "Redis setup and configuration orchestrator.",
+  "longDescription": "RedisOrchestrator provides Redis provisioning, secure runtime configuration, and operational lifecycle actions aligned with Celestia Nova setup modes.",
+  "dependencies": [
+    "coreorchestrator",
+    "keyforge",
+    "signalcore"
+  ],
+  "publicIncludePaths": [
+    "Source"
+  ],
+  "targetName": "RedisOrchestrator",
+  "projectName": "RedisOrchestrator",
+  "outputName": "RedisOrchestrator",
+  "linkNovaCore": true,
+  "optional": {
+    "contentPacks": [
+      "RedisSetup"
+    ],
+    "healthEndpoints": [
+      "/api/v1/health/redisorchestrator"
+    ],
+    "contentRoots": [
+      "Content"
+    ],
+    "telemetryStreams": [
+      "redisorchestrator.actions"
+    ],
+    "grafanaDashboards": [
+      "grafana://celestianova/redis-orchestrator"
+    ],
+    "serviceCapabilities": [
+      "redis.install",
+      "redis.configure",
+      "redis.health"
+    ]
+  }
+}

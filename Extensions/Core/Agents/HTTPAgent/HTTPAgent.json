@@ -1,0 +1,20 @@
+﻿{
+    "id":  "httpagent",
+    "name":  "HTTPAgent",
+    "file":  "libHTTPAgent.so",
+    "version":  "0.1.0",
+    "autostart":  false,
+    "startupDelayMs":  0,
+    "description":  "HTTP transport agent for API requests, health checks, and remote orchestration traffic.",
+    "longDescription":  "HTTPAgent centralizes HTTP operations for extensions, including authenticated request execution, endpoint health probing, retry-aware calls, and response forwarding to higher-level orchestrators.",
+    "dependencies":  [
+                         "canvascore"
+                     ],
+    "publicIncludePaths":  [
+                               "Source"
+                           ],
+    "targetName":  "HTTPAgent",
+    "projectName":  "HTTPAgent",
+    "outputName":  "HTTPAgent",
+    "linkNovaCore":  true
+}

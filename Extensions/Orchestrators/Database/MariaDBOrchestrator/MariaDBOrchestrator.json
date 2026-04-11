@@ -1,0 +1,51 @@
+{
+  "id": "mariadborchestrator",
+  "name": "MariaDBOrchestrator",
+  "file": "libMariaDBOrchestrator.so",
+  "version": "0.1.0",
+  "autostart": false,
+  "startupDelayMs": 0,
+  "description": "Database orchestrator for MariaDB installation, configuration, and secure integration workflows.",
+  "longDescription": "MariaDBOrchestrator provides MariaDB-specific setup and management pipelines, including install-time provisioning, secure credential wiring, schema bootstrap, environment mapping, and runtime connectivity checks.",
+  "dependencies": [
+    "coreorchestrator",
+    "keyforge",
+    "signalcore",
+    "contentforge"
+  ],
+  "publicIncludePaths": [
+    "Source"
+  ],
+  "targetName": "MariaDBOrchestrator",
+  "projectName": "MariaDBOrchestrator",
+  "outputName": "MariaDBOrchestrator",
+  "linkNovaCore": true,
+  "optional": {
+    "contentRoots": [
+      "Content"
+    ],
+    "contentPacks": [
+      "MariaDBBootstrapPack",
+      "MariaDBPolicyPack"
+    ],
+    "grafanaDashboards": [
+      "grafana://celestianova/mariadb-orchestrator"
+    ],
+    "healthEndpoints": [
+      "/api/v1/health/mariadborchestrator"
+    ],
+    "contentEndpoints": [
+      "/api/v1/content/mariadborchestrator",
+      "/api/v1/content/mariadborchestrator/packs"
+    ],
+    "telemetryStreams": [
+      "mariadb.orchestrator.jobs"
+    ],
+    "serviceCapabilities": [
+      "mariadb.setup",
+      "mariadb.env.rules",
+      "mariadb.credentials.inject",
+      "mariadb.health"
+    ]
+  }
+}

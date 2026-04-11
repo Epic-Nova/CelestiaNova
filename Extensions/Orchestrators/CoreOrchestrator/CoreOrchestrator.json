@@ -1,0 +1,51 @@
+{
+  "id": "coreorchestrator",
+  "name": "CoreOrchestrator",
+  "file": "libCoreOrchestrator.so",
+  "version": "0.1.0",
+  "autostart": true,
+  "startupDelayMs": 140,
+  "description": "Base orchestrator framework for auto, simple, advanced, and expert setup flows.",
+  "longDescription": "CoreOrchestrator defines shared orchestration patterns used across setup domains, including layered setup modes, migration and configuration routines, orchestrator-injected setup surfaces, and standardized interaction lifecycle checkpoints.",
+  "dependencies": [
+    "canvascore",
+    "keyforge",
+    "signalcore",
+    "aegiscore",
+    "contentforge"
+  ],
+  "publicIncludePaths": [
+    "Source"
+  ],
+  "targetName": "CoreOrchestrator",
+  "projectName": "CoreOrchestrator",
+  "outputName": "CoreOrchestrator",
+  "linkNovaCore": true,
+  "optional": {
+    "contentRoots": [
+      "Content"
+    ],
+    "contentPacks": [
+      "OrchestratorProfileTemplates",
+      "InteractionLifecyclePresets"
+    ],
+    "grafanaDashboards": [
+      "grafana://celestianova/coreorchestrator-profiles"
+    ],
+    "healthEndpoints": [
+      "/api/v1/health/coreorchestrator"
+    ],
+    "contentEndpoints": [
+      "/api/v1/content/coreorchestrator/profiles",
+      "/api/v1/content/coreorchestrator/lifecycle"
+    ],
+    "telemetryStreams": [
+      "coreorchestrator.profile.usage"
+    ],
+    "serviceCapabilities": [
+      "orchestrator.profiles.list",
+      "orchestrator.setup.surface",
+      "orchestrator.lifecycle.actions"
+    ]
+  }
+}

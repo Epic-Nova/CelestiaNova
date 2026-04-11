@@ -1,0 +1,44 @@
+{
+  "id": "contentforge",
+  "name": "ContentForge",
+  "file": "libContentForge.so",
+  "version": "0.1.0",
+  "autostart": true,
+  "startupDelayMs": 170,
+  "description": "Content pack and extension asset lifecycle core.",
+  "longDescription": "ContentForge manages extension-delivered scripts, templates, and content packs with version-aware fetch, validation, and local materialization hooks.",
+  "dependencies": [
+    "keyforge",
+    "syncforge"
+  ],
+  "publicIncludePaths": [
+    "Source"
+  ],
+  "targetName": "ContentForge",
+  "projectName": "ContentForge",
+  "outputName": "ContentForge",
+  "linkNovaCore": true,
+  "optional": {
+    "contentPacks": [
+      "ContentPackRuntime"
+    ],
+    "healthEndpoints": [
+      "/api/v1/health/contentforge"
+    ],
+    "contentRoots": [
+      "Content"
+    ],
+    "telemetryStreams": [
+      "contentforge.fetch.count",
+      "contentforge.pack.count"
+    ],
+    "grafanaDashboards": [
+      "grafana://celestianova/contentforge-delivery"
+    ],
+    "serviceCapabilities": [
+      "content.fetch",
+      "content.install",
+      "content.list"
+    ]
+  }
+}

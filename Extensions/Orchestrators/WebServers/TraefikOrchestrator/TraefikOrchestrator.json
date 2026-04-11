@@ -1,0 +1,45 @@
+{
+  "id": "traefikorchestrator",
+  "name": "TraefikOrchestrator",
+  "file": "libTraefikOrchestrator.so",
+  "version": "0.1.0",
+  "autostart": false,
+  "startupDelayMs": 0,
+  "description": "Traefik reverse proxy orchestrator for dynamic routing and edge integration.",
+  "longDescription": "TraefikOrchestrator automates Traefik setup and policy-driven reverse proxy configuration with service discovery, certificate routing, and edge path controls.",
+  "dependencies": [
+    "dockerorchestrator",
+    "coreorchestrator",
+    "keyforge",
+    "signalcore"
+  ],
+  "publicIncludePaths": [
+    "Source"
+  ],
+  "targetName": "TraefikOrchestrator",
+  "projectName": "TraefikOrchestrator",
+  "outputName": "TraefikOrchestrator",
+  "linkNovaCore": true,
+  "optional": {
+    "contentPacks": [
+      "TraefikSetup"
+    ],
+    "healthEndpoints": [
+      "/api/v1/health/traefikorchestrator"
+    ],
+    "contentRoots": [
+      "Content"
+    ],
+    "telemetryStreams": [
+      "traefikorchestrator.actions"
+    ],
+    "grafanaDashboards": [
+      "grafana://celestianova/traefik-orchestrator"
+    ],
+    "serviceCapabilities": [
+      "traefik.install",
+      "traefik.configure",
+      "traefik.health"
+    ]
+  }
+}

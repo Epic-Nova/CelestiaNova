@@ -1,0 +1,50 @@
+{
+  "id": "novaloadbalancerservice",
+  "name": "NovaLoadBalancerService",
+  "file": "libNovaLoadBalancerService.so",
+  "version": "0.1.0",
+  "autostart": false,
+  "startupDelayMs": 0,
+  "description": "Service extension for load-balancer lifecycle and balancing policy management.",
+  "longDescription": "NovaLoadBalancerService provides operational control for balancing policy, backend health, and rollout-safe routing changes for hosted workloads.",
+  "dependencies": [
+    "coreservice",
+    "signalcore",
+    "keyforge",
+    "coreorchestrator",
+    "contentforge"
+  ],
+  "publicIncludePaths": [
+    "Source"
+  ],
+  "targetName": "NovaLoadBalancerService",
+  "projectName": "NovaLoadBalancerService",
+  "outputName": "NovaLoadBalancerService",
+  "linkNovaCore": true,
+  "optional": {
+    "contentRoots": [
+      "Content"
+    ],
+    "contentPacks": [
+      "LoadBalancerPolicyPack"
+    ],
+    "grafanaDashboards": [
+      "grafana://celestianova/loadbalancer-service"
+    ],
+    "healthEndpoints": [
+      "/api/v1/health/novaloadbalancerservice"
+    ],
+    "contentEndpoints": [
+      "/api/v1/content/novaloadbalancerservice",
+      "/api/v1/content/novaloadbalancerservice/policies"
+    ],
+    "telemetryStreams": [
+      "novalb.backend.healthy"
+    ],
+    "serviceCapabilities": [
+      "loadbalancer.backends.list",
+      "loadbalancer.policy.apply",
+      "loadbalancer.health"
+    ]
+  }
+}

@@ -17,6 +17,10 @@
 #include "Helpers/PipInstallHelper/PipInstallHelper.h"
 #include "Helpers/RootAccessHelper/RootAccessHelper.h"
 #include <filesystem>
+#include <algorithm>
+#include <map>
+#include "Core/ExtensionRegistry.h"
+#include "Core/ModuleManager.h"
 
 namespace Utils
 {
@@ -30,11 +34,264 @@ namespace Utils
                                               CommandLineOptionsStruct cmdOptions,
                                               const std::string& contentFolderPath) // Changed NovaFileHandle to std::string
     {
+        // Register extensions callback (plugin UI)
+        RegisterExtensionsCallback(mainMenu, cmdOptions, contentFolderPath);
+
         RegisterOptionsCallback(mainMenu, cmdOptions);
         RegisterInstallRequirementsCallback(mainMenu, cmdOptions, contentFolderPath);
         RegisterStartDocumentationCallback(mainMenu, contentFolderPath);
         RegisterHelpCallback(mainMenu);
         RegisterQuitCallback(mainMenu);
+    }
+
+    void Interactables::RegisterExtensionsCallback(std::shared_ptr<MainMenu> mainMenu,
+                                                   CommandLineOptionsStruct cmdOptions,
+                                                   const std::string& contentFolderPath)
+    {
+        mainMenu->SetMenuActionCallback("Extensions", [mainMenu]() {
+            using namespace ftxui;
+            using namespace Core;
+            using namespace Core::FileOperations;
+
+            ExtensionRegistry::Instance().Discover("Extensions");
+            auto descriptors = ExtensionRegistry::Instance().ListExtensionDescriptors();
+
+            std::sort(descriptors.begin(), descriptors.end(), [](const ExtensionDescriptor& a, const ExtensionDescriptor& b) {
+                const std::string an = a.name.empty() ? a.id : a.name;
+                const std::string bn = b.name.empty() ? b.id : b.name;
+                if (an == bn) {
+                    return a.id < b.id;
+                }
+                return an < bn;
+            });
+
+            struct ExtensionViewEntry {
+                std::string id;
+                std::string label;
+                bool isCategoryHeader = false;
+            };
+
+            auto toForwardSlashes = [](std::string value) {
+                std::replace(value.begin(), value.end(), '\\', '/');
+                return value;
+            };
+
+            auto categoryFromDescriptor = [&](const ExtensionDescriptor& descriptor) {
+                std::string descriptorPath = ExtensionRegistry::Instance().GetExtensionDescriptorPath(descriptor.id);
+                descriptorPath = toForwardSlashes(descriptorPath);
+
+                size_t markerPos = descriptorPath.find("/Extensions/");
+                if (markerPos == std::string::npos) {
+                    markerPos = descriptorPath.find("Extensions/");
+                    if (markerPos == std::string::npos) {
+                        return std::string("Uncategorized");
+                    }
+                    markerPos += std::string("Extensions/").size();
+                } else {
+                    markerPos += std::string("/Extensions/").size();
+                }
+
+                std::string relativePath = descriptorPath.substr(markerPos);
+                std::vector<std::string> segments;
+                std::string token;
+                for (char c : relativePath) {
+                    if (c == '/') {
+                        if (!token.empty()) {
+                            segments.push_back(token);
+                            token.clear();
+                        }
+                        continue;
+                    }
+                    token.push_back(c);
+                }
+                if (!token.empty()) {
+                    segments.push_back(token);
+                }
+
+                if (segments.size() < 3) {
+                    return std::string("Uncategorized");
+                }
+
+                std::string category;
+                for (size_t i = 0; i + 2 < segments.size(); ++i) {
+                    if (!category.empty()) {
+                        category += "/";
+                    }
+                    category += segments[i];
+                }
+                return category.empty() ? std::string("Uncategorized") : category;
+            };
+
+            std::map<std::string, std::vector<const ExtensionDescriptor*>> descriptorsByCategory;
+            for (const auto& descriptor : descriptors) {
+                descriptorsByCategory[categoryFromDescriptor(descriptor)].push_back(&descriptor);
+            }
+
+            std::vector<ExtensionViewEntry> extensionEntries;
+            std::vector<std::string> extensionLabels;
+
+            for (auto& [category, categoryDescriptors] : descriptorsByCategory) {
+                std::sort(categoryDescriptors.begin(), categoryDescriptors.end(), [](const ExtensionDescriptor* a, const ExtensionDescriptor* b) {
+                    const std::string an = a->name.empty() ? a->id : a->name;
+                    const std::string bn = b->name.empty() ? b->id : b->name;
+                    if (an == bn) {
+                        return a->id < b->id;
+                    }
+                    return an < bn;
+                });
+
+                ExtensionViewEntry categoryHeader;
+                categoryHeader.id = "";
+                categoryHeader.label = "[" + category + "]";
+                categoryHeader.isCategoryHeader = true;
+                extensionEntries.push_back(categoryHeader);
+
+                for (const auto* descriptor : categoryDescriptors) {
+                    ExtensionViewEntry entry;
+                    entry.id = descriptor->id;
+                    std::string displayName = descriptor->name.empty() ? descriptor->id : descriptor->name;
+                    entry.label = "  " + displayName + " (" + descriptor->id + ")";
+                    if (!descriptor->version.empty()) {
+                        entry.label += " v" + descriptor->version;
+                    }
+                    extensionEntries.push_back(std::move(entry));
+                }
+            }
+
+            if (extensionEntries.empty()) {
+                extensionEntries.push_back({"", "No extensions discovered", true});
+            }
+
+            for (const auto& entry : extensionEntries) {
+                extensionLabels.push_back(entry.label);
+            }
+
+            int selectedIndex = 0;
+            bool showDescriptorJson = false;
+            std::string activeDescriptorPath;
+            std::string activeDescriptorBody;
+
+            auto listMenu = Menu(&extensionLabels, &selectedIndex);
+
+            auto openDescriptorButton = Button("Open Descriptor JSON", [&]() {
+                if (selectedIndex < 0 || selectedIndex >= static_cast<int>(extensionEntries.size())) {
+                    return;
+                }
+
+                const auto& selectedEntry = extensionEntries[selectedIndex];
+                if (selectedEntry.isCategoryHeader || selectedEntry.id.empty()) {
+                    return;
+                }
+
+                const std::string selectedId = selectedEntry.id;
+
+                activeDescriptorPath = ExtensionRegistry::Instance().GetExtensionDescriptorPath(selectedId);
+                if (activeDescriptorPath.empty()) {
+                    activeDescriptorBody = "Descriptor path unavailable for this extension.";
+                } else {
+                    activeDescriptorBody = NovaFileOperations::ReadTextFile(activeDescriptorPath);
+                    if (activeDescriptorBody.empty()) {
+                        activeDescriptorBody = "Descriptor file is empty or unreadable.";
+                    }
+                }
+                showDescriptorJson = true;
+            });
+
+            auto closeDescriptorButton = Button("Close Descriptor", [&]() {
+                showDescriptorJson = false;
+            });
+
+            auto backButton = Button("Back", [mainMenu]() {
+                mainMenu->GetScreen().ExitLoopClosure()();
+            });
+
+            auto actions = Container::Horizontal({openDescriptorButton, closeDescriptorButton, backButton});
+            auto root = Container::Vertical({listMenu, actions});
+
+            auto component = Renderer(root, [&]() -> Element {
+                const ExtensionDescriptor* selectedDescriptor = nullptr;
+                if (selectedIndex >= 0 && selectedIndex < static_cast<int>(extensionEntries.size())) {
+                    const auto& selectedEntry = extensionEntries[selectedIndex];
+                    if (!selectedEntry.isCategoryHeader && !selectedEntry.id.empty()) {
+                        selectedDescriptor = ExtensionRegistry::Instance().GetExtensionDescriptor(selectedEntry.id);
+                    }
+                }
+
+                Elements details;
+                std::string longDescription;
+                details.push_back(text("Descriptor Viewer") | bold | color(Color::Cyan));
+
+                if (selectedDescriptor) {
+                    details.push_back(text("ID: " + selectedDescriptor->id));
+                    if (!selectedDescriptor->description.empty()) {
+                        details.push_back(paragraph("Summary: " + selectedDescriptor->description));
+                    }
+                    if (!selectedDescriptor->longDescription.empty()) {
+                        longDescription = selectedDescriptor->longDescription;
+                    }
+                    details.push_back(text("Dependencies: " + std::to_string(selectedDescriptor->dependencies.size())));
+                } else {
+                    if (selectedIndex >= 0 && selectedIndex < static_cast<int>(extensionEntries.size()) && extensionEntries[selectedIndex].isCategoryHeader) {
+                        details.push_back(text("Category: " + extensionEntries[selectedIndex].label));
+                        details.push_back(paragraph("Select an extension row under this category to inspect its descriptor."));
+                    } else {
+                        details.push_back(text("No descriptor selected."));
+                    }
+                }
+
+                Element detailsBody = vbox(details);
+                if (!longDescription.empty()) {
+                    detailsBody = vbox({
+                        detailsBody,
+                        separator(),
+                        text("Long Description") | bold,
+                        paragraph(longDescription) | size(WIDTH, EQUAL, 66) | flex,
+                    });
+                }
+
+                Element listPanel = window(
+                    text("Extensions (Folder-Categorized)"),
+                    listMenu->Render() | frame | vscroll_indicator | size(WIDTH, EQUAL, 62) | size(HEIGHT, EQUAL, 16)
+                );
+
+                Element detailsPanel = window(
+                    text("Selection"),
+                    detailsBody | frame | vscroll_indicator | size(WIDTH, EQUAL, 74) | size(HEIGHT, EQUAL, 16)
+                );
+
+                Elements body;
+                body.push_back(text("Extensions Catalog") | bold | center | color(Color::Blue));
+                body.push_back(text("Browse extension descriptors only. This menu never executes extensions.") | center | color(Color::GrayLight));
+                body.push_back(separator());
+                body.push_back(hbox({listPanel, detailsPanel}));
+
+                if (showDescriptorJson) {
+                    body.push_back(separator());
+                    std::string descriptorTitle = activeDescriptorPath.empty() ? "Descriptor JSON" : ("Descriptor JSON: " + activeDescriptorPath);
+                    body.push_back(
+                        window(
+                            text(descriptorTitle),
+                            paragraph(activeDescriptorBody) | frame | vscroll_indicator | size(HEIGHT, LESS_THAN, 14)
+                        )
+                    );
+                }
+
+                body.push_back(separator());
+                body.push_back(actions->Render() | center);
+
+                return vbox(body) | border | size(WIDTH, EQUAL, 140) | center;
+            });
+
+            auto withEvents = CatchEvent(component, [&](Event event) {
+                if (event == Event::Escape && showDescriptorJson) {
+                    showDescriptorJson = false;
+                    return true;
+                }
+                return false;
+            });
+
+            mainMenu->GetScreen().Loop(withEvents);
+        });
     }
 
     /**
@@ -389,16 +646,18 @@ namespace Utils
     {
         mainMenu->SetMenuActionCallback("Quit", [mainMenu]() {
             NOVA_LOG("Quitting application...", LogType::Debug);
-            // First exit the screen loop
-            exit(0);
-            mainMenu->GetScreen().ExitLoopClosure();
 
-            // Then exit the application
-            #ifdef _WIN32
-            PostQuitMessage(0);
-            #else
-            std::exit(0);
-            #endif
+            // First request the FTXUI screen loop to exit so terminal state is restored
+            try {
+                auto exitClosure = mainMenu->GetScreen().ExitLoopClosure();
+                if (exitClosure) exitClosure();
+            } catch (...) {}
+
+            // Unload all modules/plugins to allow them to perform cleanup
+            try { Core::ExtensionRegistry::Instance().UnloadAllExtensions(); } catch (...) {}
+
+            // Final log and return to allow process to exit cleanly
+            NOVA_LOG("Application shutdown sequence initiated", LogType::Log);
         });
     }
 }

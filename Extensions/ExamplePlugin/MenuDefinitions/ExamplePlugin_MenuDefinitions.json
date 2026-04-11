@@ -1,0 +1,57 @@
+{
+  "$schema": "../../Core/CanvasCore/MenuDefinitions/CanvasMenuDefinitions.schema.json",
+  "schema": "canvas.menu.definitions.v1",
+  "ownerExtensionId": "exampleplugin",
+  "menus": [
+    {
+      "id": "example_environment_setup",
+      "title": "Example Environment Setup",
+      "subtitle": "Demonstrates dynamic environment resolution",
+      "icon": "EXAMPLE",
+      "pageRequirements": [
+        "environment.target"
+      ],
+      "sections": [
+        {
+          "id": "environment_section",
+          "title": "Environment",
+          "description": "Environment options are dynamically resolved by a resolver extension.",
+          "fields": [
+            {
+              "id": "targetEnvironment",
+              "label": "Target Environment",
+              "description": "Resolved dynamically from resolver output.",
+              "type": "ProviderSelect",
+              "requirementBinding": {
+                "key": "environment.target",
+                "source": "AnyExtension",
+                "resolveMode": "ValueList",
+                "strategy": "ApiRequest",
+                "requestAction": "exampleplugin.environments.list",
+                "responseCollectionPath": "environments",
+                "responseLabelPath": "displayName",
+                "responseValuePath": "name",
+                "preferredResolverExtensionIds": [
+                  "exampleplugin"
+                ],
+                "requestStructName": "CoreRequirementResolveRequest",
+                "outputStructName": "CoreRequirementResolveResult"
+              },
+              "validations": [
+                {
+                  "kind": "Required",
+                  "argument": "",
+                  "message": "Please choose an environment"
+                }
+              ],
+              "valueStorage": "ConfigJson",
+              "outputKey": "example.environment.target"
+            }
+          ]
+        }
+      ],
+      "submitAction": "service.exampleplugin.configureEnvironment",
+      "cancelAction": "menu.back"
+    }
+  ]
+}

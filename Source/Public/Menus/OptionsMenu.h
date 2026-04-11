@@ -6,6 +6,7 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
+#include "Core/ModuleAPI.h"
 
 namespace Menus
 {
@@ -13,7 +14,7 @@ namespace Menus
     using Utils::CommandLineOptions;
     using Utils::CommandLineOptionsStruct;
 
-    class OptionsMenu : public BaseMenu
+    class NOVA_CORE_API OptionsMenu : public BaseMenu
     {
     public:
         static std::shared_ptr<OptionsMenu> Create(CommandLineOptionsStruct& options);

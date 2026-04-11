@@ -1,0 +1,20 @@
+﻿{
+    "id":  "exampledependentplugin",
+    "name":  "ExampleDependentPlugin",
+    "file":  "libExampleDependentPlugin.so",
+    "version":  "0.1.0",
+    "autostart":  false,
+    "startupDelayMs":  0,
+    "description":  "Sample extension that demonstrates descriptor-level dependencies on ExamplePlugin.",
+    "longDescription":  "ExampleDependentPlugin is a reference dependent extension that validates build-time include propagation and runtime dependency ordering by requiring ExamplePlugin in its manifest.",
+    "dependencies":  [
+                         "exampleplugin"
+                     ],
+    "publicIncludePaths":  [
+                               "Source"
+                           ],
+    "targetName":  "ExampleDependentPlugin",
+    "projectName":  "ExampleDependentPlugin",
+    "outputName":  "ExampleDependentPlugin",
+    "linkNovaCore":  true
+}

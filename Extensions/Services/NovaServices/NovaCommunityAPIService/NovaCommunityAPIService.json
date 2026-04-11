@@ -1,0 +1,49 @@
+{
+  "id": "novacommunityapiservice",
+  "name": "NovaCommunityAPIService",
+  "file": "libNovaCommunityAPIService.so",
+  "version": "0.1.0",
+  "autostart": false,
+  "startupDelayMs": 0,
+  "description": "Service exposing community-facing API capabilities and related integration routes.",
+  "longDescription": "NovaCommunityAPIService provides community feature API surfaces and coordination logic, integrating with primary API capabilities, content pack routes, and secure runtime services.",
+  "dependencies": [
+    "coreservice",
+    "novaapiservice",
+    "keyforge",
+    "contentforge"
+  ],
+  "publicIncludePaths": [
+    "Source"
+  ],
+  "targetName": "NovaCommunityAPIService",
+  "projectName": "NovaCommunityAPIService",
+  "outputName": "NovaCommunityAPIService",
+  "linkNovaCore": true,
+  "optional": {
+    "contentRoots": [
+      "Content"
+    ],
+    "contentPacks": [
+      "CommunityAPIPack"
+    ],
+    "grafanaDashboards": [
+      "grafana://celestianova/community-api-service"
+    ],
+    "healthEndpoints": [
+      "/api/v1/health/novacommunityapiservice"
+    ],
+    "contentEndpoints": [
+      "/api/v1/content/novacommunityapiservice",
+      "/api/v1/content/novacommunityapiservice/packs"
+    ],
+    "telemetryStreams": [
+      "novacommunityapi.request.count"
+    ],
+    "serviceCapabilities": [
+      "community.api.routes.list",
+      "community.content.resolve",
+      "community.health"
+    ]
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "id": "pulsecore",
+  "name": "PulseCore",
+  "file": "libPulseCore.so",
+  "version": "0.1.0",
+  "autostart": true,
+  "startupDelayMs": 150,
+  "description": "Telemetry ingestion and aggregation core for host and service observability.",
+  "longDescription": "PulseCore normalizes telemetry streams from extensions and services, enabling status views, alert fan-out through SignalCore, and dashboard-grade metric export.",
+  "dependencies": [
+    "signalcore",
+    "nexuscore",
+    "coreservice"
+  ],
+  "publicIncludePaths": [
+    "Source"
+  ],
+  "targetName": "PulseCore",
+  "projectName": "PulseCore",
+  "outputName": "PulseCore",
+  "linkNovaCore": true,
+  "optional": {
+    "contentPacks": [
+      "PulseMetrics"
+    ],
+    "healthEndpoints": [
+      "/api/v1/health/pulsecore"
+    ],
+    "contentRoots": [
+      "Content"
+    ],
+    "telemetryStreams": [
+      "pulse.ingest.rate",
+      "pulse.stream.count"
+    ],
+    "grafanaDashboards": [
+      "grafana://celestianova/pulsecore-observability"
+    ],
+    "serviceCapabilities": [
+      "telemetry.ingest",
+      "telemetry.query",
+      "telemetry.streams.list"
+    ]
+  }
+}

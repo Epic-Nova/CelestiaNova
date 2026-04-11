@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "NovaCore.h"
+#include "ModuleAPI.h"
 #include "NovaMinimal.h"
 
 #include <string>
@@ -25,7 +25,7 @@ namespace Core {
 		Assert
 	};
 
-	class NovaLog
+	class NOVA_CORE_API NovaLog
 	{
 	public:
 		static void Type(const char* Message, LogType Type);
@@ -34,6 +34,8 @@ namespace Core {
 		static void StartLogFile();
 		static void* CreateScrollableLog();
 		static void* RenderLog();
+		static void LogStackTrace(const char* Context = nullptr);
+		static void LogObjectTrace(const char* Context = nullptr);
 		
 	//private:
 		static void Log(const char* Message);
@@ -49,3 +51,5 @@ namespace Core {
 		static bool verboseEnabled;
 	};
 }
+// Provide a global alias so callers can use `LogType::X` without `Core::` qualification
+using LogType = Core::LogType;

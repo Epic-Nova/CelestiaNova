@@ -1,0 +1,51 @@
+{
+  "id": "surrealdborchestrator",
+  "name": "SurrealDBOrchestrator",
+  "file": "libSurrealDBOrchestrator.so",
+  "version": "0.1.0",
+  "autostart": false,
+  "startupDelayMs": 0,
+  "description": "Database orchestrator for SurrealDB setup, runtime configuration, and secure service integration.",
+  "longDescription": "SurrealDBOrchestrator automates SurrealDB deployment and operational setup, covering install checks, config generation, startup orchestration, environment routing hooks, and integration handoffs to dependent services.",
+  "dependencies": [
+    "coreorchestrator",
+    "keyforge",
+    "signalcore",
+    "contentforge"
+  ],
+  "publicIncludePaths": [
+    "Source"
+  ],
+  "targetName": "SurrealDBOrchestrator",
+  "projectName": "SurrealDBOrchestrator",
+  "outputName": "SurrealDBOrchestrator",
+  "linkNovaCore": true,
+  "optional": {
+    "contentRoots": [
+      "Content"
+    ],
+    "contentPacks": [
+      "SurrealDBBootstrapPack",
+      "SurrealDBPolicyPack"
+    ],
+    "grafanaDashboards": [
+      "grafana://celestianova/surrealdb-orchestrator"
+    ],
+    "healthEndpoints": [
+      "/api/v1/health/surrealdborchestrator"
+    ],
+    "contentEndpoints": [
+      "/api/v1/content/surrealdborchestrator",
+      "/api/v1/content/surrealdborchestrator/packs"
+    ],
+    "telemetryStreams": [
+      "surrealdb.orchestrator.jobs"
+    ],
+    "serviceCapabilities": [
+      "surrealdb.setup",
+      "surrealdb.env.rules",
+      "surrealdb.credentials.inject",
+      "surrealdb.health"
+    ]
+  }
+}

@@ -16,6 +16,10 @@ namespace Utils
         bool requestRootForPip = true; // Request root access for Pip
         bool requestRootForVenv = true; // Request root access for Virtual Environment
         bool scrollableLogAlwaysVisible = false; // Keep scrollable log always visible
+        // When true, suppresses mouse-movement events in the CanvasCore menu loop
+        // (disables the "Light Party" cursor-tracking animation).
+        // Persisted to Config/app_options.json via OptionsMenu.
+        bool disableMousePartyMode = false;
         std::string mkdocsProjectPath = "Rawr, I am a Dinosaur!"; // Path to MkDocs project
     };
     

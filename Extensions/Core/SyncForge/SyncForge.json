@@ -1,0 +1,21 @@
+﻿{
+    "id":  "syncforge",
+    "name":  "SyncForge",
+    "file":  "libSyncForge.so",
+    "version":  "0.1.0",
+    "autostart":  true,
+    "startupDelayMs":  120,
+    "description":  "Secure update synchronization core for extension and platform rollout coordination.",
+    "longDescription":  "SyncForge coordinates trusted update checks and rollout workflows for Celestia Nova, handling source synchronization, gated update stages, and update-state propagation to dependent components.",
+    "dependencies":  [
+                         "aegiscore",
+                         "signalcore"
+                     ],
+    "publicIncludePaths":  [
+                               "Source"
+                           ],
+    "targetName":  "SyncForge",
+    "projectName":  "SyncForge",
+    "outputName":  "SyncForge",
+    "linkNovaCore":  true
+}
