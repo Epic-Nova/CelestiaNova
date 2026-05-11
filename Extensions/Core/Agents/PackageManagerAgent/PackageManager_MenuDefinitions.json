@@ -1,0 +1,70 @@
+{
+    "$schema": "../../CanvasCore/MenuDefinitions/CanvasMenuDefinitions.schema.json",
+    "schema": "canvas.menu.definitions.v1",
+    "ownerExtensionId": "packagemanageragent",
+    "menus": [
+        {
+            "id": "package_manager_status",
+            "title": "System Installation Progress",
+            "subtitle": "Monitoring package deployment and configuration",
+            "icon": "PACKAGE",
+            "pageRequirements": [],
+            "sections": [
+                {
+                    "id": "progress_section",
+                    "title": "Overall Progress",
+                    "description": "Visual feedback for the active installation queue.",
+                    "fields": [
+                        {
+                            "id": "overall_progress",
+                            "label": "Completion",
+                            "description": "Percentage of total tasks completed",
+                            "type": "ProgressGauge",
+                            "defaultValue": "0",
+                            "requirementBinding": {
+                                "key": "package_manager.progress",
+                                "strategy": "Custom"
+                            },
+                            "validations": [],
+                            "valueStorage": "RuntimeOnly"
+                        },
+                        {
+                            "id": "current_step",
+                            "label": "Active Step",
+                            "description": "The specific task currently being executed",
+                            "type": "TextLabel",
+                            "defaultValue": "IDLE",
+                            "requirementBinding": {
+                                "key": "package_manager.step",
+                                "strategy": "Custom"
+                            },
+                            "validations": [],
+                            "valueStorage": "RuntimeOnly"
+                        }
+                    ]
+                },
+                {
+                    "id": "log_section",
+                    "title": "Diagnostic Logs",
+                    "description": "Live stdout/stderr stream from the underlying package manager.",
+                    "fields": [
+                        {
+                            "id": "install_logs",
+                            "label": "Output Stream",
+                            "description": "Scrollable terminal output",
+                            "type": "TerminalView",
+                            "defaultValue": "Waiting for process output...",
+                            "requirementBinding": {
+                                "key": "package_manager.logs",
+                                "strategy": "Custom"
+                            },
+                            "validations": [],
+                            "valueStorage": "RuntimeOnly"
+                        }
+                    ]
+                }
+            ],
+            "cancelAction": "menu.back"
+        }
+    ]
+}

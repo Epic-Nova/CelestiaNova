@@ -14,7 +14,6 @@
 #include <thread>
 #include "UnitTests/BaseUnitTest.h"
 #include "UnitTests/UnitTestManager.h"
-#include "Menus/OptionsMenu.h"
 #include <cpptrace/cpptrace.hpp>
 
 #ifndef BUILD_CONFIGURATION
@@ -71,6 +70,37 @@ int main(int argc, const char* argv[])
     NovaLog::StartLogFile();
     NovaLog::CreateRequiredDirectories();
 
+    // Initialize command-line options structure
+    CommandLineOptionsStruct cmdOptions;
+    {
+        NOVA_LOG("Command line arguments received:", LogType::Log);
+        for (int i = 0; i < argc; ++i) {
+            NOVA_LOG(("Argument " + std::to_string(i) + ": " + argv[i]).c_str(), LogType::Log);
+        }
+
+        // Register Core command-line options dynamically
+        auto* manager = CommandLineOptions::GetSingletonInstance();
+        manager->RegisterBoolOption("verbose", &cmdOptions.verbose, []() {
+            NovaLog::SetVerbose(true);
+            NOVA_LOG("Verbose mode enabled via CLI", LogType::Log);
+        });
+        manager->RegisterBoolOption("no-root", &cmdOptions.noRoot, []() {
+            NOVA_LOG("No-root mode enabled via CLI", LogType::Log);
+        });
+        manager->RegisterBoolOption("clear-content", &cmdOptions.clearContent, []() {
+            NOVA_LOG("Content clearing requested via CLI", LogType::Log);
+        });
+        manager->RegisterOption("mkdocs-path", &cmdOptions.mkdocsProjectPath, []() {
+            NOVA_LOG("MkDocs path set via CLI", LogType::Log);
+        });
+
+        // Parse command-line arguments for core options
+        CommandLineParsing::ParseArguments(argc, argv, manager->GetOptionMapping(), manager->GetBoolMapping());
+        
+        // Execute behaviors for enabled core options
+        manager->ExecuteEnabledOptions();
+    }
+
     NOVA_LOG("Starting Celestia Nova", LogType::Log);
 
     // CanvasCore is expected to autostart and provide app menu definitions.
@@ -91,7 +121,10 @@ int main(int argc, const char* argv[])
         }
     }
 
-        const std::string buildConfiguration = BUILD_CONFIGURATION;
+    // Dispatch CLI arguments to all loaded extensions
+    Core::ExtensionRegistry::Instance().ApplyCliArguments(argc, argv);
+
+    const std::string buildConfiguration = BUILD_CONFIGURATION;
 
     if (buildConfiguration == "Development" || buildConfiguration == "Testing")
     {
@@ -116,26 +149,6 @@ int main(int argc, const char* argv[])
     }
 
     
-    // Initialize command-line options structure
-    CommandLineOptionsStruct cmdOptions;
-    {
-        NOVA_LOG("Command line arguments received:", LogType::Log);
-        for (int i = 0; i < argc; ++i) {
-            NOVA_LOG(("Argument " + std::to_string(i) + ": " + argv[i]).c_str(), LogType::Log);
-        }
-
-        // Create options menu
-        auto optionsMenu = Menus::OptionsMenu::Create(cmdOptions);
-
-        // Register command-line options dynamically
-        optionsMenu->RegisterCommandLineOptions();
-
-        // Parse command-line arguments using dynamically registered options
-        cmdOptions = CommandLineParsing::ParseArguments(argc, argv, optionsMenu->GetCommandLineMapping());
-
-        // Apply command-line arguments to the options menu
-        optionsMenu->ApplyCommandLineOptions(cmdOptions);
-    }
 
     auto* canvasRuntimeSurface = dynamic_cast<Core::ICanvasRuntimeSurfaceProvider*>(
         Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("canvascore"));

@@ -24,5 +24,7 @@ public:
 
     void StartupModule() override;
     void ShutdownModule() override;
+
+    void RunStartupSequence();
 };
 

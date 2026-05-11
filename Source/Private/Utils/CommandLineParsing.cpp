@@ -10,19 +10,28 @@ namespace Utils
     using namespace Core;
     using namespace Utils;
 
-    CommandLineOptionsStruct CommandLineParsing::ParseArguments(int argc, const char* argv[], const std::unordered_map<std::string, std::string*>& optionMapping)
+    CommandLineOptionsStruct CommandLineParsing::ParseArguments(int argc, const char* argv[], 
+                                                 const std::unordered_map<std::string, std::string*>& optionMapping,
+                                                 const std::unordered_map<std::string, bool*>& boolMapping)
     {
         CommandLineOptionsStruct options;
 
         for (int i = 1; i < argc; ++i) {
             std::string arg = argv[i];
 
-            // Check if the argument matches any registered option
+            // Check boolean options
+            for (const auto& [key, value] : boolMapping) {
+                if (arg == "-" + key || arg == "--" + key) {
+                    if (value) *value = true;
+                    NOVA_LOG(("Command line: " + key + " (bool) enabled").c_str(), LogType::Log);
+                }
+            }
+
+            // Check string/valued options
             for (const auto& [key, value] : optionMapping) {
                 if (arg == "-" + key || arg == "--" + key) {
-                    *value = true;
+                    if (value) *value = "true";
                     NOVA_LOG(("Command line: " + key + " enabled").c_str(), LogType::Log);
-                    break;
                 }
             }
 
@@ -34,6 +43,37 @@ namespace Utils
         }
 
         return options;
+    }
+
+    std::vector<Core::FExtensionCliArg> CommandLineParsing::ParseExtensionArguments(int argc, const char* argv[], const std::vector<Core::FExtensionCliArgDescriptor>& descriptors)
+    {
+        std::vector<Core::FExtensionCliArg> results;
+        if (descriptors.empty()) return results;
+
+        for (int i = 1; i < argc; ++i) {
+            std::string arg = argv[i];
+            
+            for (const auto& desc : descriptors) {
+                // Match exact flag (e.g. --flag or -flag)
+                if (arg == desc.Flag || arg == ("-" + desc.Flag) || arg == ("--" + desc.Flag)) {
+                    Core::FExtensionCliArg result;
+                    result.Flag = desc.Flag;
+                    
+                    if (desc.RequiresValue) {
+                        if (i + 1 < argc) {
+                            result.Value = argv[++i];
+                        } else {
+                            NOVA_LOG(("Command line: " + desc.Flag + " requires a value but none provided").c_str(), LogType::Warning);
+                        }
+                    }
+                    
+                    results.push_back(std::move(result));
+                    break;
+                }
+            }
+        }
+
+        return results;
     }
 
     void CommandLineParsing::DisplayHelp(const std::unordered_map<std::string, std::string*>& optionMapping)

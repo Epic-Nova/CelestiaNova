@@ -27,7 +27,7 @@ namespace Utils
     /**
      * Class to manage application options dynamically.
      */
-    class CommandLineOptions
+    class NOVA_CORE_API CommandLineOptions
     {
     public:
 
@@ -38,26 +38,48 @@ namespace Utils
         }
 
         // Register an option with its associated behavior
-        void RegisterOption(const std::string& name, std::string* flag, std::function<void()> handler)
+        void RegisterOption(const std::string& name, std::string* valuePtr, std::function<void()> handler)
         {
-            optionMapping_[name] = flag;
+            optionMapping_[name] = valuePtr;
             optionHandlers_[name] = handler;
         }
 
-        // Get the mapping of options to their flags
+        // Register a boolean option
+        void RegisterBoolOption(const std::string& name, bool* boolPtr, std::function<void()> handler)
+        {
+            boolMapping_[name] = boolPtr;
+            optionHandlers_[name] = handler;
+        }
+
+        // Get the mapping of options to their flags (for string/valued options)
         const std::unordered_map<std::string, std::string*>& GetOptionMapping() const
         {
             return optionMapping_;
         }
 
+        // Get the mapping of boolean options
+        const std::unordered_map<std::string, bool*>& GetBoolMapping() const
+        {
+            return boolMapping_;
+        }
+
         // Execute the behavior for all enabled options
         void ExecuteEnabledOptions() const
         {
-            for (const auto& [name, flag] : optionMapping_) {
-                if (*flag == "true") { // Assuming flags are stored as "true" or "false"
+            for (const auto& [name, ptr] : boolMapping_) {
+                if (ptr && *ptr) {
                     auto it = optionHandlers_.find(name);
                     if (it != optionHandlers_.end()) {
-                        it->second(); // Call the associated behavior
+                        it->second();
+                    }
+                }
+            }
+
+            for (const auto& [name, flag] : optionMapping_) {
+                if (flag && !flag->empty() && *flag != "false") { 
+                    auto it = optionHandlers_.find(name);
+                    if (it != optionHandlers_.end()) {
+                        it->second();
                     }
                 }
             }
@@ -66,17 +88,52 @@ namespace Utils
         // Check if a specific option is enabled
         bool IsOptionEnabled(const std::string& name) const
         {
+            auto itBool = boolMapping_.find(name);
+            if (itBool != boolMapping_.end()) {
+                return itBool->second && *(itBool->second);
+            }
+
             auto it = optionMapping_.find(name);
             if (it != optionMapping_.end()) {
-                return *(it->second) == "true"; // Assuming flags are stored as "true" or "false"
+                return it->second && !it->second->empty() && *(it->second) != "false";
             }
-            return false; // Option not found, consider it disabled
+            return false;
+        }
+
+        // Check if an option is registered
+        bool IsOptionRegistered(const std::string& name) const
+        {
+            return optionMapping_.find(name) != optionMapping_.end() || boolMapping_.find(name) != boolMapping_.end();
+        }
+
+        // Update an option value dynamically
+        void SetOptionValue(const std::string& name, const std::string& value)
+        {
+            auto itBool = boolMapping_.find(name);
+            if (itBool != boolMapping_.end() && itBool->second) {
+                *(itBool->second) = (value == "true" || value == "1");
+                auto handlerIt = optionHandlers_.find(name);
+                if (handlerIt != optionHandlers_.end()) {
+                    handlerIt->second();
+                }
+                return;
+            }
+
+            auto it = optionMapping_.find(name);
+            if (it != optionMapping_.end() && it->second) {
+                *(it->second) = value;
+                auto handlerIt = optionHandlers_.find(name);
+                if (handlerIt != optionHandlers_.end()) {
+                    handlerIt->second();
+                }
+            }
         }
 
     private:
         std::unordered_map<std::string, std::string*> optionMapping_; // Maps option names to flags
+        std::unordered_map<std::string, bool*> boolMapping_; // Maps option names to bool flags
         std::unordered_map<std::string, std::function<void()>> optionHandlers_; // Maps option names to behaviors
 
         static CommandLineOptions* instance_; // Singleton instance
     };
-}
+}

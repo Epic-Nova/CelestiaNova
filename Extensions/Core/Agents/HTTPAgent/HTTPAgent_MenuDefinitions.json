@@ -1,0 +1,84 @@
+{
+    "$schema": "../../CanvasCore/MenuDefinitions/CanvasMenuDefinitions.schema.json",
+    "schema": "canvas.menu.definitions.v1",
+    "ownerExtensionId": "httpagent",
+    "menus": [
+        {
+            "id": "http_main",
+            "title": "HTTP Network Agent",
+            "subtitle": "Request orchestration and file downloads",
+            "icon": "NETWORK",
+            "pageRequirements": [],
+            "sections": [
+                {
+                    "id": "actions",
+                    "title": "Actions",
+                    "description": "Network connectivity operations.",
+                    "fields": [
+                        {
+                            "id": "test_connectivity",
+                            "label": "Test Connectivity",
+                            "description": "Perform GET request to google.com",
+                            "type": "ActionButton",
+                            "defaultValue": "http.action.test_connectivity",
+                            "validations": [],
+                            "valueStorage": "RuntimeOnly",
+                            "outputKey": "http.action.test_connectivity"
+                        },
+                        {
+                            "id": "http_url",
+                            "label": "Target URL",
+                            "description": "URL used by HTTP actions.",
+                            "type": "String",
+                            "defaultValue": "https://google.com",
+                            "validations": [],
+                            "valueStorage": "RuntimeOnly",
+                            "outputKey": "http.input.url"
+                        },
+                        {
+                            "id": "http_headers",
+                            "label": "Headers",
+                            "description": "Optional headers (one per line: Key: Value).",
+                            "type": "String",
+                            "defaultValue": "",
+                            "validations": [],
+                            "valueStorage": "RuntimeOnly",
+                            "outputKey": "http.input.headers"
+                        }
+                    ]
+                }
+            ],
+            "cancelAction": "menu.back"
+        },
+        {
+            "id": "http_progress",
+            "title": "Network Activity",
+            "subtitle": "Live diagnostic stream",
+            "icon": "TERMINAL",
+            "sections": [
+                {
+                    "id": "logs",
+                    "title": "Diagnostic Output",
+                    "description": "Real-time feed from the HTTP agent.",
+                    "fields": [
+                        {
+                            "id": "http_logs",
+                            "label": "Live Output",
+                            "description": "Streaming curl output",
+                            "type": "TerminalView",
+                            "defaultValue": "Waiting for network traffic...",
+                            "requirementBinding": {
+                                "key": "http.logs",
+                                "source": "Agent",
+                                "strategy": "RegistryLookup"
+                            },
+                            "validations": [],
+                            "valueStorage": "RuntimeOnly"
+                        }
+                    ]
+                }
+            ],
+            "cancelAction": "menu.goto:httpagent::http_main"
+        }
+    ]
+}

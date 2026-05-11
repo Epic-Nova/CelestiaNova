@@ -1,5 +1,4 @@
 # Editor and IDE settings
-.vscode/
 .idea/
 *.code-workspace
 

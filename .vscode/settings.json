@@ -1,0 +1,25 @@
+{
+  "json.schemas": [
+    {
+      "fileMatch": [
+        "Extensions/Core/*/*.json",
+        "Extensions/Core/Agents/*/*.json",
+        "Extensions/Orchestrators/*/*.json",
+        "Extensions/Orchestrators/*/*/*.json",
+        "Extensions/Orchestrators/*/*/*/*.json",
+        "Extensions/Services/*/*.json",
+        "Extensions/Services/*/*/*.json",
+        "Extensions/Samples/*/*.json",
+        "Extensions/ExamplePlugin/*.json"
+      ],
+      "url": "./Extensions/ExtensionDescriptor.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/*_MenuDefinitions.json",
+        "**/*_MenuDefinitions.example.json"
+      ],
+      "url": "./Extensions/Core/CanvasCore/MenuDefinitions/CanvasMenuDefinitions.schema.json"
+    }
+  ]
+}

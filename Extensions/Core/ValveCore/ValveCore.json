@@ -1,0 +1,33 @@
+{
+  "id": "valvecore",
+  "name": "ValveCore",
+  "file": "libValveCore.so",
+  "version": "0.1.0",
+  "autostart": true,
+  "startupDelayMs": 100,
+  "description": "Traffic shaping and application-level rate limiting core.",
+  "longDescription": "ValveCore provides request metering, token-bucket rate limiting, and traffic shaping policies for Celestia Nova services. It integrates with Redis for distributed limit tracking and exposes policy-aware decision surfaces for gateways.",
+  "dependencies": [
+    "nexuscore",
+    "signalcore"
+  ],
+  "publicIncludePaths": [
+    "Source"
+  ],
+  "targetName": "ValveCore",
+  "projectName": "ValveCore",
+  "outputName": "ValveCore",
+  "linkNovaCore": true,
+  "optional": {
+    "telemetryStreams": [
+      "valve.request.allowed",
+      "valve.request.denied",
+      "valve.policy.active"
+    ],
+    "serviceCapabilities": [
+      "valve.limit.check",
+      "valve.policy.list",
+      "valve.stats.reset"
+    ]
+  }
+}

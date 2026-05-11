@@ -11,6 +11,8 @@
 #include "Core/NovaLog.h"
 #include "Core/NovaFileOperations.h"
 #include "json.hpp"
+#include "Utils/CommandLineParsing.h"
+#include "ExtensionSpecific/IExtensionCliProvider.h"
 
 using namespace Core;
 namespace fs = std::filesystem;
@@ -480,6 +482,7 @@ bool ExtensionRegistry::LoadExtensionById(const std::string& id) {
 
         ent->loadedModule = lm;
         ent->state = Entry::Loaded;
+        loadedOrder_.push_back(extensionId);
 
         if (ent->loadedModule->instance) {
             try {
@@ -536,13 +539,52 @@ bool ExtensionRegistry::UnloadExtensionById(const std::string& id) {
         ent->loadedModule = nullptr;
     }
     ent->state = Entry::Unloaded;
+
+    auto it = std::find(loadedOrder_.begin(), loadedOrder_.end(), id);
+    if (it != loadedOrder_.end()) {
+        loadedOrder_.erase(it);
+    }
+
     return true;
 }
 
 void ExtensionRegistry::UnloadAllExtensions() {
+    // Unload in reverse order of loading to respect dependencies
+    std::vector<std::string> toUnload = loadedOrder_;
+    std::reverse(toUnload.begin(), toUnload.end());
+
+    for (const auto& id : toUnload) {
+        UnloadExtensionById(id);
+    }
+
+    // Fallback for any extensions that might have been loaded outside the normal path
     for (auto& e : entries_) {
         if (e && e->state == Entry::Loaded) {
             UnloadExtensionById(e->desc.id);
+        }
+    }
+}
+
+void ExtensionRegistry::ApplyCliArguments(int argc, const char* argv[]) {
+    NOVA_LOG("Dispatching CLI arguments to extensions...", LogType::Log);
+
+    for (const auto& e : entries_) {
+        if (!e || e->state != Entry::Loaded || !e->loadedModule || !e->loadedModule->instance) {
+            continue;
+        }
+
+        auto* cliProvider = dynamic_cast<IExtensionCliProvider*>(e->loadedModule->instance);
+        if (cliProvider) {
+            auto descriptors = cliProvider->GetCliArgDescriptors();
+            if (descriptors.empty()) {
+                continue;
+            }
+
+            auto matchedArgs = Utils::CommandLineParsing::ParseExtensionArguments(argc, argv, descriptors);
+            if (!matchedArgs.empty()) {
+                NOVA_LOG(("Applying " + std::to_string(matchedArgs.size()) + " CLI arguments to extension: " + e->desc.id).c_str(), LogType::Log);
+                cliProvider->ApplyCliArgs(matchedArgs);
+            }
         }
     }
 }

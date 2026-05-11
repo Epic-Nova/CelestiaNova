@@ -17,6 +17,14 @@ enum class SignalNotificationSeverity {
     Critical,
 };
 
+namespace SignalChannels {
+    inline constexpr const char* UiControl = "canvas.ui.control";
+}
+
+namespace SignalTitles {
+    inline constexpr const char* ForceRefresh = "FORCE_REFRESH";
+}
+
 struct SignalNotification {
     std::string Channel;
     std::string SourceExtensionId;

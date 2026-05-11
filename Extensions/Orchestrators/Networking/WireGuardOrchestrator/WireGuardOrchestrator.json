@@ -1,0 +1,29 @@
+{
+  "id": "wireguardorchestrator",
+  "name": "WireGuardOrchestrator",
+  "file": "libWireGuardOrchestrator.so",
+  "version": "0.1.0",
+  "autostart": false,
+  "startupDelayMs": 0,
+  "description": "Orchestrator for WireGuard tunnel setup and configuration.",
+  "longDescription": "WireGuardOrchestrator automates the lifecycle of WireGuard interfaces, including key generation, peer configuration, interface bring-up/down, and routing table management.",
+  "dependencies": [
+    "coreorchestrator",
+    "signalcore"
+  ],
+  "publicIncludePaths": [
+    "Source"
+  ],
+  "targetName": "WireGuardOrchestrator",
+  "projectName": "WireGuardOrchestrator",
+  "outputName": "WireGuardOrchestrator",
+  "linkNovaCore": true,
+  "optional": {
+    "serviceCapabilities": [
+      "wireguard.interface.create",
+      "wireguard.peer.add",
+      "wireguard.key.generate",
+      "wireguard.health"
+    ]
+  }
+}

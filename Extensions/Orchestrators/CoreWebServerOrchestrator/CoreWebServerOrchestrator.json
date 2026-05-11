@@ -1,0 +1,27 @@
+{
+  "id": "corewebserverorchestrator",
+  "name": "CoreWebServerOrchestrator",
+  "file": "libCoreWebServerOrchestrator.so",
+  "version": "0.1.0",
+  "autostart": true,
+  "startupDelayMs": 150,
+  "description": "Base orchestrator for web server environments.",
+  "longDescription": "CoreWebServerOrchestrator provides the foundation for setting up web servers. It works closely with Framework Orchestrators to determine routing, virtual hosts, and reverse proxy configurations.",
+  "dependencies": [
+    "coreorchestrator",
+    "coreframeworkorchestrator"
+  ],
+  "publicIncludePaths": [
+    "Source"
+  ],
+  "targetName": "CoreWebServerOrchestrator",
+  "projectName": "CoreWebServerOrchestrator",
+  "outputName": "CoreWebServerOrchestrator",
+  "linkNovaCore": true,
+  "optional": {
+    "serviceCapabilities": [
+      "orchestrator.webserver.setup",
+      "orchestrator.webserver.config"
+    ]
+  }
+}

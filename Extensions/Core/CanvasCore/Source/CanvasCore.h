@@ -92,6 +92,8 @@ private:
     mutable std::uint64_t LastObservedSignalSequence_ = 0;
     mutable std::uint64_t RuntimeNotificationCounter_ = 0;
     mutable bool HasReloadedOnFirstUse_ = false;
+    mutable std::vector<std::string> MenuHistory_;
+    mutable std::function<void()> RedrawCallback_;
 };
 
 #ifdef CanvasCore_EXPORTS

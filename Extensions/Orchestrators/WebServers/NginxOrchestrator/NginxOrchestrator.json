@@ -1,4 +1,4 @@
-﻿{
+{
     "id":  "nginxorchestrator",
     "name":  "NginxOrchestrator",
     "file":  "libNginxOrchestrator.so",
@@ -10,7 +10,8 @@
     "dependencies":  [
                          "coreorchestrator",
                          "keyforge",
-                         "signalcore"
+                         "signalcore",
+                         "corewebserverorchestrator"
                      ],
     "publicIncludePaths":  [
                                "Source"

@@ -34,6 +34,7 @@ struct CanvasToastNotification {
     CanvasNotificationSeverity Severity = CanvasNotificationSeverity::Info;
     std::string CreatedAtUtc;
     int DisplayDurationMs = 4200;
+    bool bRequireAcknowledge = false;
 };
 
 struct CanvasPersistentInfoWidget {

@@ -1,0 +1,40 @@
+{
+    "id": "composeragent",
+    "name": "ComposerAgent",
+    "file": "libComposerAgent.so",
+    "version": "0.1.0",
+    "autostart": false,
+    "startupDelayMs": 0,
+    "description": "Agent for PHP Composer dependency management and package orchestration.",
+    "longDescription": "ComposerAgent provides standardized hooks for PHP dependency management, including installation checks, composer.json validation, and package lifecycle actions used by framework orchestrators.",
+    "dependencies": [
+        "phpagent",
+        "terminalagent"
+    ],
+    "publicIncludePaths": [
+        "Source"
+    ],
+    "targetName": "ComposerAgent",
+    "projectName": "ComposerAgent",
+    "outputName": "ComposerAgent",
+    "linkNovaCore": true,
+    "canvas": {
+        "supportsDirectInvocation": true,
+        "menuDefinitions": {
+            "schema": "canvas.menu.definitions.v1",
+            "file": "ComposerAgent_MenuDefinitions.json",
+            "ownerExtensionId": "composeragent"
+        }
+    },
+    "optional": {
+        "serviceCapabilities": [
+            "composer.install",
+            "composer.update",
+            "composer.validate",
+            "composer.setup"
+        ],
+        "healthEndpoints": [
+            "/api/v1/health/composeragent"
+        ]
+    }
+}

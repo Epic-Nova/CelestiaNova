@@ -1,4 +1,4 @@
-﻿{
+{
     "id":  "python3agent",
     "name":  "Python3Agent",
     "file":  "libPython3Agent.so",
@@ -9,7 +9,9 @@
     "longDescription":  "Python3Agent supplies Python-specific automation support for setup and orchestration flows, including interpreter validation, environment bootstrap helpers, and package management command execution.",
     "dependencies":  [
                          "canvascore",
-                         "terminalagent"
+                         "terminalagent",
+                         "packagemanageragent",
+                         "nexuscore"
                      ],
     "publicIncludePaths":  [
                                "Source"
@@ -17,5 +19,21 @@
     "targetName":  "Python3Agent",
     "projectName":  "Python3Agent",
     "outputName":  "Python3Agent",
-    "linkNovaCore":  true
+    "linkNovaCore":  true,
+    "canvas": {
+        "supportsDirectInvocation": true,
+        "menuDefinitions": {
+            "schema": "canvas.menu.definitions.v1",
+            "file": "Python3Agent_MenuDefinitions.json",
+            "ownerExtensionId": "python3agent"
+        }
+    },
+    "optional": {
+        "serviceCapabilities": [
+            "python.venv.create",
+            "python.pip.install",
+            "python.script.run",
+            "python.version.get"
+        ]
+    }
 }

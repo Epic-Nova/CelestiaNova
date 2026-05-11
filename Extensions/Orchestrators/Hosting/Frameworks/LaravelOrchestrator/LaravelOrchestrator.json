@@ -1,4 +1,4 @@
-﻿{
+{
     "id":  "laravelorchestrator",
     "name":  "LaravelOrchestrator",
     "file":  "libLaravelOrchestrator.so",
@@ -10,6 +10,9 @@
     "dependencies":  [
                          "dockerorchestrator",
                          "phpagent",
+                         "composeragent",
+                         "nodeagent",
+                         "contentforge",
                          "coreorchestrator"
                      ],
     "publicIncludePaths":  [

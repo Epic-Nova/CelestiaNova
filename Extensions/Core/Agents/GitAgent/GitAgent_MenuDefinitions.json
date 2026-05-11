@@ -1,0 +1,124 @@
+{
+    "$schema": "../../CanvasCore/MenuDefinitions/CanvasMenuDefinitions.schema.json",
+    "schema": "canvas.menu.definitions.v1",
+    "ownerExtensionId": "gitagent",
+    "menus": [
+        {
+            "id": "git_main",
+            "title": "Git Source Control Agent",
+            "subtitle": "Repository management and versioning",
+            "icon": "SOURCE_CONTROL",
+            "pageRequirements": [],
+            "sections": [
+                {
+                    "id": "actions",
+                    "title": "Actions",
+                    "description": "Git runtime operations.",
+                    "fields": [
+                        {
+                            "id": "check_version",
+                            "label": "Check Git Version",
+                            "description": "Run git --version to detect runtime",
+                            "type": "ActionButton",
+                            "defaultValue": "git.action.check_version",
+                            "validations": [],
+                            "valueStorage": "RuntimeOnly",
+                            "outputKey": "git.action.check_version"
+                        },
+                        {
+                            "id": "clone_repo",
+                            "label": "Clone Repository",
+                            "description": "Clone a repo to the destination path.",
+                            "type": "ActionButton",
+                            "defaultValue": "git.action.clone",
+                            "validations": [],
+                            "valueStorage": "RuntimeOnly",
+                            "outputKey": "git.action.clone"
+                        },
+                        {
+                            "id": "pull_repo",
+                            "label": "Pull Repository",
+                            "description": "Pull latest changes for a local repo.",
+                            "type": "ActionButton",
+                            "defaultValue": "git.action.pull",
+                            "validations": [],
+                            "valueStorage": "RuntimeOnly",
+                            "outputKey": "git.action.pull"
+                        },
+                        {
+                            "id": "repo_url",
+                            "label": "Repository URL",
+                            "description": "Git URL for clone.",
+                            "type": "String",
+                            "defaultValue": "",
+                            "validations": [],
+                            "valueStorage": "RuntimeOnly",
+                            "outputKey": "git.input.url"
+                        },
+                        {
+                            "id": "repo_destination",
+                            "label": "Destination Path",
+                            "description": "Local path to clone into.",
+                            "type": "String",
+                            "defaultValue": "",
+                            "validations": [],
+                            "valueStorage": "RuntimeOnly",
+                            "outputKey": "git.input.destination"
+                        },
+                        {
+                            "id": "repo_branch",
+                            "label": "Branch",
+                            "description": "Optional branch name for clone.",
+                            "type": "String",
+                            "defaultValue": "",
+                            "validations": [],
+                            "valueStorage": "RuntimeOnly",
+                            "outputKey": "git.input.branch"
+                        },
+                        {
+                            "id": "repo_path",
+                            "label": "Repo Path",
+                            "description": "Local repo path for pull.",
+                            "type": "String",
+                            "defaultValue": ".",
+                            "validations": [],
+                            "valueStorage": "RuntimeOnly",
+                            "outputKey": "git.input.path"
+                        }
+                    ]
+                }
+            ],
+            "cancelAction": "menu.back"
+        },
+        {
+            "id": "git_progress",
+            "title": "Git Activity",
+            "subtitle": "Live diagnostic stream",
+            "icon": "TERMINAL",
+            "sections": [
+                {
+                    "id": "logs",
+                    "title": "Diagnostic Output",
+                    "description": "Real-time feed from the Git process.",
+                    "fields": [
+                        {
+                            "id": "git_logs",
+                            "label": "Live Output",
+                            "description": "Streaming stdout/stderr",
+                            "type": "TerminalView",
+                            "defaultValue": "Waiting for process output...",
+                            "requirementBinding": {
+                                "key": "git.logs",
+                                "source": "Agent",
+                                "strategy": "RegistryLookup"
+                            },
+                            "validations": [],
+                            "valueStorage": "RuntimeOnly"
+                        }
+                    ]
+                }
+            ],
+            "cancelAction": "menu.goto:gitagent::git_main"
+        }
+    ]
+}

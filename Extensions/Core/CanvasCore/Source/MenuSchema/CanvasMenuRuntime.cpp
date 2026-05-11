@@ -661,6 +661,85 @@ std::vector<std::string> CanvasMenuRuntime::ListMenuIds() const {
     return ids;
 }
 
+bool CanvasMenuRuntime::HasMenusForExtension(const std::string& extensionId) const {
+    if (extensionId.empty()) {
+        return false;
+    }
+
+    for (const auto& document : Documents_) {
+        const std::string& ownerId = document.File.OwnerExtensionId.empty()
+            ? document.SourceExtensionId
+            : document.File.OwnerExtensionId;
+
+        if (ownerId == extensionId || document.SourceExtensionId == extensionId) {
+            if (!document.File.Menus.empty()) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+std::string CanvasMenuRuntime::GetDefaultMenuIdForExtension(const std::string& extensionId) const {
+    if (extensionId.empty()) {
+        return "";
+    }
+
+    std::string selectedOwnerId;
+    std::string selectedMenuId;
+
+    for (const auto& document : Documents_) {
+        const std::string ownerId = document.File.OwnerExtensionId.empty()
+            ? document.SourceExtensionId
+            : document.File.OwnerExtensionId;
+
+        if (ownerId != extensionId && document.SourceExtensionId != extensionId) {
+            continue;
+        }
+
+        for (const auto& menu : document.File.Menus) {
+            if (menu.Id == "main") {
+                selectedOwnerId = ownerId;
+                selectedMenuId = menu.Id;
+                return selectedOwnerId.empty()
+                    ? selectedMenuId
+                    : selectedOwnerId + "::" + selectedMenuId;
+            }
+        }
+
+        if (selectedMenuId.empty() && !document.File.Menus.empty()) {
+            selectedOwnerId = ownerId;
+            selectedMenuId = document.File.Menus.front().Id;
+        }
+    }
+
+    if (selectedMenuId.empty()) {
+        return "";
+    }
+
+    return selectedOwnerId.empty() ? selectedMenuId : selectedOwnerId + "::" + selectedMenuId;
+}
+
+std::string CanvasMenuRuntime::GetMenuOwnerExtensionId(const std::string& menuId) const {
+    FMenuRef menuRef;
+    std::string error;
+    if (!TryResolveMenuRef(menuId, menuRef, error)) {
+        return "";
+    }
+
+    if (menuRef.DocumentIndex >= Documents_.size()) {
+        return "";
+    }
+
+    const auto& document = Documents_[menuRef.DocumentIndex];
+    if (!document.File.OwnerExtensionId.empty()) {
+        return document.File.OwnerExtensionId;
+    }
+
+    return document.SourceExtensionId;
+}
+
 bool CanvasMenuRuntime::GetMenuDefinition(const std::string& menuId,
                                           MenuSchema::FCanvasMenuDefinition& outMenu) const {
     FMenuRef menuRef;

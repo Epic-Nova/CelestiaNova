@@ -1,0 +1,94 @@
+{
+    "$schema": "../../CanvasCore/MenuDefinitions/CanvasMenuDefinitions.schema.json",
+    "schema": "canvas.menu.definitions.v1",
+    "ownerExtensionId": "nodeagent",
+    "menus": [
+        {
+            "id": "node_main",
+            "title": "Node.js Agent",
+            "subtitle": "Javascript runtime and package management",
+            "icon": "CODE",
+            "pageRequirements": [],
+            "sections": [
+                {
+                    "id": "actions",
+                    "title": "Available Actions",
+                    "description": "Standard Node/npm commands.",
+                    "fields": [
+                        {
+                            "id": "run_install",
+                            "label": "npm install",
+                            "description": "Install project dependencies",
+                            "type": "ActionButton",
+                            "defaultValue": "node.action.run_install",
+                            "validations": [],
+                            "valueStorage": "RuntimeOnly",
+                            "outputKey": "node.action.run_install"
+                        },
+                        {
+                            "id": "run_dev",
+                            "label": "npm run dev",
+                            "description": "Start development server",
+                            "type": "ActionButton",
+                            "defaultValue": "node.action.run_dev",
+                            "validations": [],
+                            "valueStorage": "RuntimeOnly",
+                            "outputKey": "node.action.run_dev"
+                        },
+                        {
+                            "id": "working_dir",
+                            "label": "Working Directory",
+                            "description": "Directory where npm commands run.",
+                            "type": "String",
+                            "defaultValue": ".",
+                            "validations": [],
+                            "valueStorage": "RuntimeOnly",
+                            "outputKey": "node.input.working_dir"
+                        },
+                        {
+                            "id": "dev_script",
+                            "label": "Dev Script",
+                            "description": "npm script name to run.",
+                            "type": "String",
+                            "defaultValue": "dev",
+                            "validations": [],
+                            "valueStorage": "RuntimeOnly",
+                            "outputKey": "node.input.dev_script"
+                        }
+                    ]
+                }
+            ],
+            "cancelAction": "menu.back"
+        },
+        {
+            "id": "node_progress",
+            "title": "Node Activity",
+            "subtitle": "Live diagnostic stream",
+            "icon": "TERMINAL",
+            "sections": [
+                {
+                    "id": "logs",
+                    "title": "Diagnostic Output",
+                    "description": "Real-time feed from the Node.js process.",
+                    "fields": [
+                        {
+                            "id": "node_logs",
+                            "label": "Live Output",
+                            "description": "Streaming stdout/stderr",
+                            "type": "TerminalView",
+                            "defaultValue": "Waiting for process output...",
+                            "requirementBinding": {
+                                "key": "node.logs",
+                                "source": "Agent",
+                                "strategy": "RegistryLookup"
+                            },
+                            "validations": [],
+                            "valueStorage": "RuntimeOnly"
+                        }
+                    ]
+                }
+            ],
+            "cancelAction": "menu.goto:nodeagent::node_main"
+        }
+    ]
+}

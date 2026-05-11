@@ -1,5 +1,10 @@
 {
     "clearContent": true,
+    "extensions": {
+        "selected": {
+            "id": "httpagent"
+        }
+    },
     "mkdocsProjectPath": "Rawr, I am a Dinosaur!",
     "noRoot": true,
     "requestRootForBrew": true,

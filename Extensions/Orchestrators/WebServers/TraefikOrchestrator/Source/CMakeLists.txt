@@ -150,6 +150,7 @@ _nova_json_get_bool("${NOVA_PLUGIN_DESCRIPTOR_JSON}" "linkNovaCore" "true" NOVA_
 
 _nova_json_get_string_array("${NOVA_PLUGIN_DESCRIPTOR_JSON}" "dependencies" NOVA_PLUGIN_DEPENDENCIES)
 _nova_json_get_string_array("${NOVA_PLUGIN_DESCRIPTOR_JSON}" "publicIncludePaths" NOVA_PLUGIN_PUBLIC_INCLUDE_PATHS)
+_nova_json_get_string_array("${NOVA_PLUGIN_DESCRIPTOR_JSON}" "privateIncludePaths" NOVA_PLUGIN_PRIVATE_INCLUDE_PATHS)
 _nova_json_get_string_array("${NOVA_PLUGIN_DESCRIPTOR_JSON}" "extraIncludePaths" NOVA_PLUGIN_EXTRA_INCLUDE_PATHS)
 _nova_json_get_string_array("${NOVA_PLUGIN_DESCRIPTOR_JSON}" "extraCompileDefinitions" NOVA_PLUGIN_EXTRA_COMPILE_DEFINITIONS)
 
@@ -218,6 +219,27 @@ endforeach()
 if(NOT "${_public_include_dirs}" STREQUAL "")
   list(REMOVE_DUPLICATES _public_include_dirs)
   target_include_directories(${NOVA_PLUGIN_TARGET_NAME} PUBLIC ${_public_include_dirs})
+endif()
+
+set(_private_include_dirs)
+foreach(_private_path IN LISTS NOVA_PLUGIN_PRIVATE_INCLUDE_PATHS)
+  if(IS_ABSOLUTE "${_private_path}")
+    set(_resolved_private_path "${_private_path}")
+  else()
+    get_filename_component(_descriptor_dir "${NOVA_PLUGIN_DESCRIPTOR_PATH}" DIRECTORY)
+    set(_resolved_private_path "${_descriptor_dir}/${_private_path}")
+  endif()
+
+  if(EXISTS "${_resolved_private_path}")
+    list(APPEND _private_include_dirs "${_resolved_private_path}")
+  else()
+    message(WARNING "${NOVA_PLUGIN_TARGET_NAME}: private include path '${_private_path}' not found at '${_resolved_private_path}'.")
+  endif()
+endforeach()
+
+if(NOT "${_private_include_dirs}" STREQUAL "")
+  list(REMOVE_DUPLICATES _private_include_dirs)
+  target_include_directories(${NOVA_PLUGIN_TARGET_NAME} PRIVATE ${_private_include_dirs})
 endif()
 
 set(_dependency_include_dirs)

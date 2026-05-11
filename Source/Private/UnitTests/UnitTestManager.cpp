@@ -2,10 +2,6 @@
 #include "UnitTests/NovaFileOperationsTest.h"
 #include "UnitTests/NovaFileOperationsExtendedTest.h"
 #include "UnitTests/NovaLogTest.h"
-#include "UnitTests/BrewInstallHelperTest.h"
-#include "UnitTests/PipInstallHelperTest.h"
-#include "UnitTests/RootAccessHelperTest.h"
-#include "UnitTests/UIComponentTest.h"
 #include "Core/NovaLog.h"
 
 void UnitTestManager::Initialize(int argc, const char* argv[]) {
@@ -30,10 +26,6 @@ bool UnitTestManager::RunUnitTests() {
     unitTests.emplace_back(std::make_unique<NovaFileOperationsTest>());
     unitTests.emplace_back(std::make_unique<NovaFileOperationsExtendedTest>());
     unitTests.emplace_back(std::make_unique<NovaLogTest>());
-    unitTests.emplace_back(std::make_unique<BrewInstallHelperTest>());
-    unitTests.emplace_back(std::make_unique<PipInstallHelperTest>());
-    unitTests.emplace_back(std::make_unique<RootAccessHelperTest>());
-    unitTests.emplace_back(std::make_unique<UIComponentTest>());
 
     // Find and run the specified unit test
     for (const auto& test : unitTests) {

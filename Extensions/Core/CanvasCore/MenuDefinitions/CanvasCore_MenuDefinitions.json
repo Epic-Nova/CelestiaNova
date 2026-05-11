@@ -64,6 +64,16 @@
               "validations": [],
               "valueStorage": "RuntimeOnly",
               "outputKey": "navigation.main.help"
+            },
+            {
+              "id": "openUnattendedTest",
+              "label": "Unattended Test",
+              "description": "TEMPORARY: Test unattended mode UI and logging.",
+              "type": "ActionButton",
+              "defaultValue": "unattended_test",
+              "validations": [],
+              "valueStorage": "RuntimeOnly",
+              "outputKey": "navigation.main.unattended_test"
             }
           ]
         }
@@ -117,101 +127,14 @@
               "outputKey": "extensions.selected.id"
             },
             {
-              "id": "selectedExtensionContentPack",
-              "label": "Content Pack",
-              "description": "Installed content packs for the selected extension.",
-              "type": "ProviderSelect",
-              "requirementBinding": {
-                "key": "catalog.contentpacks.byProvider",
-                "source": "AnyExtension",
-                "resolveMode": "ValueList",
-                "allowMultiple": false,
-                "strategy": "ApiRequest",
-                "requestAction": "canvascore.catalog.contentpacks",
-                "responseCollectionPath": "items",
-                "responseLabelPath": "label",
-                "responseValuePath": "value",
-                "preferredResolverExtensionIds": [
-                  "canvascore"
-                ],
-                "requestStructName": "CoreRequirementResolveRequest",
-                "outputStructName": "CoreRequirementResolveResult",
-                "contextBindings": [
-                  {
-                    "requestKey": "providerId",
-                    "fromFieldId": "selectedExtension"
-                  }
-                ]
-              },
+              "id": "invokeExtension",
+              "label": "Invoke Extension",
+              "description": "Directly launch the extension's primary menu if supported.",
+              "type": "ActionButton",
+              "defaultValue": "invoke",
               "validations": [],
-              "valueStorage": "ConfigJson",
-              "outputKey": "extensions.selected.contentPack"
-            },
-            {
-              "id": "selectedExtensionInteraction",
-              "label": "Interaction",
-              "description": "Provider-level interactions defined by extension or core fallback surfaces.",
-              "type": "ProviderSelect",
-              "requirementBinding": {
-                "key": "catalog.interactions.byProvider",
-                "source": "AnyExtension",
-                "resolveMode": "ValueList",
-                "allowMultiple": false,
-                "strategy": "ApiRequest",
-                "requestAction": "canvascore.catalog.interactions.provider",
-                "responseCollectionPath": "items",
-                "responseLabelPath": "label",
-                "responseValuePath": "value",
-                "preferredResolverExtensionIds": [
-                  "canvascore"
-                ],
-                "requestStructName": "CoreRequirementResolveRequest",
-                "outputStructName": "CoreRequirementResolveResult",
-                "contextBindings": [
-                  {
-                    "requestKey": "providerId",
-                    "fromFieldId": "selectedExtension"
-                  }
-                ]
-              },
-              "validations": [],
-              "valueStorage": "ConfigJson",
-              "outputKey": "extensions.selected.interaction"
-            },
-            {
-              "id": "selectedExtensionPackInteraction",
-              "label": "Content Pack Interaction",
-              "description": "Content-pack scoped interactions for the selected extension.",
-              "type": "ProviderSelect",
-              "requirementBinding": {
-                "key": "catalog.interactions.byContentPack",
-                "source": "AnyExtension",
-                "resolveMode": "ValueList",
-                "allowMultiple": false,
-                "strategy": "ApiRequest",
-                "requestAction": "canvascore.catalog.interactions.contentpack",
-                "responseCollectionPath": "items",
-                "responseLabelPath": "label",
-                "responseValuePath": "value",
-                "preferredResolverExtensionIds": [
-                  "canvascore"
-                ],
-                "requestStructName": "CoreRequirementResolveRequest",
-                "outputStructName": "CoreRequirementResolveResult",
-                "contextBindings": [
-                  {
-                    "requestKey": "providerId",
-                    "fromFieldId": "selectedExtension"
-                  },
-                  {
-                    "requestKey": "contentPackId",
-                    "fromFieldId": "selectedExtensionContentPack"
-                  }
-                ]
-              },
-              "validations": [],
-              "valueStorage": "ConfigJson",
-              "outputKey": "extensions.selected.contentPackInteraction"
+              "valueStorage": "RuntimeOnly",
+              "outputKey": "extensions.action.invoke"
             }
           ]
         }
@@ -232,7 +155,7 @@
           "description": "Extension-specific settings are handled in extension menus.",
           "fields": [
             {
-              "id": "verboseLogging",
+              "id": "verbose",
               "label": "Verbose Logging",
               "description": "Enable verbose logging output for the app runtime.",
               "type": "Bool",
@@ -250,6 +173,16 @@
               "validations": [],
               "valueStorage": "ConfigJson",
               "outputKey": "app.options.scrollableLogAlwaysVisible"
+            },
+            {
+              "id": "disableMousePartyMode",
+              "label": "Disable Mouse Party Mode",
+              "description": "Disables the flashy cursor tracking in menus to save resources.",
+              "type": "Bool",
+              "defaultValue": "false",
+              "validations": [],
+              "valueStorage": "ConfigJson",
+              "outputKey": "disableMousePartyMode"
             }
           ]
         }
@@ -303,101 +236,14 @@
               "outputKey": "orchestrators.selected.id"
             },
             {
-              "id": "selectedOrchestratorContentPack",
-              "label": "Content Pack",
-              "description": "Installed content packs for the selected orchestrator.",
-              "type": "ProviderSelect",
-              "requirementBinding": {
-                "key": "catalog.contentpacks.byProvider",
-                "source": "Orchestrator",
-                "resolveMode": "ValueList",
-                "allowMultiple": false,
-                "strategy": "ApiRequest",
-                "requestAction": "canvascore.catalog.contentpacks",
-                "responseCollectionPath": "items",
-                "responseLabelPath": "label",
-                "responseValuePath": "value",
-                "preferredResolverExtensionIds": [
-                  "canvascore"
-                ],
-                "requestStructName": "CoreRequirementResolveRequest",
-                "outputStructName": "CoreRequirementResolveResult",
-                "contextBindings": [
-                  {
-                    "requestKey": "providerId",
-                    "fromFieldId": "selectedOrchestrator"
-                  }
-                ]
-              },
+              "id": "invokeOrchestrator",
+              "label": "Invoke Orchestrator",
+              "description": "Launch the orchestrator's primary interface.",
+              "type": "ActionButton",
+              "defaultValue": "invoke",
               "validations": [],
-              "valueStorage": "ConfigJson",
-              "outputKey": "orchestrators.selected.contentPack"
-            },
-            {
-              "id": "selectedOrchestratorInteraction",
-              "label": "Interaction",
-              "description": "Provider interactions. Falls back to CoreOrchestrator-defined surfaces when needed.",
-              "type": "ProviderSelect",
-              "requirementBinding": {
-                "key": "catalog.interactions.byProvider",
-                "source": "Orchestrator",
-                "resolveMode": "ValueList",
-                "allowMultiple": false,
-                "strategy": "ApiRequest",
-                "requestAction": "canvascore.catalog.interactions.provider",
-                "responseCollectionPath": "items",
-                "responseLabelPath": "label",
-                "responseValuePath": "value",
-                "preferredResolverExtensionIds": [
-                  "canvascore"
-                ],
-                "requestStructName": "CoreRequirementResolveRequest",
-                "outputStructName": "CoreRequirementResolveResult",
-                "contextBindings": [
-                  {
-                    "requestKey": "providerId",
-                    "fromFieldId": "selectedOrchestrator"
-                  }
-                ]
-              },
-              "validations": [],
-              "valueStorage": "ConfigJson",
-              "outputKey": "orchestrators.selected.interaction"
-            },
-            {
-              "id": "selectedOrchestratorPackInteraction",
-              "label": "Content Pack Interaction",
-              "description": "If a pack is selected, interact at the content-pack scope.",
-              "type": "ProviderSelect",
-              "requirementBinding": {
-                "key": "catalog.interactions.byContentPack",
-                "source": "Orchestrator",
-                "resolveMode": "ValueList",
-                "allowMultiple": false,
-                "strategy": "ApiRequest",
-                "requestAction": "canvascore.catalog.interactions.contentpack",
-                "responseCollectionPath": "items",
-                "responseLabelPath": "label",
-                "responseValuePath": "value",
-                "preferredResolverExtensionIds": [
-                  "canvascore"
-                ],
-                "requestStructName": "CoreRequirementResolveRequest",
-                "outputStructName": "CoreRequirementResolveResult",
-                "contextBindings": [
-                  {
-                    "requestKey": "providerId",
-                    "fromFieldId": "selectedOrchestrator"
-                  },
-                  {
-                    "requestKey": "contentPackId",
-                    "fromFieldId": "selectedOrchestratorContentPack"
-                  }
-                ]
-              },
-              "validations": [],
-              "valueStorage": "ConfigJson",
-              "outputKey": "orchestrators.selected.contentPackInteraction"
+              "valueStorage": "RuntimeOnly",
+              "outputKey": "orchestrators.action.invoke"
             }
           ]
         }
@@ -451,101 +297,14 @@
               "outputKey": "services.selected.id"
             },
             {
-              "id": "selectedServiceContentPack",
-              "label": "Content Pack",
-              "description": "Installed content packs for the selected service.",
-              "type": "ProviderSelect",
-              "requirementBinding": {
-                "key": "catalog.contentpacks.byProvider",
-                "source": "Service",
-                "resolveMode": "ValueList",
-                "allowMultiple": false,
-                "strategy": "ApiRequest",
-                "requestAction": "canvascore.catalog.contentpacks",
-                "responseCollectionPath": "items",
-                "responseLabelPath": "label",
-                "responseValuePath": "value",
-                "preferredResolverExtensionIds": [
-                  "canvascore"
-                ],
-                "requestStructName": "CoreRequirementResolveRequest",
-                "outputStructName": "CoreRequirementResolveResult",
-                "contextBindings": [
-                  {
-                    "requestKey": "providerId",
-                    "fromFieldId": "selectedService"
-                  }
-                ]
-              },
+              "id": "invokeService",
+              "label": "Invoke Service",
+              "description": "Launch the service's primary interface.",
+              "type": "ActionButton",
+              "defaultValue": "invoke",
               "validations": [],
-              "valueStorage": "ConfigJson",
-              "outputKey": "services.selected.contentPack"
-            },
-            {
-              "id": "selectedServiceInteraction",
-              "label": "Interaction",
-              "description": "Provider interactions. Falls back to CoreService-defined surfaces when needed.",
-              "type": "ProviderSelect",
-              "requirementBinding": {
-                "key": "catalog.interactions.byProvider",
-                "source": "Service",
-                "resolveMode": "ValueList",
-                "allowMultiple": false,
-                "strategy": "ApiRequest",
-                "requestAction": "canvascore.catalog.interactions.provider",
-                "responseCollectionPath": "items",
-                "responseLabelPath": "label",
-                "responseValuePath": "value",
-                "preferredResolverExtensionIds": [
-                  "canvascore"
-                ],
-                "requestStructName": "CoreRequirementResolveRequest",
-                "outputStructName": "CoreRequirementResolveResult",
-                "contextBindings": [
-                  {
-                    "requestKey": "providerId",
-                    "fromFieldId": "selectedService"
-                  }
-                ]
-              },
-              "validations": [],
-              "valueStorage": "ConfigJson",
-              "outputKey": "services.selected.interaction"
-            },
-            {
-              "id": "selectedServicePackInteraction",
-              "label": "Content Pack Interaction",
-              "description": "If a pack is selected, interact at the content-pack scope.",
-              "type": "ProviderSelect",
-              "requirementBinding": {
-                "key": "catalog.interactions.byContentPack",
-                "source": "Service",
-                "resolveMode": "ValueList",
-                "allowMultiple": false,
-                "strategy": "ApiRequest",
-                "requestAction": "canvascore.catalog.interactions.contentpack",
-                "responseCollectionPath": "items",
-                "responseLabelPath": "label",
-                "responseValuePath": "value",
-                "preferredResolverExtensionIds": [
-                  "canvascore"
-                ],
-                "requestStructName": "CoreRequirementResolveRequest",
-                "outputStructName": "CoreRequirementResolveResult",
-                "contextBindings": [
-                  {
-                    "requestKey": "providerId",
-                    "fromFieldId": "selectedService"
-                  },
-                  {
-                    "requestKey": "contentPackId",
-                    "fromFieldId": "selectedServiceContentPack"
-                  }
-                ]
-              },
-              "validations": [],
-              "valueStorage": "ConfigJson",
-              "outputKey": "services.selected.contentPackInteraction"
+              "valueStorage": "RuntimeOnly",
+              "outputKey": "services.action.invoke"
             }
           ]
         }
@@ -659,6 +418,46 @@
         }
       ],
       "submitAction": "menu.help.interact",
+      "cancelAction": "menu.back"
+    },
+    {
+      "id": "unattended_test",
+      "title": "Unattended Mode Tests",
+      "subtitle": "Trigger different simulation outcomes",
+      "icon": "DEBUG",
+      "sections": [
+        {
+          "id": "actions",
+          "title": "Simulation Triggers",
+          "fields": [
+            {
+              "id": "testSuccess",
+              "label": "Test Success",
+              "description": "Simulate a flawless automated setup.",
+              "type": "ActionButton",
+              "defaultValue": "test_success",
+              "outputKey": "test.unattended.success"
+            },
+            {
+              "id": "testWarning",
+              "label": "Test Warning",
+              "description": "Simulate a setup with non-critical alerts.",
+              "type": "ActionButton",
+              "defaultValue": "test_warning",
+              "outputKey": "test.unattended.warning"
+            },
+            {
+              "id": "testFail",
+              "label": "Test Fail",
+              "description": "Simulate a critical system failure.",
+              "type": "ActionButton",
+              "defaultValue": "test_fail",
+              "outputKey": "test.unattended.fail"
+            }
+          ]
+        }
+      ],
+      "submitAction": "custom.unattended_trigger",
       "cancelAction": "menu.back"
     }
   ]

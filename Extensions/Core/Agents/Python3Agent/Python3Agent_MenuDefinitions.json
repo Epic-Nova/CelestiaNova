@@ -1,0 +1,94 @@
+{
+    "$schema": "../../CanvasCore/MenuDefinitions/CanvasMenuDefinitions.schema.json",
+    "schema": "canvas.menu.definitions.v1",
+    "ownerExtensionId": "python3agent",
+    "menus": [
+        {
+            "id": "python_main",
+            "title": "Python 3 Agent",
+            "subtitle": "Runtime detection and virtualenv management",
+            "icon": "CODE",
+            "pageRequirements": [],
+            "sections": [
+                {
+                    "id": "actions",
+                    "title": "Actions",
+                    "description": "Python runtime operations.",
+                    "fields": [
+                        {
+                            "id": "check_version",
+                            "label": "Check Python Version",
+                            "description": "Run python3 --version",
+                            "type": "ActionButton",
+                            "defaultValue": "python.action.check_version",
+                            "validations": [],
+                            "valueStorage": "RuntimeOnly",
+                            "outputKey": "python.action.check_version"
+                        },
+                        {
+                            "id": "run_script",
+                            "label": "Run Script",
+                            "description": "Run a Python script with optional args.",
+                            "type": "ActionButton",
+                            "defaultValue": "python.action.run_script",
+                            "validations": [],
+                            "valueStorage": "RuntimeOnly",
+                            "outputKey": "python.action.run_script"
+                        },
+                        {
+                            "id": "script_path",
+                            "label": "Script Path",
+                            "description": "Path to the Python script.",
+                            "type": "String",
+                            "defaultValue": "",
+                            "validations": [],
+                            "valueStorage": "RuntimeOnly",
+                            "outputKey": "python.input.script"
+                        },
+                        {
+                            "id": "script_args",
+                            "label": "Script Args",
+                            "description": "Arguments separated by spaces.",
+                            "type": "String",
+                            "defaultValue": "",
+                            "validations": [],
+                            "valueStorage": "RuntimeOnly",
+                            "outputKey": "python.input.args"
+                        }
+                    ]
+                }
+            ],
+            "cancelAction": "menu.back"
+        },
+        {
+            "id": "python_progress",
+            "title": "Python Activity",
+            "subtitle": "Live diagnostic stream",
+            "icon": "TERMINAL",
+            "sections": [
+                {
+                    "id": "logs",
+                    "title": "Diagnostic Output",
+                    "description": "Real-time feed from the Python process.",
+                    "fields": [
+                        {
+                            "id": "python_logs",
+                            "label": "Live Output",
+                            "description": "Streaming stdout/stderr",
+                            "type": "TerminalView",
+                            "defaultValue": "Waiting for process output...",
+                            "requirementBinding": {
+                                "key": "python.logs",
+                                "source": "Agent",
+                                "strategy": "RegistryLookup"
+                            },
+                            "validations": [],
+                            "valueStorage": "RuntimeOnly"
+                        }
+                    ]
+                }
+            ],
+            "cancelAction": "menu.goto:python3agent::python_main"
+        }
+    ]
+}

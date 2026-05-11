@@ -1,0 +1,27 @@
+{
+  "id": "coreframeworkorchestrator",
+  "name": "CoreFrameworkOrchestrator",
+  "file": "libCoreFrameworkOrchestrator.so",
+  "version": "0.1.0",
+  "autostart": true,
+  "startupDelayMs": 150,
+  "description": "Base orchestrator for framework-level hosting environments.",
+  "longDescription": "CoreFrameworkOrchestrator provides the foundation for setting up API and web frameworks. It processes ContentForge packages and provides Hosting and Web Server orchestrators with the necessary configuration directives.",
+  "dependencies": [
+    "coreorchestrator",
+    "contentforge"
+  ],
+  "publicIncludePaths": [
+    "Source"
+  ],
+  "targetName": "CoreFrameworkOrchestrator",
+  "projectName": "CoreFrameworkOrchestrator",
+  "outputName": "CoreFrameworkOrchestrator",
+  "linkNovaCore": true,
+  "optional": {
+    "serviceCapabilities": [
+      "orchestrator.framework.setup",
+      "orchestrator.framework.config"
+    ]
+  }
+}

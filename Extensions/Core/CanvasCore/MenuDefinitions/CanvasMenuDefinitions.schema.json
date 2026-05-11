@@ -185,7 +185,8 @@
         "WindowPane",
         "CollapsibleSection",
         "ResizableSplit",
-        "TabContainer"
+        "TabContainer",
+        "TerminalView"
       ]
     },
     "providerSource": {

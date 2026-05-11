@@ -5,6 +5,7 @@
 #include "NovaMinimal.h"
 #include <filesystem>
 #include <cpptrace/cpptrace.hpp>
+#include <ftxui/component/event.hpp>
 
 namespace Core {
 

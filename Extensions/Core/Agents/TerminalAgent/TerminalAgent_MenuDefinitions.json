@@ -1,0 +1,68 @@
+{
+  "$schema": "../../CanvasCore/MenuDefinitions/CanvasMenuDefinitions.schema.json",
+  "schema": "canvas.menu.definitions.v1",
+  "ownerExtensionId": "terminalagent",
+  "menus": [
+    {
+      "id": "terminal_ui",
+      "title": "Terminal Environment",
+      "subtitle": "Direct interaction with the host OS",
+      "icon": "TERMINAL",
+      "pageRequirements": [],
+      "sections": [
+        {
+          "id": "terminal_interface",
+          "title": "Interactive Session",
+          "description": "Execute commands and view streaming output.",
+          "fields": [
+            {
+              "id": "commandHistory",
+              "label": "Terminal",
+              "description": "Terminal session output",
+              "type": "TerminalView",
+              "defaultValue": "Welcome to Celestia Nova Terminal.\nType a command below.",
+              "requirementBinding": {
+                "key": "terminal.history",
+                "source": "Agent",
+                "strategy": "RegistryLookup"
+              },
+              "validations": [],
+              "valueStorage": "RuntimeOnly"
+            },
+            {
+              "id": "commandInput",
+              "label": "Command",
+              "description": "Type a command to execute",
+              "type": "String",
+              "defaultValue": "",
+              "validations": [],
+              "valueStorage": "RuntimeOnly",
+              "outputKey": "terminal.command.input"
+            },
+            {
+              "id": "executeCommand",
+              "label": "Execute",
+              "description": "Run the command",
+              "type": "ActionButton",
+              "defaultValue": "execute",
+              "validations": [],
+              "valueStorage": "RuntimeOnly",
+              "outputKey": "terminal.action.execute"
+            },
+            {
+              "id": "extensionNote",
+              "label": "Note",
+              "description": "Dynamic extension information",
+              "type": "Paragraph",
+              "defaultValue": "Specific extensions may inject additional sub-menus or interaction surfaces into this agent dynamically.",
+              "validations": [],
+              "valueStorage": "RuntimeOnly"
+            }
+          ]
+        }
+      ],
+      "submitAction": "menu.back",
+      "cancelAction": "menu.back"
+    }
+  ]
+}

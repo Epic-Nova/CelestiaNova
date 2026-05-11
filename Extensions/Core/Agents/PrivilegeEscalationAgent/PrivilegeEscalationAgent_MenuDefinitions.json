@@ -1,0 +1,53 @@
+{
+  "$schema": "../../CanvasCore/MenuDefinitions/CanvasMenuDefinitions.schema.json",
+  "schema": "canvas.menu.definitions.v1",
+  "ownerExtensionId": "privilegeescalationagent",
+  "menus": [
+    {
+      "id": "escalation_menu",
+      "title": "Administrative Authentication",
+      "subtitle": "Elevation Required",
+      "icon": "SECURITY",
+      "pageRequirements": [],
+      "sections": [
+        {
+          "id": "auth_section",
+          "title": "Credentials",
+          "description": "Please provide administrative credentials to proceed with the requested operation.",
+          "fields": [
+            {
+              "id": "auth_reason",
+              "label": "Reason",
+              "description": "Information about the elevation request",
+              "type": "TextLabel",
+              "defaultValue": "The system requires elevated privileges.",
+              "validations": [],
+              "valueStorage": "RuntimeOnly"
+            },
+            {
+              "id": "password",
+              "label": "Password",
+              "description": "System administrator password",
+              "type": "PasswordString",
+              "defaultValue": "",
+              "validations": [],
+              "valueStorage": "RuntimeOnly",
+              "outputKey": "privilege.password"
+            },
+            {
+              "id": "authenticate_btn",
+              "label": "Authenticate",
+              "description": "Elevate privileges",
+              "type": "ActionButton",
+              "defaultValue": "authenticate",
+              "validations": [],
+              "valueStorage": "RuntimeOnly",
+              "outputKey": "privilege.action.authenticate"
+            }
+          ]
+        }
+      ],
+      "cancelAction": "menu.back"
+    }
+  ]
+}

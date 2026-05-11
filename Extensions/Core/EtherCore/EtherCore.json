@@ -1,0 +1,34 @@
+{
+  "id": "ethercore",
+  "name": "EtherCore",
+  "file": "libEtherCore.so",
+  "version": "0.1.0",
+  "autostart": true,
+  "startupDelayMs": 200,
+  "description": "Secure overlay networking and VPN management core.",
+  "longDescription": "EtherCore manages secure tunnels and virtual private networking for Celestia Nova nodes. It acts as the bridge between high-level federation requests and low-level VPN orchestrators (like WireGuard), enabling encrypted cross-node communication regardless of physical topology.",
+  "dependencies": [
+    "nexuscore",
+    "aegiscore",
+    "signalcore"
+  ],
+  "publicIncludePaths": [
+    "Source"
+  ],
+  "targetName": "EtherCore",
+  "projectName": "EtherCore",
+  "outputName": "EtherCore",
+  "linkNovaCore": true,
+  "optional": {
+    "telemetryStreams": [
+      "ether.tunnel.count",
+      "ether.traffic.rx",
+      "ether.traffic.tx"
+    ],
+    "serviceCapabilities": [
+      "ether.tunnel.create",
+      "ether.tunnel.status",
+      "ether.mesh.join"
+    ]
+  }
+}

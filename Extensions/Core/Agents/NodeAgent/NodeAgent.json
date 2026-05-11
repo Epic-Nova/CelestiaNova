@@ -1,4 +1,4 @@
-﻿{
+{
     "id":  "nodeagent",
     "name":  "NodeAgent",
     "file":  "libNodeAgent.so",
@@ -17,5 +17,23 @@
     "targetName":  "NodeAgent",
     "projectName":  "NodeAgent",
     "outputName":  "NodeAgent",
-    "linkNovaCore":  true
+    "linkNovaCore":  true,
+    "canvas": {
+        "supportsDirectInvocation": true,
+        "menuDefinitions": {
+            "schema": "canvas.menu.definitions.v1",
+            "file": "NodeAgent_MenuDefinitions.json",
+            "ownerExtensionId": "nodeagent"
+        }
+    },
+    "optional": {
+        "serviceCapabilities": [
+            "node.install",
+            "node.run.script",
+            "node.detect.pm"
+        ],
+        "healthEndpoints": [
+            "/api/v1/health/nodeagent"
+        ]
+    }
 }

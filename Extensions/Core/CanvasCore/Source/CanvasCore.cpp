@@ -1,4 +1,5 @@
 #include "CanvasCore.h"
+#include "UnattendedModeManager.h"
 
 #include <algorithm>
 #include <cctype>
@@ -22,7 +23,9 @@
 #include "ExtensionSpecific/INovaCapabilityProvider.h"
 #include "ExtensionSpecific/IOrchestrationSurfaces.h"
 #include "ExtensionSpecific/ISignalCoreSurfaces.h"
+#include "ExtensionSpecific/IMenuActionProvider.h"
 #include "MenuSchema/CanvasMenuRuntime.h"
+#include "Utils/CommandLineOptions.h"
 
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/component_options.hpp>
@@ -165,6 +168,89 @@ float Clamp01(const double value) {
         return 1.0f;
     }
     return static_cast<float>(value);
+}
+
+bool GetJsonPathValue(const nlohmann::json& root, const std::string& path, nlohmann::json& outValue) {
+    if (path.empty()) return false;
+    
+    std::vector<std::string> segments;
+    std::string current;
+    for (char ch : path) {
+        if (ch == '.') {
+            if (!current.empty()) segments.push_back(current);
+            current.clear();
+            continue;
+        }
+        current.push_back(ch);
+    }
+    if (!current.empty()) segments.push_back(current);
+
+    const nlohmann::json* node = &root;
+    for (const auto& segment : segments) {
+        if (!node->is_object() || !node->contains(segment)) return false;
+        node = &((*node)[segment]);
+    }
+    outValue = *node;
+    return true;
+}
+
+bool SetJsonPathValue(nlohmann::json& root, const std::string& path, const nlohmann::json& value) {
+    if (path.empty()) return false;
+    
+    std::vector<std::string> segments;
+    std::string current;
+    for (char ch : path) {
+        if (ch == '.') {
+            if (!current.empty()) segments.push_back(current);
+            current.clear();
+            continue;
+        }
+        current.push_back(ch);
+    }
+    if (!current.empty()) segments.push_back(current);
+
+    if (segments.empty()) return false;
+
+    nlohmann::json* node = &root;
+    for (std::size_t idx = 0; idx < segments.size(); ++idx) {
+        const std::string& segment = segments[idx];
+        const bool isLeaf = idx + 1 == segments.size();
+        if (isLeaf) {
+            (*node)[segment] = value;
+            return true;
+        }
+        nlohmann::json& next = (*node)[segment];
+        if (!next.is_object()) next = nlohmann::json::object();
+        node = &next;
+    }
+    return false;
+}
+
+nlohmann::json LoadGlobalConfig() {
+    try {
+        namespace fs = std::filesystem;
+        const fs::path configPath = fs::current_path() / "Configs" / "app_config.json";
+        if (fs::exists(configPath)) {
+            std::ifstream configFile(configPath);
+            nlohmann::json configJson;
+            configFile >> configJson;
+            return configJson;
+        }
+    } catch (...) {}
+    return nlohmann::json::object();
+}
+
+void SaveGlobalConfig(const nlohmann::json& config) {
+    try {
+        namespace fs = std::filesystem;
+        const fs::path configDir = fs::current_path() / "Configs";
+        if (!fs::exists(configDir)) {
+            fs::create_directories(configDir);
+        }
+        const fs::path configPath = configDir / "app_config.json";
+        std::ofstream configFile(configPath);
+        configFile << config.dump(4);
+    } catch (...) {}
 }
 
 std::string FieldTypeLabel(const CanvasCore::MenuSchema::ECanvasFieldType fieldType) {
@@ -376,6 +462,34 @@ std::string ResolveDisplayName(const FDescriptorSnapshot& descriptor) {
     return descriptor.Descriptor.id;
 }
 
+std::string ExtractDescriptorFolderTag(const FDescriptorSnapshot& descriptor) {
+    std::string path = descriptor.DescriptorPath;
+    if (path.empty()) {
+        return "";
+    }
+
+    std::replace(path.begin(), path.end(), '\\', '/');
+    std::string tag;
+
+    std::size_t pos = path.find("/Extensions/");
+    if (pos == std::string::npos) {
+        pos = path.find("/extensions/");
+    }
+
+    if (pos != std::string::npos) {
+        tag = path.substr(pos + std::string("/Extensions/").size());
+    } else {
+        tag = path;
+    }
+
+    std::size_t lastSlash = tag.find_last_of('/');
+    if (lastSlash != std::string::npos) {
+        tag = tag.substr(0, lastSlash);
+    }
+
+    return tag;
+}
+
 void AddUniqueOption(std::vector<CanvasCoreResolveOption>& outOptions,
                      std::set<std::string>& seenValues,
                      const std::string& label,
@@ -397,9 +511,14 @@ void AddUniqueOption(std::vector<CanvasCoreResolveOption>& outOptions,
 }
 
 std::vector<CanvasCoreResolveOption> BuildInstalledProviderOptions(EProviderScope scope) {
-    std::vector<CanvasCoreResolveOption> options;
-    std::set<std::string> seen;
+    struct FProviderRow {
+        std::string FolderTag;
+        std::string DisplayName;
+        std::string Id;
+        std::string Description;
+    };
 
+    std::vector<FProviderRow> rows;
     for (const auto& descriptor : CollectDescriptorSnapshots()) {
         if (!MatchesScope(descriptor, scope)) {
             continue;
@@ -408,12 +527,32 @@ std::vector<CanvasCoreResolveOption> BuildInstalledProviderOptions(EProviderScop
             continue;
         }
 
-        AddUniqueOption(
-            options,
-            seen,
-            ResolveDisplayName(descriptor),
-            descriptor.Descriptor.id,
-            descriptor.Descriptor.description);
+        FProviderRow row;
+        row.FolderTag = ExtractDescriptorFolderTag(descriptor);
+        row.DisplayName = ResolveDisplayName(descriptor);
+        row.Id = descriptor.Descriptor.id;
+        row.Description = descriptor.Descriptor.description;
+        rows.push_back(std::move(row));
+    }
+
+    std::sort(rows.begin(), rows.end(), [](const FProviderRow& left, const FProviderRow& right) {
+        if (left.FolderTag == right.FolderTag) {
+            if (left.DisplayName == right.DisplayName) {
+                return left.Id < right.Id;
+            }
+            return left.DisplayName < right.DisplayName;
+        }
+        return left.FolderTag < right.FolderTag;
+    });
+
+    std::vector<CanvasCoreResolveOption> options;
+    std::set<std::string> seen;
+    for (const auto& row : rows) {
+        std::string label = row.DisplayName;
+        if (!row.FolderTag.empty()) {
+            label = "[" + row.FolderTag + "] " + row.DisplayName;
+        }
+        AddUniqueOption(options, seen, label, row.Id, row.Description);
     }
 
     return options;
@@ -807,6 +946,47 @@ void CanvasCoreModule::StartupModule() {
     startupToast.Severity = Core::CanvasNotificationSeverity::Info;
     startupToast.DisplayDurationMs = 3000;
     QueueToast(std::move(startupToast));
+
+    //@TODO remove later, just for testing
+    /*Core::CanvasToastNotification testToast;
+    testToast.SourceExtensionId = "canvascore";
+    testToast.Title = "Arcade System Boot";
+    testToast.Message = "Testing 8-bit notification queueing... [1/2]";
+    testToast.Severity = Core::CanvasNotificationSeverity::Success;
+    testToast.DisplayDurationMs = 4000;
+    QueueToast(std::move(testToast));
+
+    Core::CanvasToastNotification testToast2;
+    testToast2.SourceExtensionId = "canvascore";
+    testToast2.Title = "Queue Verification";
+    testToast2.Message = "Second notification sliding in! [2/3]";
+    testToast2.Severity = Core::CanvasNotificationSeverity::Info;
+    testToast2.DisplayDurationMs = 4000;
+    QueueToast(std::move(testToast2));
+    
+    Core::CanvasToastNotification testToast3;
+    testToast3.SourceExtensionId = "canvascore";
+    testToast3.Title = "SYSTEM_INTERRUPT";
+    testToast3.Message = "Manual acknowledgement required. Click [OK] to proceed. [3/3]";
+    testToast3.Severity = Core::CanvasNotificationSeverity::Warning;
+    testToast3.bRequireAcknowledge = true;
+    QueueToast(std::move(testToast3));
+
+    Core::CanvasToastNotification testToast4;
+    testToast4.SourceExtensionId = "canvascore";
+    testToast4.Title = "Queue Resumed";
+    testToast4.Message = "Acknowledgement successful. Resuming normal operations... [4/4]";
+    testToast4.Severity = Core::CanvasNotificationSeverity::Success;
+    testToast4.DisplayDurationMs = 4000;
+    QueueToast(std::move(testToast4));
+
+    Core::CanvasToastNotification testToast5;
+    testToast5.SourceExtensionId = "canvascore";
+    testToast5.Title = "Sequence Finalized";
+    testToast5.Message = "Full notification lifecycle verified. System nominal. [5/5]";
+    testToast5.Severity = Core::CanvasNotificationSeverity::Info;
+    testToast5.DisplayDurationMs = 4000;
+    QueueToast(std::move(testToast5));*/
 }
 
 void CanvasCoreModule::ShutdownModule() {
@@ -1006,7 +1186,6 @@ bool CanvasCoreModule::BuildMenuRenderFrame(const std::string& menuId,
     outFrame.ResolvedMenuId = menuId;
     outFrame.Chrome.StatusPill = GetCanvasStatusPill();
     outFrame.Chrome.PersistentInfos = GetCanvasPersistentInfos(menuId);
-    outFrame.Chrome.Toasts = ConsumeCanvasToastsForMenu(menuId, maxToasts);
     return true;
 }
 
@@ -1025,29 +1204,50 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
     }
 
     std::string activeMenuId = startMenuId.empty() ? "main" : startMenuId;
-    std::vector<std::string> menuHistory;
+    MenuHistory_.clear();
     std::unordered_map<std::string, std::unordered_map<std::string, std::string>> menuValuesByMenu;
 
     using namespace ftxui;
+    // Reverting to FitComponent to restore full mouse interactivity on Windows terminals.
     auto screen = ScreenInteractive::FitComponent();
+
+    CanvasCore::UnattendedModeManager unattendedManager;
+    
+    // Initialize redraw callback for this screen session
+    {
+        std::lock_guard<std::mutex> lock(UiStateMutex_);
+        RedrawCallback_ = [&]() {
+            screen.PostEvent(ftxui::Event::Custom);
+        };
+    }
+
+    // Check for unattended payload argument
+    auto* cmdOptions = Utils::CommandLineOptions::GetSingletonInstance();
+    // Assuming 'payloadPath' might be a registered string option or we check raw args.
+    // For now, we'll hook into the pattern used by other options.
+    if (cmdOptions->IsOptionRegistered("payload")) {
+        // Trigger unattended mode if a payload is detected
+        unattendedManager.Trigger("BOOT_PAYLOAD");
+    }
+
+    struct FActiveToastState {
+        Core::CanvasToastNotification Toast;
+        std::chrono::steady_clock::time_point ReceivedAt;
+        bool bAcknowledged = false;
+        bool bAnimationStarted = false;
+    };
+    std::vector<FActiveToastState> activeToasts;
+    auto nextAvailableTime = std::chrono::steady_clock::now();
+
 
     auto menuExists = [&](const std::string& menuId) {
         CanvasCore::MenuSchema::FCanvasMenuDefinition dummy;
         return GetMenuDefinition(menuId, dummy);
     };
 
-    // Load the mouse-party-mode config flag (written by OptionsMenu to Config/app_config.json). //@TODO: just define through menu json file & set the config files automatically without hardocing any available options, jsut receiving & applying should be in code, not the deifnition , interaction & saving
-    bool disableMousePartyMode = false;
-    try {
-        namespace fs = std::filesystem;
-        const fs::path configPath = fs::current_path() / "Config" / "app_config.json";
-        if (fs::exists(configPath)) {
-            std::ifstream configFile(configPath);
-            nlohmann::json configJson;
-            configFile >> configJson;
-            disableMousePartyMode = configJson.value("disableMousePartyMode", false);
-        }
-    } catch (...) {}
+    // Load global persistent configuration.
+    nlohmann::json globalConfig = LoadGlobalConfig();
+    bool disableMousePartyMode = globalConfig.value("disableMousePartyMode", false);
 
     bool shouldQuit = false;
     while (!shouldQuit) {
@@ -1061,31 +1261,59 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
         auto& menuValues = menuValuesByMenu[activeMenuId];
         for (const auto& section : menuFrame.Menu.Sections) {
             for (const auto& field : section.Fields) {
-                if (!field.DefaultValue.empty() && menuValues.find(field.Id) == menuValues.end()) {
-                    menuValues[field.Id] = field.DefaultValue;
+                if (menuValues.find(field.Id) == menuValues.end()) {
+                    bool loadedFromConfig = false;
+                    if (field.ValueStorage == CanvasCore::MenuSchema::ECanvasValueStorage::ConfigJson && !field.OutputKey.empty()) {
+                        nlohmann::json configVal;
+                        if (GetJsonPathValue(globalConfig, field.OutputKey, configVal)) {
+                            if (configVal.is_string()) menuValues[field.Id] = configVal.get<std::string>();
+                            else if (configVal.is_boolean()) menuValues[field.Id] = configVal.get<bool>() ? "true" : "false";
+                            else if (configVal.is_number()) menuValues[field.Id] = configVal.dump();
+                            loadedFromConfig = true;
+                        }
+                    }
+                    
+                    if (!loadedFromConfig) {
+                        menuValues[field.Id] = field.DefaultValue;
+                    }
                 }
             }
         }
+
+        auto updateInvokeFlags = [&]() {
+            if (!Runtime_) {
+                return;
+            }
+
+            auto setFlag = [&](const std::string& selectionField,
+                               const std::string& flagField) {
+                const auto it = menuValues.find(selectionField);
+                const bool hasMenu = (it != menuValues.end() && Runtime_->HasMenusForExtension(it->second));
+                menuValues[flagField] = hasMenu ? "true" : "false";
+            };
+
+            if (activeMenuId == "extensions") {
+                setFlag("selectedExtension", "selectedExtensionHasMenu");
+            } else if (activeMenuId == "services") {
+                setFlag("selectedService", "selectedServiceHasMenu");
+            } else if (activeMenuId == "orchestrators") {
+                setFlag("selectedOrchestrator", "selectedOrchestratorHasMenu");
+            }
+        };
+
+        updateInvokeFlags();
 
         std::string navigateToMenuId;
         bool requestBack = false;
         bool requestRebuild = false;
 
-        struct FActiveToastState {
-            Core::CanvasToastNotification Toast;
-            std::chrono::steady_clock::time_point ReceivedAt;
-        };
-
-        std::vector<FActiveToastState> activeToasts;
         const auto loopStart = std::chrono::steady_clock::now();
-        for (const auto& toast : menuFrame.Chrome.Toasts) {
-            activeToasts.push_back({toast, loopStart});
-        }
 
         Core::CanvasStatusPillSnapshot status = menuFrame.Chrome.StatusPill;
         std::vector<Core::CanvasPersistentInfoWidget> persistentInfos = menuFrame.Chrome.PersistentInfos;
 
         std::vector<std::function<void()>> syncValueCallbacks;
+        std::vector<std::function<void()>> visibilityCallbacks;
 
         auto collectContextValues = [&]() {
             std::vector<CanvasCore::FCanvasFieldValue> contextValues;
@@ -1110,39 +1338,79 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
         };
 
         auto makePixelButton = [&](const std::string& label,
+                                   const std::string& description,
                                    const std::function<void()>& callback,
                                    Color bg,
                                    Color fg,
                                    Color bgActive,
                                    Color fgActive) {
             auto option = ButtonOption::Animated(bg, fg, bgActive, fgActive);
-            option.transform = [](const EntryState& state) {
-                const std::string prefix = state.focused ? "[>" : "[ ";
-                const std::string suffix = state.focused ? "<]" : " ]";
-                return hbox({
-                           text(prefix),
-                           text(state.label) | bold,
-                           text(suffix),
-                       }) |
-                       center;
+            option.transform = [description](const EntryState& state) {
+                const auto now = std::chrono::steady_clock::now().time_since_epoch();
+                const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
+                bool blink = (ms / 300) % 2 == 0;
+
+                auto label_element = text(state.label) | bold;
+                if (state.focused) {
+                    label_element = hbox({
+                        text(blink ? " > " : "   ") | color(Color::Yellow),
+                        label_element | color(Color::White) | inverted,
+                        text(blink ? " < " : "   ") | color(Color::Yellow),
+                    });
+                } else {
+                    label_element = text(" [ " + state.label + " ] ");
+                }
+
+                auto base = vbox({
+                    label_element | center,
+                });
+
+                if (!description.empty() && state.focused) {
+                    base = vbox({
+                        base,
+                        text("  ░▒ " + description) | color(Color::GrayLight) | size(HEIGHT, EQUAL, 1),
+                    });
+                }
+
+                return base | center | borderStyled(state.focused ? BorderStyle::DOUBLE : BorderStyle::LIGHT) | 
+                       color(state.focused ? Color::Yellow : Color::GrayDark);
             };
             return Button(label, callback, option);
         };
 
         Components contentComponents;
 
-        contentComponents.push_back(Renderer([title = menuFrame.Menu.Title, subtitle = menuFrame.Menu.Subtitle] {
-            Elements rows;
-            rows.push_back(text("== CELESTIA NOVA / CANVASCORE ==") | color(Color::Magenta) | bold | center);
-            if (!title.empty()) {
-                rows.push_back(text(title) | color(Color::Cyan) | bold | center);
+        auto isInvokeVisibilityFlag = [](const std::string& fieldId) {
+            return fieldId == "selectedExtensionHasMenu" ||
+                   fieldId == "selectedServiceHasMenu" ||
+                   fieldId == "selectedOrchestratorHasMenu";
+        };
+
+        auto computeHasMenuForFlag = [&](const std::string& flagField) {
+            if (!Runtime_) {
+                return false;
             }
-            if (!subtitle.empty()) {
-                rows.push_back(paragraph(subtitle) | color(Color::GrayLight) | center);
+
+            std::string selectionField;
+            if (flagField == "selectedExtensionHasMenu") {
+                selectionField = "selectedExtension";
+            } else if (flagField == "selectedServiceHasMenu") {
+                selectionField = "selectedService";
+            } else if (flagField == "selectedOrchestratorHasMenu") {
+                selectionField = "selectedOrchestrator";
             }
-            rows.push_back(separatorDouble());
-            return vbox(std::move(rows));
-        }));
+
+            if (selectionField.empty()) {
+                return false;
+            }
+
+            const auto it = menuValues.find(selectionField);
+            if (it == menuValues.end() || it->second.empty()) {
+                return false;
+            }
+
+            return Runtime_->HasMenusForExtension(it->second);
+        };
 
         for (const auto& section : menuFrame.Menu.Sections) {
             contentComponents.push_back(Renderer([section] {
@@ -1155,7 +1423,7 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
             }));
 
             for (const auto& field : section.Fields) {
-                if (!field.VisibleIfField.empty()) {
+                if (!field.VisibleIfField.empty() && !isInvokeVisibilityFlag(field.VisibleIfField)) {
                     std::string visibleValue;
                     const auto visibleMatch = menuValues.find(field.VisibleIfField);
                     if (visibleMatch != menuValues.end()) {
@@ -1166,13 +1434,18 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
                     }
                 }
 
+                // Simplified label rendering: ActionButtons handle their own labels now.
                 if (field.Type != CanvasCore::MenuSchema::ECanvasFieldType::Separator &&
-                    field.Type != CanvasCore::MenuSchema::ECanvasFieldType::Spacer) {
+                    field.Type != CanvasCore::MenuSchema::ECanvasFieldType::Spacer &&
+                    field.Type != CanvasCore::MenuSchema::ECanvasFieldType::ActionButton) {
                     contentComponents.push_back(Renderer([label = field.Label, description = field.Description] {
                         Elements rows;
-                        rows.push_back(text(label.empty() ? std::string("Field") : label) | color(Color::White) | bold);
+                        rows.push_back(hbox({
+                            text(" ▓ ") | color(Color::Yellow),
+                            text(label.empty() ? std::string("FIELD_ID") : label) | bold,
+                        }));
                         if (!description.empty()) {
-                            rows.push_back(paragraph(description) | color(Color::GrayDark));
+                            rows.push_back(text("   ░▒ " + description) | color(Color::GrayDark));
                         }
                         return vbox(std::move(rows));
                     }));
@@ -1184,13 +1457,98 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
                 switch (field.Type) {
                     case ECanvasFieldType::ActionButton: {
                         std::string actionTarget = field.DefaultValue;
-                        contentComponents.push_back(makePixelButton(
-                            field.Label.empty() ? std::string("Run Action") : field.Label,
+                        const bool usesInvokeVisibility = isInvokeVisibilityFlag(field.VisibleIfField);
+                        auto invokeVisible = std::make_shared<bool>(true);
+                        if (usesInvokeVisibility) {
+                            *invokeVisible = computeHasMenuForFlag(field.VisibleIfField);
+                            visibilityCallbacks.push_back([&, flagField = field.VisibleIfField, invokeVisible] {
+                                *invokeVisible = computeHasMenuForFlag(flagField);
+                                menuValues[flagField] = *invokeVisible ? "true" : "false";
+                            });
+                        }
+
+                        auto buttonComponent = makePixelButton(
+                            field.Label.empty() ? std::string("RUN_EXEC") : field.Label,
+                            field.Description,
                             [&, actionTarget, fieldId = field.Id]() {
                                 menuValues[fieldId] = actionTarget;
 
-                                if (!actionTarget.empty() && menuExists(actionTarget)) {
+                                if (actionTarget == "test_success") unattendedManager.Trigger("SUCCESS");
+                                else if (actionTarget == "test_warning") unattendedManager.Trigger("WARNING");
+                                else if (actionTarget == "test_fail") unattendedManager.Trigger("FAIL");
+                                else if (actionTarget == "invoke") {
+                                    std::string targetExtensionId;
+                                    if (activeMenuId == "extensions") {
+                                        auto it = menuValues.find("selectedExtension");
+                                        if (it != menuValues.end()) targetExtensionId = it->second;
+                                    } else if (activeMenuId == "services") {
+                                        auto it = menuValues.find("selectedService");
+                                        if (it != menuValues.end()) targetExtensionId = it->second;
+                                    } else if (activeMenuId == "orchestrators") {
+                                        auto it = menuValues.find("selectedOrchestrator");
+                                        if (it != menuValues.end()) targetExtensionId = it->second;
+                                    }
+
+                                    std::string targetMenuId;
+                                    if (!targetExtensionId.empty() && Runtime_) {
+                                        targetMenuId = Runtime_->GetDefaultMenuIdForExtension(targetExtensionId);
+                                    }
+
+                                    if (!targetMenuId.empty() && menuExists(targetMenuId)) {
+                                        navigateToMenuId = targetMenuId;
+                                    } else {
+                                        Core::CanvasToastNotification toast;
+                                        toast.SourceExtensionId = "canvascore";
+                                        toast.TargetMenuId = NormalizeMenuId(activeMenuId);
+                                        toast.Title = "MENU_UNAVAILABLE";
+                                        toast.Message = "No menu definitions were found for the selected extension.";
+                                        toast.Severity = Core::CanvasNotificationSeverity::Warning;
+                                        PublishCanvasToast(toast);
+                                    }
+                                }
+                                else if (!actionTarget.empty() && (actionTarget == "menu.back" || menuExists(actionTarget))) {
                                     navigateToMenuId = actionTarget;
+                                } else if (!actionTarget.empty()) {
+                                    // Dispatch to IMenuActionProvider
+                                    Core::CanvasMenuActionRequest actionReq;
+                                    actionReq.MenuId = activeMenuId;
+                                    actionReq.ActionId = actionTarget;
+                                    for (const auto& entry : menuValues) {
+                                        actionReq.ContextValues[entry.first] = entry.second;
+                                    }
+
+                                    auto& registry = Core::ExtensionRegistry::Instance();
+                                    const auto descriptors = registry.ListExtensionDescriptors();
+                                    const std::string ownerExtensionId = Runtime_ ? Runtime_->GetMenuOwnerExtensionId(activeMenuId) : std::string();
+
+                                    for (const auto& descriptor : descriptors) {
+                                        if (!ownerExtensionId.empty() && descriptor.id != ownerExtensionId) {
+                                            continue;
+                                        }
+                                        auto* instance = registry.GetLoadedExtensionInstance(descriptor.id);
+                                        if (instance) {
+                                            auto* actionProvider = dynamic_cast<Core::IMenuActionProvider*>(instance);
+                                            if (actionProvider) {
+                                                Core::CanvasMenuActionResult actionResult = actionProvider->OnMenuAction(actionReq);
+                                                if (actionResult.Success) {
+                                                    for (const auto& updateEntry : actionResult.ConfigUpdates) {
+                                                        menuValues[updateEntry.first] = updateEntry.second;
+                                                    }
+                                                    if (!actionResult.NavigateToMenuId.empty() && (actionResult.NavigateToMenuId == "menu.back" || menuExists(actionResult.NavigateToMenuId))) {
+                                                        navigateToMenuId = actionResult.NavigateToMenuId;
+                                                    }
+                                                } else if (!actionResult.ErrorMessage.empty()) {
+                                                    Core::CanvasToastNotification errToast;
+                                                    errToast.SourceExtensionId = descriptor.id;
+                                                    errToast.TargetMenuId = NormalizeMenuId(activeMenuId);
+                                                    errToast.Title = "ACTION_FAILED";
+                                                    errToast.Message = actionResult.ErrorMessage;
+                                                    errToast.Severity = Core::CanvasNotificationSeverity::Error;
+                                                    PublishCanvasToast(errToast);
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
 
                                 requestRebuild = true;
@@ -1199,7 +1557,13 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
                             Color::Black,
                             Color::Cyan,
                             Color::Cyan,
-                            Color::Black));
+                            Color::Black);
+
+                        if (usesInvokeVisibility) {
+                            contentComponents.push_back(Maybe(buttonComponent, invokeVisible.get()));
+                        } else {
+                            contentComponents.push_back(buttonComponent);
+                        }
                         break;
                     }
 
@@ -1235,7 +1599,7 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
 
                         int selectedIndex = 0;
                         const auto selectedValue = menuValues.find(field.Id);
-                        if (selectedValue != menuValues.end()) {
+                        if (selectedValue != menuValues.end() && !selectedValue->second.empty()) {
                             for (std::size_t index = 0; index < values->size(); ++index) {
                                 if ((*values)[index] == selectedValue->second) {
                                     selectedIndex = static_cast<int>(index);
@@ -1408,8 +1772,47 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
                     }
 
                     case ECanvasFieldType::Paragraph: {
-                        const std::string paragraphText = field.DefaultValue.empty() ? field.Description : field.DefaultValue;
-                        contentComponents.push_back(Renderer([paragraphText] { return paragraph(paragraphText) | color(Color::GrayLight); }));
+                        auto textSource = std::make_shared<std::string>();
+                        const auto match = menuValues.find(field.Id);
+                        if (match != menuValues.end()) {
+                            *textSource = match->second;
+                        } else {
+                            *textSource = field.DefaultValue.empty() ? field.Description : field.DefaultValue;
+                        }
+                        
+                        contentComponents.push_back(Renderer([textSource] { 
+                            return paragraph(*textSource) | color(Color::GrayLight); 
+                        }));
+                        break;
+                    }
+
+                    case ECanvasFieldType::TerminalView: {
+                        if (field.RequirementBinding.has_value()) {
+                            auto resolveResult = ResolveFieldRequirement(
+                                activeMenuId,
+                                field.Id,
+                                "canvascore",
+                                collectContextValues());
+                            
+                            if (resolveResult.Success && !resolveResult.Options.empty()) {
+                                menuValues[field.Id] = resolveResult.Options[0].Value;
+                            }
+                        }
+
+                        auto textSource = std::make_shared<std::string>();
+                        const auto match = menuValues.find(field.Id);
+                        if (match != menuValues.end()) {
+                            *textSource = match->second;
+                        } else {
+                            *textSource = field.DefaultValue;
+                        }
+
+                        contentComponents.push_back(Renderer([textSource] {
+                            // Terminal style: monospace (if supported by terminal), vertical scrolling, 8-bit look
+                            return vbox({
+                                paragraph(*textSource) | color(Color::GreenLight)
+                            }) | borderDouble | color(Color::Green) | vscroll_indicator | frame | size(HEIGHT, EQUAL, 12);
+                        }));
                         break;
                     }
 
@@ -1525,16 +1928,50 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
         auto contentContainer = Container::Vertical(std::move(contentComponents));
 
         auto applyButton = makePixelButton(
-            "Apply",
+            "APPLY",
+            "Commit configuration changes to the mesh registry.",
             [&]() {
                 auto collectedValues = collectSubmitValues();
                 std::string payload;
                 std::string buildError;
                 if (BuildSubmitPayload(activeMenuId, collectedValues, payload, buildError)) {
+                    // Update persistent config for any fields marked with ConfigJson.
+                    bool configChanged = false;
+                    nlohmann::json payloadJson = nlohmann::json::parse(payload);
+                    auto* cmdOptions = Utils::CommandLineOptions::GetSingletonInstance();
+
+                    for (const auto& section : menuFrame.Menu.Sections) {
+                        for (const auto& field : section.Fields) {
+                            if (field.ValueStorage == CanvasCore::MenuSchema::ECanvasValueStorage::ConfigJson && !field.OutputKey.empty()) {
+                                nlohmann::json newVal;
+                                if (GetJsonPathValue(payloadJson, field.OutputKey, newVal)) {
+                                    SetJsonPathValue(globalConfig, field.OutputKey, newVal);
+                                    configChanged = true;
+
+                                    // Sync with CommandLineOptions if registered
+                                    std::string valueStr;
+                                    if (newVal.is_string()) valueStr = newVal.get<std::string>();
+                                    else if (newVal.is_boolean()) valueStr = newVal.get<bool>() ? "true" : "false";
+                                    else valueStr = newVal.dump();
+
+                                    if (cmdOptions->IsOptionRegistered(field.Id)) {
+                                        cmdOptions->SetOptionValue(field.Id, valueStr);
+                                    } else if (cmdOptions->IsOptionRegistered(field.OutputKey)) {
+                                        cmdOptions->SetOptionValue(field.OutputKey, valueStr);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (configChanged) {
+                        SaveGlobalConfig(globalConfig);
+                    }
+
                     Core::CanvasToastNotification toast;
                     toast.SourceExtensionId = "canvascore";
                     toast.TargetMenuId = NormalizeMenuId(activeMenuId);
-                    toast.Title = "Submit payload built";
+                    toast.Title = "CONFIG_SYNC_OK";
                     toast.Message = menuFrame.Menu.SubmitAction.empty()
                         ? "Payload generated from canvas field values."
                         : ("Action '" + menuFrame.Menu.SubmitAction + "' payload generated.");
@@ -1544,8 +1981,85 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
                     std::string logPayload = "[CanvasCore] submit payload for menu '" + activeMenuId + "':\n" + payload;
                     NOVA_LOG(logPayload.c_str(), LogType::Log);
 
+                    // Dispatch to any IMenuActionProvider
+                    if (!menuFrame.Menu.SubmitAction.empty() && menuFrame.Menu.SubmitAction != "custom.unattended_trigger" && !menuExists(menuFrame.Menu.SubmitAction)) {
+                        Core::CanvasMenuActionRequest actionReq;
+                        actionReq.MenuId = activeMenuId;
+                        actionReq.ActionId = menuFrame.Menu.SubmitAction;
+                        for (const auto& entry : collectedValues) {
+                            actionReq.ContextValues[entry.FieldId] = entry.Value;
+                        }
+
+                        auto& registry = Core::ExtensionRegistry::Instance();
+                        const auto descriptors = registry.ListExtensionDescriptors();
+                        std::string ownerExtensionId;
+                        if (Runtime_) {
+                            ownerExtensionId = Runtime_->GetMenuOwnerExtensionId(activeMenuId);
+                        }
+
+                        if (ownerExtensionId.empty()) {
+                            if (activeMenuId == "extensions") {
+                                auto it = menuValues.find("selectedExtension");
+                                if (it != menuValues.end()) ownerExtensionId = it->second;
+                            } else if (activeMenuId == "services") {
+                                auto it = menuValues.find("selectedService");
+                                if (it != menuValues.end()) ownerExtensionId = it->second;
+                            } else if (activeMenuId == "orchestrators") {
+                                auto it = menuValues.find("selectedOrchestrator");
+                                if (it != menuValues.end()) ownerExtensionId = it->second;
+                            }
+                        }
+                        bool actionHandled = false;
+
+                        for (const auto& descriptor : descriptors) {
+                            if (!ownerExtensionId.empty() && descriptor.id != ownerExtensionId) {
+                                continue;
+                            }
+                            auto* instance = registry.GetLoadedExtensionInstance(descriptor.id);
+                            if (instance) {
+                                auto* actionProvider = dynamic_cast<Core::IMenuActionProvider*>(instance);
+                                if (actionProvider) {
+                                    Core::CanvasMenuActionResult actionResult = actionProvider->OnMenuAction(actionReq);
+                                    if (!actionResult.Success) {
+                                        Core::CanvasToastNotification errToast;
+                                        errToast.SourceExtensionId = descriptor.id;
+                                        errToast.TargetMenuId = NormalizeMenuId(activeMenuId);
+                                        errToast.Title = "ACTION_FAILED";
+                                        errToast.Message = actionResult.ErrorMessage.empty() ? "The extension rejected the action." : actionResult.ErrorMessage;
+                                        errToast.Severity = Core::CanvasNotificationSeverity::Error;
+                                        PublishCanvasToast(errToast);
+                                    } else {
+                                        for (const auto& updateEntry : actionResult.ConfigUpdates) {
+                                            menuValues[updateEntry.first] = updateEntry.second;
+                                            // also update context config json
+                                            for (const auto& section : menuFrame.Menu.Sections) {
+                                                for (const auto& field : section.Fields) {
+                                                    if (field.Id == updateEntry.first && field.ValueStorage == CanvasCore::MenuSchema::ECanvasValueStorage::ConfigJson && !field.OutputKey.empty()) {
+                                                        SetJsonPathValue(globalConfig, field.OutputKey, nlohmann::json(updateEntry.second));
+                                                        SaveGlobalConfig(globalConfig);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        if (!actionResult.NavigateToMenuId.empty() && (actionResult.NavigateToMenuId == "menu.back" || menuExists(actionResult.NavigateToMenuId))) {
+                                            navigateToMenuId = actionResult.NavigateToMenuId;
+                                        }
+                                    }
+                                    actionHandled = true;
+                                }
+                            }
+                        }
+
+                        if (!actionHandled) {
+                            // Optionally warn that no one handled it
+                        }
+                    }
+
                     // If SubmitAction names a menu, navigate there on success.
-                    if (!menuFrame.Menu.SubmitAction.empty() && menuExists(menuFrame.Menu.SubmitAction)) {
+                    if (menuFrame.Menu.SubmitAction == "custom.unattended_trigger") {
+                        unattendedManager.Trigger("SUCCESS"); // Default if triggered via submit
+                        requestRebuild = true;
+                    } else if (!menuFrame.Menu.SubmitAction.empty() && (menuFrame.Menu.SubmitAction == "menu.back" || menuExists(menuFrame.Menu.SubmitAction))) {
                         navigateToMenuId = menuFrame.Menu.SubmitAction;
                     } else {
                         requestRebuild = true;
@@ -1554,7 +2068,7 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
                     Core::CanvasToastNotification toast;
                     toast.SourceExtensionId = "canvascore";
                     toast.TargetMenuId = NormalizeMenuId(activeMenuId);
-                    toast.Title = "Submit payload failed";
+                    toast.Title = "CONFIG_SYNC_FAIL";
                     toast.Message = buildError;
                     toast.Severity = Core::CanvasNotificationSeverity::Error;
                     PublishCanvasToast(toast);
@@ -1569,7 +2083,8 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
             Color::Black);
 
         auto refreshButton = makePixelButton(
-            "Refresh",
+            "REFRESH",
+            "Reload active menu schema and sync local state.",
             [&]() {
                 requestRebuild = true;
                 screen.ExitLoopClosure()();
@@ -1580,11 +2095,12 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
             Color::Black);
 
         auto backButton = makePixelButton(
-            "Back",
+            "BACK",
+            "Return to the previous navigation node.",
             [&]() {
                 // CancelAction in the menu definition overrides the default
                 // history-pop behaviour, making navigation fully metadata-driven.
-                if (!menuFrame.Menu.CancelAction.empty() && menuExists(menuFrame.Menu.CancelAction)) {
+                if (!menuFrame.Menu.CancelAction.empty() && (menuFrame.Menu.CancelAction == "menu.back" || menuExists(menuFrame.Menu.CancelAction))) {
                     navigateToMenuId = menuFrame.Menu.CancelAction;
                 } else {
                     requestBack = true;
@@ -1597,7 +2113,8 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
             Color::Black);
 
         auto quitButton = makePixelButton(
-            "Quit",
+            "QUIT",
+            "Terminate the current session and exit.",
             [&]() {
                 shouldQuit = true;
                 screen.ExitLoopClosure()();
@@ -1608,9 +2125,48 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
             Color::White);
 
         auto actions = Container::Horizontal({applyButton, refreshButton, backButton, quitButton});
-        auto root = Container::Vertical({contentContainer, actions});
+        
+        // Logical root of the menu application
+        auto menuRoot = Container::Vertical({
+            contentContainer,
+            actions
+        });
 
-        auto component = Renderer(root, [&]() -> Element {
+        // Interactive toast acknowledgement button
+        auto ackButton = Button(" [ OK ] ", [&] {
+            if (!activeToasts.empty()) {
+                auto& t = activeToasts.front();
+                t.bAcknowledged = true;
+                // Reset timing so the toast starts its fade-out phase immediately
+                const int mAge = t.Toast.DisplayDurationMs > 0 ? t.Toast.DisplayDurationMs : 4200;
+                t.ReceivedAt = std::chrono::steady_clock::now() - std::chrono::milliseconds(mAge - 300);
+            }
+        }, ButtonOption::Animated(Color::Black, Color::Green, Color::Green, Color::Black));
+
+        bool showAckButton = false;
+        auto maybeAck = Maybe(ackButton, &showAckButton);
+
+        // Overlay layout for interactive components (aligned to top to match toast position)
+        auto interactiveOverlay = Renderer(maybeAck, [&] {
+            return vbox({
+                filler() | size(HEIGHT, EQUAL, 4), // Vertical offset to align with toast content
+                maybeAck->Render() | hcenter,
+                filler()
+            }) | size(HEIGHT, EQUAL, 12);
+        });
+
+        auto mainStack = Container::Stacked({
+            menuRoot,
+            interactiveOverlay
+        });
+
+        auto component = Renderer(mainStack, [&]() -> Element {
+            showAckButton = false; // Reset state for each frame
+
+            for (const auto& callback : visibilityCallbacks) {
+                callback();
+            }
+
             for (const auto& syncCallback : syncValueCallbacks) {
                 syncCallback();
             }
@@ -1618,19 +2174,80 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
             status = GetCanvasStatusPill();
             persistentInfos = GetCanvasPersistentInfos(activeMenuId);
 
-            const auto now = std::chrono::steady_clock::now();
-            const auto newToasts = ConsumeCanvasToastsForMenu(activeMenuId, 3);
-            for (const auto& toast : newToasts) {
-                activeToasts.push_back({toast, now});
+            const auto tNow = std::chrono::steady_clock::now();
+            const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(tNow - loopStart).count();
+
+            // Unattended Mode Simulation Loop
+            unattendedManager.Update();
+            
+            // Check if we have an active interactive toast that blocks new ones
+            bool bBlockingActive = false;
+            for (const auto& toast : activeToasts) {
+                if (toast.Toast.bRequireAcknowledge && !toast.bAcknowledged) {
+                    bBlockingActive = true;
+                    break;
+                }
             }
 
-            activeToasts.erase(
-                std::remove_if(activeToasts.begin(), activeToasts.end(), [&](const FActiveToastState& toast) {
-                    const auto ageMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - toast.ReceivedAt).count();
-                    const int maxAge = toast.Toast.DisplayDurationMs > 0 ? toast.Toast.DisplayDurationMs : 4200;
-                    return ageMs > maxAge;
-                }),
-                activeToasts.end());
+            if (nextAvailableTime < tNow) {
+                nextAvailableTime = tNow;
+            }
+
+            if (tNow >= nextAvailableTime && !bBlockingActive) {
+                const auto newToasts = ConsumeCanvasToastsForMenu(activeMenuId, 3);
+                for (const auto& toast : newToasts) {
+                    auto startTime = nextAvailableTime;
+                    const int mAge = toast.DisplayDurationMs > 0 ? toast.DisplayDurationMs : 4200;
+                    
+                    // Set the next available slot to after this toast expires + 2 seconds gap
+                    // Set the next available slot to after this toast expires + a small gap
+                    nextAvailableTime = startTime + std::chrono::milliseconds(mAge + 500);
+                    activeToasts.push_back({toast, startTime, false, false});
+                }
+            }
+            
+            // Critical fix for the "plop" after long blocking:
+            // Ensure nextAvailableTime doesn't trail behind tNow, but also respect
+            // any active toast's remaining time so the next one slides in perfectly.
+            if (!activeToasts.empty()) {
+                const auto& lastToast = activeToasts.back();
+                const int lastMaxAge = lastToast.Toast.DisplayDurationMs > 0 ? lastToast.Toast.DisplayDurationMs : 4200;
+                auto lastEndTime = lastToast.ReceivedAt + std::chrono::milliseconds(lastMaxAge + 500);
+                if (nextAvailableTime < lastEndTime) nextAvailableTime = lastEndTime;
+            }
+
+            if (nextAvailableTime < tNow) nextAvailableTime = tNow;
+
+            // Note: We move erase logic later to ensure we don't skip the last frame of animation.
+
+            // 8-bit Rainbow Color Logic
+            auto get_rainbow_color = [&](int offset) -> Color {
+                int color_cycle = (elapsed / 100) % 360;
+                int hue = (color_cycle + offset) % 360;
+                if (hue < 60) return Color::Red;
+                else if (hue < 120) return Color::Yellow; 
+                else if (hue < 180) return Color::Green;
+                else if (hue < 240) return Color::Cyan;
+                else if (hue < 300) return Color::Blue;
+                else return Color::Magenta;
+            };
+
+            // Arcade Particle Effect
+            auto createParticles = [&]() -> Element {
+                if (disableMousePartyMode) return text("");
+                Elements particles;
+                for (int x = 0; x < 12; ++x) {
+                    auto particle_time = (elapsed + x * 137) / 60;
+                    auto char_idx = particle_time % 4;
+                    std::string p_char = "  ";
+                    if (char_idx == 0) p_char = "· ";
+                    else if (char_idx == 1) p_char = "○ ";
+                    else if (char_idx == 2) p_char = "✦ ";
+                    else p_char = "▓ ";
+                    particles.push_back(text(p_char) | color(get_rainbow_color(x * 25)));
+                }
+                return hbox(particles) | center;
+            };
 
             Color statusColor = Color::Yellow;
             if (status.ModeLabel == "HOST") {
@@ -1642,106 +2259,190 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
             }
 
             Element statusPill = hbox({
-                text("[ "),
-                text(status.ModeLabel.empty() ? std::string("UNKNOWN") : status.ModeLabel) | color(statusColor) | bold,
-                text(" | PEERS "),
-                text(std::to_string(status.ConnectedInstanceCount)) | color(statusColor) | bold,
-                text(" ]"),
+                text(" ▓▒░ "),
+                text(status.ModeLabel.empty() ? std::string("SYSTEM") : status.ModeLabel) | color(statusColor) | bold,
+                text(" | MESH_NODES "),
+                text(std::to_string(status.ConnectedInstanceCount)) | color(get_rainbow_color(45)) | bold,
+                text(" ░▒▓ "),
             }) | center;
 
+            // Arcade Header
+            auto header = vbox({
+                createParticles(),
+                hbox({
+                    text(" [ "),
+                    text("CELESTIA NOVA") | bold | color(get_rainbow_color(0)),
+                    text(" ] "),
+                }) | center,
+                hbox({
+                    text(" < "),
+                    text(menuFrame.Menu.Title.empty() ? "MAIN_BOARD" : menuFrame.Menu.Title) | bold | color(get_rainbow_color(90)),
+                    text(" > "),
+                }) | center,
+                separatorDouble() | color(get_rainbow_color(180)),
+            });
+
             Elements infoRows;
-            infoRows.push_back(text("[ Canvas Diagnostics ]") | color(Color::Yellow) | bold);
+            infoRows.push_back(text(" [ DIAGNOSTIC_BUS ] ") | color(Color::Yellow) | bold);
             if (persistentInfos.empty()) {
-                infoRows.push_back(text("OK - no persistent issues") | color(Color::Green));
+                infoRows.push_back(text("  STATUS: GREEN_LIGHT") | color(Color::Green));
             } else {
                 const std::size_t visibleInfos = persistentInfos.size() > 3 ? 3 : persistentInfos.size();
                 for (std::size_t index = 0; index < visibleInfos; ++index) {
                     const auto& info = persistentInfos[persistentInfos.size() - 1 - index];
-                    std::string line = info.Code + ": " + info.Message;
-                    if (line.size() > 92) {
-                        line = line.substr(0, 89) + "...";
+                    std::string line = "  ! " + info.Code + ": " + info.Message;
+                    if (line.size() > 88) {
+                        line = line.substr(0, 85) + "...";
                     }
                     infoRows.push_back(text(line) | color(Color::Red));
                 }
             }
 
-            Elements toastRows;
+            Element notificationLayer = text("");
+            bool showNotification = false;
+            bool hasActiveNotification = false;
             if (!activeToasts.empty()) {
-                toastRows.push_back(text("[ Toasts ]") | color(Color::Cyan) | bold);
-                const std::size_t visibleToasts = activeToasts.size() > 3 ? 3 : activeToasts.size();
-                for (std::size_t index = 0; index < visibleToasts; ++index) {
-                    const auto& toastState = activeToasts[activeToasts.size() - 1 - index];
+                auto& toastState = activeToasts.front(); 
+                
+                // Ensure the animation starts from zero exactly when this toast becomes the front
+                if (!toastState.bAnimationStarted) {
+                    toastState.ReceivedAt = tNow;
+                    toastState.bAnimationStarted = true;
+                }
 
-                    std::string severityLabel = "INFO";
+                const auto ageMs = std::chrono::duration_cast<std::chrono::milliseconds>(tNow - toastState.ReceivedAt).count();
+                const int maxAge = toastState.Toast.DisplayDurationMs > 0 ? toastState.Toast.DisplayDurationMs : 4200;
+                
+                float animScale = 0.0f;
+                if (ageMs < 0) {
+                    animScale = 0.0f; // Still waiting in queue
+                    hasActiveNotification = true;
+                } else if (ageMs < 300) {
+                    animScale = (float)ageMs / 300.0f;
+                    hasActiveNotification = true; 
+                } else {
+                    // Decide if we should fade out or stay visible
+                    bool bShouldFadeOut = false;
+                    if (!toastState.Toast.bRequireAcknowledge || toastState.bAcknowledged) {
+                        if (ageMs > (maxAge - 300)) {
+                            bShouldFadeOut = true;
+                        }
+                    }
+
+                    if (bShouldFadeOut) {
+                        animScale = (float)(maxAge - ageMs) / 300.0f;
+                        if (animScale < 0.0f) animScale = 0.0f;
+                    } else {
+                        animScale = 1.0f; // Sticky or middle of duration
+                    }
+                    hasActiveNotification = true;
+                }
+
+                if (animScale > 0.01f) {
+                    showNotification = true;
                     Color severityColor = Color::Cyan;
+                    std::string severityTag = "INFO";
                     switch (toastState.Toast.Severity) {
-                        case Core::CanvasNotificationSeverity::Success:
-                            severityLabel = "OK";
-                            severityColor = Color::Green;
-                            break;
-                        case Core::CanvasNotificationSeverity::Warning:
-                            severityLabel = "WARN";
-                            severityColor = Color::Yellow;
-                            break;
-                        case Core::CanvasNotificationSeverity::Error:
-                            severityLabel = "ERR";
-                            severityColor = Color::Red;
-                            break;
-                        case Core::CanvasNotificationSeverity::Critical:
-                            severityLabel = "CRIT";
-                            severityColor = Color::Red;
-                            break;
-                        case Core::CanvasNotificationSeverity::Info:
-                        default:
-                            break;
+                        case Core::CanvasNotificationSeverity::Success: severityColor = Color::Green; severityTag = "SUCCESS"; break;
+                        case Core::CanvasNotificationSeverity::Warning: severityColor = Color::Yellow; severityTag = "WARNING"; break;
+                        case Core::CanvasNotificationSeverity::Error: severityColor = Color::Red; severityTag = "FAILURE"; break;
+                        default: break;
                     }
 
-                    std::string toastMessage = toastState.Toast.Message;
-                    if (toastMessage.size() > 84) {
-                        toastMessage = toastMessage.substr(0, 81) + "...";
-                    }
+                    int estimatedLines = (int)(toastState.Toast.Message.length() / 45) + 1;
+                    int targetHeight = 3 + estimatedLines; // Title + Spacer + Wrapped lines
+                    if (toastState.Toast.bRequireAcknowledge) targetHeight += 2; // Extra space for button
+                    
+                    if (targetHeight < 4) targetHeight = 4;
+                    if (targetHeight > 12) targetHeight = 12;
 
-                    toastRows.push_back(
+                    showAckButton = toastState.Toast.bRequireAcknowledge && animScale > 0.99f && !toastState.bAcknowledged;
+
+                    notificationLayer = vbox({
                         hbox({
-                            text("[") | color(severityColor),
-                            text(severityLabel) | color(severityColor) | bold,
-                            text("] ") | color(severityColor),
-                            text(toastState.Toast.Title.empty() ? std::string("Signal") : toastState.Toast.Title) | color(Color::White) | bold,
-                            text(" :: "),
-                            text(toastMessage) | color(Color::GrayLight),
-                        }));
+                            text(" ⚡ ") | color(severityColor) | bold,
+                            text("[" + severityTag + "] ") | bold | color(severityColor),
+                            text(toastState.Toast.Title) | bold | color(Color::White),
+                        }) | hcenter,
+                        separatorEmpty(),
+                        paragraph(toastState.Toast.Message) | color(Color::White) | hcenter,
+                        showAckButton ? separatorEmpty() : text(""),
+                        showAckButton ? (text("") | size(HEIGHT, EQUAL, 1)) : text("") // Keep space for the interactive button
+                    }) | size(WIDTH, LESS_THAN, 100) | bgcolor(Color::Black) | clear_under | borderDouble | color(severityColor) | 
+                         size(HEIGHT, EQUAL, (int)(animScale * targetHeight));
+                    
+                    notificationLayer = notificationLayer | hcenter;
                 }
             }
 
-            return vbox({
-                       text("== CANVAS RUNTIME ==") | color(Color::Magenta) | bold | center,
-                       statusPill,
-                       text(status.Summary) | color(Color::GrayLight) | center,
-                       separatorDouble(),
-                       window(text(menuFrame.Menu.Id), contentContainer->Render() | vscroll_indicator | size(HEIGHT, LESS_THAN, 24)) |
-                           color(Color::White),
-                       separatorLight(),
-                       window(text("Diagnostics"), vbox(std::move(infoRows)) | size(HEIGHT, LESS_THAN, 8)),
-                       toastRows.empty() ? text("") : window(text("Notifications"), vbox(std::move(toastRows)) | size(HEIGHT, LESS_THAN, 8)),
-                       separatorLight(),
-                       actions->Render() | center,
-                       text("Esc: Back/Quit | Enter: Activate") | color(Color::GrayDark) | center,
-                   }) |
-                   size(WIDTH, EQUAL, 110) |
-                   center;
+            // Perform cleanup of expired toasts after rendering to avoid flickering/jumps.
+            activeToasts.erase(
+                std::remove_if(activeToasts.begin(), activeToasts.end(), [&](const FActiveToastState& toast) {
+                    // Interactive toasts stay until acknowledged
+                    if (toast.Toast.bRequireAcknowledge && !toast.bAcknowledged) {
+                        return false;
+                    }
+                    
+                    const auto tNow = std::chrono::steady_clock::now();
+                    const auto tAgeMs = std::chrono::duration_cast<std::chrono::milliseconds>(tNow - toast.ReceivedAt).count();
+                    const int tMaxAge = toast.Toast.DisplayDurationMs > 0 ? toast.Toast.DisplayDurationMs : 4200;
+                    return tAgeMs > tMaxAge;
+                }),
+                activeToasts.end());
+
+            // Keep the arcade UI alive for rainbow cycling and background toast checks
+            screen.RequestAnimationFrame();
+
+            auto mainApp = vbox({
+                               header,
+                               contentContainer->Render() | flex | vscroll_indicator | frame | border | color(get_rainbow_color(270)),
+                               separatorLight() | color(get_rainbow_color(300)),
+                               hbox({
+                                   vbox(std::move(infoRows)) | flex,
+                               }) | size(HEIGHT, EQUAL, 6) | borderStyled(BorderStyle::LIGHT) | color(get_rainbow_color(315)),
+                               separatorDouble() | color(get_rainbow_color(330)),
+                               hbox({
+                                   statusPill | flex,
+                                   separatorLight(),
+                                   actions->Render() | center,
+                               }),
+                           }) |
+                           borderStyled(BorderStyle::DOUBLE) |
+                           color(get_rainbow_color(0)) |
+                           size(WIDTH, EQUAL, 110) |
+                           clear_under;
+
+            auto interactiveLayer = interactiveOverlay->Render();
+
+            if (unattendedManager.IsActive()) {
+                auto unattendedUI = unattendedManager.RenderUI(header, get_rainbow_color);
+                
+                if (showNotification) {
+                    return dbox({ unattendedUI, vbox({ notificationLayer, filler() }), interactiveLayer }) | clear_under | center;
+                }
+                return dbox({ unattendedUI, interactiveLayer }) | clear_under | center;
+            }
+
+            if (showNotification) {
+                return dbox({
+                    mainApp,
+                    vbox({ notificationLayer, filler() }),
+                    interactiveLayer
+                }) | clear_under | center;
+            }
+            
+            return dbox({
+                mainApp,
+                interactiveLayer
+            }) | clear_under | center;
         });
 
         auto withEvents = CatchEvent(component, [&](Event event) {
-            // Suppress all mouse events when "Light Party" (mouse party mode) is disabled.
-            if (disableMousePartyMode && event.is_mouse()) {
-                return true;
-            }
-
             if (event == Event::Escape) {
                 // CancelAction overrides the escape key too.
-                if (!menuFrame.Menu.CancelAction.empty() && menuExists(menuFrame.Menu.CancelAction)) {
+                if (!menuFrame.Menu.CancelAction.empty() && (menuFrame.Menu.CancelAction == "menu.back" || menuExists(menuFrame.Menu.CancelAction))) {
                     navigateToMenuId = menuFrame.Menu.CancelAction;
-                } else if (!menuHistory.empty()) {
+                } else if (!MenuHistory_.empty()) {
                     requestBack = true;
                 } else {
                     shouldQuit = true;
@@ -1760,15 +2461,30 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
         }
 
         if (!navigateToMenuId.empty()) {
-            menuHistory.push_back(activeMenuId);
-            activeMenuId = navigateToMenuId;
+            if (navigateToMenuId == "menu.back") {
+                if (!MenuHistory_.empty()) {
+                    activeMenuId = MenuHistory_.back();
+                    MenuHistory_.pop_back();
+                    navigateToMenuId.clear();
+                } else {
+                    activeMenuId = startMenuId;
+                    navigateToMenuId.clear();
+                }
+            } else {
+                if (activeMenuId != navigateToMenuId) {
+                    MenuHistory_.push_back(activeMenuId);
+                }
+                activeMenuId = navigateToMenuId;
+                navigateToMenuId.clear();
+            }
             continue;
         }
 
         if (requestBack) {
-            if (!menuHistory.empty()) {
-                activeMenuId = menuHistory.back();
-                menuHistory.pop_back();
+            requestBack = false;
+            if (!MenuHistory_.empty()) {
+                activeMenuId = MenuHistory_.back();
+                MenuHistory_.pop_back();
                 continue;
             }
 
@@ -1783,6 +2499,17 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
         // Loop exited without explicit navigation/back/rebuild; treat as quit.
         shouldQuit = true;
     }
+
+    // Explicitly disable mouse tracking and restore terminal state.
+    // \033[?1000l: Disable X11 mouse tracking
+    // \033[?1003l: Disable All motion mouse tracking
+    // \033[?1015l: Disable Urxvt mouse tracking
+    // \033[?1006l: Disable SGR mouse tracking
+    // \033[?25h: Show cursor
+    // \033[?47l: Restore normal screen buffer
+    printf("\033[?1000l\033[?1003l\033[?1015l\033[?1006l\033[?25h\033[?47l");
+    printf("\033[2J\033[H");
+    std::fflush(stdout);
 
     return true;
 }
@@ -1930,6 +2657,13 @@ void CanvasCoreModule::PumpSignalNotifications() const {
                                   signal.Channel == "canvas.toast" ||
                                   signal.Channel == "canvas.menu.issue";
         const bool routeToPersistentInfo = signal.Persistent || signal.Channel == "canvas.menu.issue";
+
+        if (signal.Channel == Core::SignalChannels::UiControl && signal.Title == Core::SignalTitles::ForceRefresh) {
+            if (RedrawCallback_) {
+                RedrawCallback_();
+            }
+            continue;
+        }
 
         if (routeToPersistentInfo) {
             const std::string menuId = NormalizeMenuId(signal.TargetMenuId);

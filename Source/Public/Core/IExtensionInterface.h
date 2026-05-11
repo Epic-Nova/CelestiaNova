@@ -18,4 +18,10 @@ public:
 
     // Called before the extension is unloaded from memory.
     virtual void ShutdownModule() = 0;
+
+    /**
+     * Returns a pointer to the extension's persistent store (scaffolding).
+     * This will later be connected to a DatabaseOrchestrator.
+     */
+    virtual void* GetPersistentStore() { return nullptr; }
 };

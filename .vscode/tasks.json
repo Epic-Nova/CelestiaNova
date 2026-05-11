@@ -1,0 +1,61 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "CelestiaNova: Generate + Build (Development)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/Utilities/generate_and_build_windows.ps1",
+        "-Action",
+        "all",
+        "-BuildDir",
+        "Intermediate/Solution-VSCode",
+        "-Config",
+        "Development",
+        "-GenerateExtensionCMake",
+        "ON",
+        "-ResolveExtensionDeps",
+        "ON"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": [
+        "$msCompile"
+      ]
+    },
+    {
+      "label": "CelestiaNova: Build Only (Development)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/Utilities/generate_and_build_windows.ps1",
+        "-Action",
+        "build",
+        "-BuildDir",
+        "Intermediate/Solution-VSCode",
+        "-Config",
+        "Development"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [
+        "$msCompile"
+      ]
+    }
+  ]
+}

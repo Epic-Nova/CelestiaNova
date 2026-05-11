@@ -83,6 +83,7 @@ enum class InteractionActionType {
     Restart,
     FetchLogs,
     Rollback,
+    Status,
 };
 
 struct InteractionLifecycleAction {

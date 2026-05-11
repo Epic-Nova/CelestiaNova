@@ -1,0 +1,28 @@
+{
+    "id":  "privilegeescalationagent",
+    "name":  "PrivilegeEscalationAgent",
+    "file":  "libPrivilegeEscalationAgent.so",
+    "version":  "0.1.0",
+    "autostart":  false,
+    "startupDelayMs":  0,
+    "description":  "Agent responsible for elevated command execution and privileged task handoff.",
+    "longDescription":  "PrivilegeEscalationAgent handles privileged operations that require administrative rights, including guarded escalation prompts, permission-aware command execution, and safe delegation back to orchestrators.",
+    "dependencies":  [
+                         "canvascore"
+                     ],
+    "publicIncludePaths":  [
+                               "Source"
+                           ],
+    "targetName":  "PrivilegeEscalationAgent",
+    "projectName":  "PrivilegeEscalationAgent",
+    "outputName":  "PrivilegeEscalationAgent",
+    "linkNovaCore":  true,
+    "canvas": {
+        "supportsDirectInvocation": false,
+        "menuDefinitions": {
+            "schema": "canvas.menu.definitions.v1",
+            "file": "PrivilegeEscalationAgent_MenuDefinitions.json",
+            "ownerExtensionId": "privilegeescalationagent"
+        }
+    }
+}

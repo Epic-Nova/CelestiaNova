@@ -31,8 +31,8 @@ class NOVA_CORE_API INovaCapabilityProvider {
 public:
     virtual ~INovaCapabilityProvider();
 
-    virtual NovaCapabilityDescriptor GetCapabilityDescriptor() const = 0;
-    virtual NovaHealthSnapshot GetHealthSnapshot() const = 0;
+    virtual NovaCapabilityDescriptor GetCapabilityDescriptor() const { return NovaCapabilityDescriptor{}; }
+    virtual NovaHealthSnapshot GetHealthSnapshot() const { return NovaHealthSnapshot{}; }
 };
 
 } // namespace Core

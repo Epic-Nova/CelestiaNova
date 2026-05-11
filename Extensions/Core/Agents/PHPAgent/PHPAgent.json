@@ -1,4 +1,4 @@
-﻿{
+{
     "id":  "phpagent",
     "name":  "PHPAgent",
     "file":  "libPHPAgent.so",
@@ -9,7 +9,8 @@
     "longDescription":  "PHPAgent provides PHP runtime orchestration capabilities required by framework workflows, including version checks, package installation hooks, and command execution pipelines.",
     "dependencies":  [
                          "canvascore",
-                         "terminalagent"
+                         "terminalagent",
+                         "nexuscore"
                      ],
     "publicIncludePaths":  [
                                "Source"
@@ -17,5 +18,20 @@
     "targetName":  "PHPAgent",
     "projectName":  "PHPAgent",
     "outputName":  "PHPAgent",
-    "linkNovaCore":  true
+    "linkNovaCore":  true,
+    "canvas": {
+        "supportsDirectInvocation": true,
+        "menuDefinitions": {
+            "schema": "canvas.menu.definitions.v1",
+            "file": "PHPAgent_MenuDefinitions.json",
+            "ownerExtensionId": "phpagent"
+        }
+    },
+    "optional": {
+        "serviceCapabilities": [
+            "php.version.get",
+            "php.extension.check",
+            "php.script.run"
+        ]
+    }
 }

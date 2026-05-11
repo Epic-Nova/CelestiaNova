@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "Core/IJsonStructParser.h"
-#include "MenuSchema/CanvasMenuSchemaProposal.h"
+#include "MenuSchema/CanvasMenuSchema.h"
 
 namespace CanvasCore::MenuSchema {
 

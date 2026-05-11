@@ -1,0 +1,91 @@
+{
+    "$schema": "../../CanvasCore/MenuDefinitions/CanvasMenuDefinitions.schema.json",
+    "schema": "canvas.menu.definitions.v1",
+    "ownerExtensionId": "composeragent",
+    "menus": [
+        {
+            "id": "composer_main",
+            "title": "PHP Composer Agent",
+            "subtitle": "Dependency management and project orchestration",
+            "icon": "PACKAGE",
+            "pageRequirements": [],
+            "sections": [
+                {
+                    "id": "actions",
+                    "title": "Available Actions",
+                    "description": "Direct interaction with the Composer runtime.",
+                    "fields": [
+                        {
+                            "id": "install_composer",
+                            "label": "Install Composer",
+                            "description": "Automated setup via system package manager",
+                            "type": "ActionButton",
+                            "defaultValue": "INSTALL",
+                            "validations": [],
+                            "valueStorage": "RuntimeOnly",
+                            "outputKey": "composer.action.install_composer"
+                        },
+                        {
+                            "id": "validate_config",
+                            "label": "Validate Project",
+                            "description": "Check composer.json for syntax and errors",
+                            "type": "ActionButton",
+                            "defaultValue": "VALIDATE",
+                            "validations": [],
+                            "valueStorage": "RuntimeOnly",
+                            "outputKey": "composer.action.validate_config"
+                        }
+                    ]
+                },
+                {
+                    "id": "status_link",
+                    "title": "Execution State",
+                    "description": "Monitor background processes.",
+                    "fields": [
+                        {
+                            "id": "view_logs",
+                            "label": "View Logs",
+                            "description": "Navigate to the live output stream",
+                            "type": "ActionButton",
+                            "defaultValue": "VIEW",
+                            "validations": [],
+                            "valueStorage": "RuntimeOnly",
+                            "outputKey": "menu.goto:composer_progress"
+                        }
+                    ]
+                }
+            ],
+            "cancelAction": "menu.back"
+        },
+        {
+            "id": "composer_progress",
+            "title": "Composer Activity",
+            "subtitle": "Live diagnostic stream",
+            "icon": "TERMINAL",
+            "sections": [
+                {
+                    "id": "log_section",
+                    "title": "Diagnostic Output",
+                    "description": "Real-time feed from the Composer process.",
+                    "fields": [
+                        {
+                            "id": "composer_logs",
+                            "label": "Live Output",
+                            "description": "Streaming stdout/stderr from the active command",
+                            "type": "TerminalView",
+                            "defaultValue": "Waiting for execution...",
+                            "requirementBinding": {
+                                "key": "composer.logs",
+                                "source": "Agent",
+                                "strategy": "RegistryLookup"
+                            },
+                            "validations": [],
+                            "valueStorage": "RuntimeOnly"
+                        }
+                    ]
+                }
+            ],
+            "cancelAction": "menu.goto:composer_main"
+        }
+    ]
+}

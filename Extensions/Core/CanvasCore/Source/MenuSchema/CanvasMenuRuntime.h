@@ -16,6 +16,10 @@ public:
 
     std::vector<std::string> ListMenuIds() const;
 
+    bool HasMenusForExtension(const std::string& extensionId) const;
+    std::string GetDefaultMenuIdForExtension(const std::string& extensionId) const;
+    std::string GetMenuOwnerExtensionId(const std::string& menuId) const;
+
     bool GetMenuDefinition(const std::string& menuId,
                            MenuSchema::FCanvasMenuDefinition& outMenu) const;
 

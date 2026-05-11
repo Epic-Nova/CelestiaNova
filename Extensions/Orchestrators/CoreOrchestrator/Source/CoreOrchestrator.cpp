@@ -1,4 +1,4 @@
-﻿#include "CoreOrchestrator.h"
+#include "CoreOrchestrator.h"
 
 #include "Core/NovaLog.h"
 
@@ -127,6 +127,9 @@ Core::InteractionLifecycleContract CoreOrchestratorModule::GetInteractionLifecyc
         {Core::InteractionLifecycleStage::Migration, Core::InteractionActionType::Apply, "migration.apply", "Run migration", "Execute orchestrator-managed migrations", true, true},
         {Core::InteractionLifecycleStage::Interaction, Core::InteractionActionType::Restart, "service.restart", "Restart service", "Restart service after config or migration actions", true, true},
         {Core::InteractionLifecycleStage::Interaction, Core::InteractionActionType::FetchLogs, "service.logs", "Fetch logs", "Fetch orchestrator and service logs", false, false},
+        {Core::InteractionLifecycleStage::Interaction, Core::InteractionActionType::Start, "service.start", "Start service", "Start the service (background mode)", true, true},
+        {Core::InteractionLifecycleStage::Interaction, Core::InteractionActionType::Stop, "service.stop", "Stop service", "Stop the service (background mode)", true, true},
+        {Core::InteractionLifecycleStage::Interaction, Core::InteractionActionType::Status, "service.status", "Fetch status", "Fetch the current status of the service", false, false},
     };
     contract.emittedEvents = {
         "orchestrator.config.validated",

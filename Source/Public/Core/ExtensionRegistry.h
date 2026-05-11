@@ -60,6 +60,12 @@ public:
     // Unload all loaded extensions.
     void UnloadAllExtensions();
 
+    /**
+     * Iterates through all loaded extensions and dispatches CLI arguments
+     * if they implement IExtensionCliProvider.
+     */
+    void ApplyCliArguments(int argc, const char* argv[]);
+
 private:
     ExtensionRegistry() = default;
     ~ExtensionRegistry();
@@ -75,6 +81,7 @@ private:
     Entry* FindEntry(const std::string& id);
 
     std::vector<std::unique_ptr<Entry>> entries_;
+    std::vector<std::string> loadedOrder_;
     ModuleLoader loader_;
 };
 

@@ -1,8 +1,12 @@
-﻿#pragma once
+#pragma once
 
 #include "Core/ModuleAPI.h"
 #include "Core/IExtensionInterface.h"
 #include "ExtensionSpecific/INovaCapabilityProvider.h"
+#include "ExtensionSpecific/IContentForge.h"
+#include <mutex>
+#include <vector>
+#include <string>
 
 #ifdef ContentForge_EXPORTS
 #  define CONTENTFORGE_API NOVA_EXPORT
@@ -10,7 +14,10 @@
 #  define CONTENTFORGE_API NOVA_IMPORT
 #endif
 
-class CONTENTFORGE_API ContentForgeModule : public IExtensionInterface, public Core::INovaCapabilityProvider {
+class CONTENTFORGE_API ContentForgeModule : 
+    public IExtensionInterface, 
+    public Core::INovaCapabilityProvider,
+    public Core::IContentForge {
 public:
     ContentForgeModule();
     ~ContentForgeModule() override;
@@ -20,4 +27,20 @@ public:
 
     Core::NovaCapabilityDescriptor GetCapabilityDescriptor() const override;
     Core::NovaHealthSnapshot GetHealthSnapshot() const override;
+
+    // ISourceControlAgent Implementation
+    bool Clone(const std::string& url, const std::string& destination, const std::string& branch = "") override;
+    bool Pull(const std::string& repoPath) override;
+    bool Push(const std::string& repoPath, const std::string& message) override;
+    std::string GetCurrentBranch(const std::string& repoPath) override;
+    bool IsRepo(const std::string& path) override;
+
+    // IContentForge Implementation
+    bool MountFileSystemPath(const std::string& sourcePath, const std::string& mountTarget) const override;
+    bool FetchViaGitAgent(const std::string& repoUrl, const std::string& destination) const override;
+    std::vector<std::string> GetContentProviders() const override;
+
+private:
+    mutable std::mutex ProviderMutex_;
+    std::vector<std::string> ContentProviders_;
 };

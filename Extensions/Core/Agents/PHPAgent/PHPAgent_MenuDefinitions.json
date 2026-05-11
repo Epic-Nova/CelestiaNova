@@ -1,0 +1,94 @@
+{
+    "$schema": "../../CanvasCore/MenuDefinitions/CanvasMenuDefinitions.schema.json",
+    "schema": "canvas.menu.definitions.v1",
+    "ownerExtensionId": "phpagent",
+    "menus": [
+        {
+            "id": "php_main",
+            "title": "PHP Runtime Agent",
+            "subtitle": "Environment detection and script execution",
+            "icon": "CODE",
+            "pageRequirements": [],
+            "sections": [
+                {
+                    "id": "actions",
+                    "title": "Actions",
+                    "description": "PHP runtime operations.",
+                    "fields": [
+                        {
+                            "id": "check_version",
+                            "label": "Check PHP Version",
+                            "description": "Run php -v to detect runtime",
+                            "type": "ActionButton",
+                            "defaultValue": "php.action.check_version",
+                            "validations": [],
+                            "valueStorage": "RuntimeOnly",
+                            "outputKey": "php.action.check_version"
+                        },
+                        {
+                            "id": "run_script",
+                            "label": "Run Script",
+                            "description": "Run a PHP script with optional args.",
+                            "type": "ActionButton",
+                            "defaultValue": "php.action.run_script",
+                            "validations": [],
+                            "valueStorage": "RuntimeOnly",
+                            "outputKey": "php.action.run_script"
+                        },
+                        {
+                            "id": "script_path",
+                            "label": "Script Path",
+                            "description": "Path to the PHP script.",
+                            "type": "String",
+                            "defaultValue": "",
+                            "validations": [],
+                            "valueStorage": "RuntimeOnly",
+                            "outputKey": "php.input.script"
+                        },
+                        {
+                            "id": "script_args",
+                            "label": "Script Args",
+                            "description": "Arguments separated by spaces.",
+                            "type": "String",
+                            "defaultValue": "",
+                            "validations": [],
+                            "valueStorage": "RuntimeOnly",
+                            "outputKey": "php.input.args"
+                        }
+                    ]
+                }
+            ],
+            "cancelAction": "menu.back"
+        },
+        {
+            "id": "php_progress",
+            "title": "PHP Activity",
+            "subtitle": "Live diagnostic stream",
+            "icon": "TERMINAL",
+            "sections": [
+                {
+                    "id": "logs",
+                    "title": "Diagnostic Output",
+                    "description": "Real-time feed from the PHP runtime.",
+                    "fields": [
+                        {
+                            "id": "php_logs",
+                            "label": "Live Output",
+                            "description": "Streaming stdout/stderr",
+                            "type": "TerminalView",
+                            "defaultValue": "Waiting for process output...",
+                            "requirementBinding": {
+                                "key": "php.logs",
+                                "source": "Agent",
+                                "strategy": "RegistryLookup"
+                            },
+                            "validations": [],
+                            "valueStorage": "RuntimeOnly"
+                        }
+                    ]
+                }
+            ],
+            "cancelAction": "menu.goto:phpagent::php_main"
+        }
+    ]
+}

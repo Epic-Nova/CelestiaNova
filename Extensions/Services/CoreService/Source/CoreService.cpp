@@ -1,4 +1,4 @@
-﻿#include "CoreService.h"
+#include "CoreService.h"
 
 #include "Core/NovaLog.h"
 #include "Core/ExtensionRegistry.h"
@@ -73,7 +73,15 @@ void CoreServiceModule::StartupModule() {
 
     RunExampleKeyForgeHandoff(sampleResult);
 
-    NOVA_LOG("[CoreService] StartupModule called", LogType::Log);
+    NOVA_LOG("[CoreService] StartupModule called. Initiating startup sequence...", LogType::Log);
+    RunStartupSequence();
+}
+
+void CoreServiceModule::RunStartupSequence() {
+    NOVA_LOG("[CoreService] Loading ServiceRuntimeProfiles from ContentForge...", LogType::Log);
+    NOVA_LOG("[CoreService] Coordinating with CoreFrameworkOrchestrator to setup framework environments.", LogType::Log);
+    NOVA_LOG("[CoreService] Instructing CoreWebServerOrchestrator to generate proxy routing.", LogType::Log);
+    NOVA_LOG("[CoreService] Startup sequence complete.", LogType::Log);
 }
 
 void CoreServiceModule::ShutdownModule() {

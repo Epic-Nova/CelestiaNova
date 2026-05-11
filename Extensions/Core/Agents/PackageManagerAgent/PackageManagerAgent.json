@@ -1,0 +1,41 @@
+{
+    "id": "packagemanageragent",
+    "name": "PackageManagerAgent",
+    "file": "libPackageManagerAgent.so",
+    "version": "0.1.0",
+    "autostart": false,
+    "startupDelayMs": 0,
+    "description": "Agent for platform-agnostic package management (Brew, Choco, Apt).",
+    "longDescription": "PackageManagerAgent provides a unified interface for installing and managing system packages across macOS, Windows, and Linux.",
+    "dependencies": [
+        "canvascore",
+        "privilegeescalationagent"
+    ],
+    "publicIncludePaths": [
+        "Source"
+    ],
+    "targetName": "PackageManagerAgent",
+    "projectName": "PackageManagerAgent",
+    "outputName": "PackageManagerAgent",
+    "linkNovaCore": true,
+    "canvas": {
+        "menuDefinitions": {
+            "schema": "canvas.menu.definitions.v1",
+            "file": "PackageManager_MenuDefinitions.json"
+        },
+        "requirements": {
+            "resolver": {
+                "supportedKeys": [
+                    "package_manager.progress",
+                    "package_manager.step",
+                    "package_manager.logs"
+                ],
+                "resolverApi": {
+                    "cAbiBridge": {
+                        "export": "PackageManagerAgent_Resolve"
+                    }
+                }
+            }
+        }
+    }
+}

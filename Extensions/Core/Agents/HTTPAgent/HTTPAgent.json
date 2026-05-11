@@ -1,4 +1,4 @@
-﻿{
+{
     "id":  "httpagent",
     "name":  "HTTPAgent",
     "file":  "libHTTPAgent.so",
@@ -8,7 +8,9 @@
     "description":  "HTTP transport agent for API requests, health checks, and remote orchestration traffic.",
     "longDescription":  "HTTPAgent centralizes HTTP operations for extensions, including authenticated request execution, endpoint health probing, retry-aware calls, and response forwarding to higher-level orchestrators.",
     "dependencies":  [
-                         "canvascore"
+                         "canvascore",
+                         "terminalagent",
+                         "packagemanageragent"
                      ],
     "publicIncludePaths":  [
                                "Source"
@@ -16,5 +18,20 @@
     "targetName":  "HTTPAgent",
     "projectName":  "HTTPAgent",
     "outputName":  "HTTPAgent",
-    "linkNovaCore":  true
+    "linkNovaCore":  true,
+    "canvas": {
+        "supportsDirectInvocation": true,
+        "menuDefinitions": {
+            "schema": "canvas.menu.definitions.v1",
+            "file": "HTTPAgent_MenuDefinitions.json",
+            "ownerExtensionId": "httpagent"
+        }
+    },
+    "optional": {
+        "serviceCapabilities": [
+            "http.get",
+            "http.post",
+            "http.download"
+        ]
+    }
 }

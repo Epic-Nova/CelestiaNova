@@ -1,21 +1,40 @@
-﻿{
-    "id":  "terminalagent",
-    "name":  "TerminalAgent",
-    "file":  "libTerminalAgent.so",
-    "version":  "0.1.0",
-    "autostart":  false,
-    "startupDelayMs":  0,
-    "description":  "Agent that executes shell commands and bridges terminal I/O for extensions.",
-    "longDescription":  "TerminalAgent provides command execution primitives for extension workflows, including process launch, shell command routing, and result capture needed by higher-level automation modules.",
-    "dependencies":  [
-                         "canvascore",
-                         "privilegeescalationagent"
-                     ],
-    "publicIncludePaths":  [
-                               "Source"
-                           ],
-    "targetName":  "TerminalAgent",
-    "projectName":  "TerminalAgent",
-    "outputName":  "TerminalAgent",
-    "linkNovaCore":  true
+{
+  "id": "terminalagent",
+  "name": "TerminalAgent",
+  "file": "libTerminalAgent.so",
+  "version": "0.1.0",
+  "autostart": true,
+  "startupDelayMs": 50,
+  "description": "Central extension for securely executing and managing OS-level commands.",
+  "longDescription": "TerminalAgent provides a secure, centralized interface for other extensions to interact with the underlying host OS shell. It supports synchronous/asynchronous execution, output streaming, and process lifecycle management.",
+  "dependencies": [
+    "aegiscore"
+  ],
+  "publicIncludePaths": [
+    "Source"
+  ],
+  "targetName": "TerminalAgent",
+  "projectName": "TerminalAgent",
+  "outputName": "TerminalAgent",
+  "linkNovaCore": true,
+  "canvas": {
+    "supportsDirectInvocation": true,
+    "menuDefinitions": {
+      "schema": "canvas.menu.definitions.v1",
+      "file": "TerminalAgent_MenuDefinitions.json",
+      "ownerExtensionId": "terminalagent"
+    },
+    "requirements": {
+      "resolver": {
+        "supportedKeys": [
+          "terminal.history"
+        ],
+        "resolverApi": {
+          "cAbiBridge": {
+            "export": "TerminalAgent_ResolveRequirement"
+          }
+        }
+      }
+    }
+  }
 }

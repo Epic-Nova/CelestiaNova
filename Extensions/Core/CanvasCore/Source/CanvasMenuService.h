@@ -6,7 +6,7 @@
 
 #include "Core/IJsonStructParser.h"
 #include "ExtensionSpecific/ICanvasRuntimeSurfaceProvider.h"
-#include "MenuSchema/CanvasMenuSchemaProposal.h"
+#include "MenuSchema/CanvasMenuSchema.h"
 
 namespace CanvasCore {
 

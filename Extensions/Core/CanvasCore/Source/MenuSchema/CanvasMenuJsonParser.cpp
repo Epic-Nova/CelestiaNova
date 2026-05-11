@@ -161,6 +161,7 @@ const std::unordered_map<std::string, ECanvasFieldType>& FieldTypeLookup() {
         {"CollapsibleSection", ECanvasFieldType::CollapsibleSection},
         {"ResizableSplit", ECanvasFieldType::ResizableSplit},
         {"TabContainer", ECanvasFieldType::TabContainer},
+        {"TerminalView", ECanvasFieldType::TerminalView},
     };
     return kLookup;
 }
