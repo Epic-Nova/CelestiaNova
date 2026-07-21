@@ -63,8 +63,8 @@ int main(int argc, const char* argv[])
 #ifdef PROJECT_SOURCE_DIR
     try { std::filesystem::current_path(PROJECT_SOURCE_DIR); } catch(...) {}
 #endif
-    // Ensure terminal size is set
-    Utils::TerminalUtils::SetTerminalSize(65, 40);
+    // Keep the user's terminal dimensions intact. FTXUI needs the real viewport
+    // dimensions to align mouse hitboxes with rendered components.
 
     // Initialize Logging system & Default directories
     NovaLog::StartLogFile();

@@ -5,6 +5,7 @@
 #include "ExtensionSpecific/INovaCapabilityProvider.h"
 #include "ExtensionSpecific/IContentForge.h"
 #include <mutex>
+#include <map>
 #include <vector>
 #include <string>
 
@@ -39,8 +40,11 @@ public:
     bool MountFileSystemPath(const std::string& sourcePath, const std::string& mountTarget) const override;
     bool FetchViaGitAgent(const std::string& repoUrl, const std::string& destination) const override;
     std::vector<std::string> GetContentProviders() const override;
+    bool RegisterLocalContent(const Core::LocalContentDescriptor& descriptor) override;
+    bool ResolveLocalContent(const std::string& contentId, Core::LocalContentDescriptor& outDescriptor) const override;
 
 private:
     mutable std::mutex ProviderMutex_;
     std::vector<std::string> ContentProviders_;
+    std::map<std::string, Core::LocalContentDescriptor> LocalContent_;
 };

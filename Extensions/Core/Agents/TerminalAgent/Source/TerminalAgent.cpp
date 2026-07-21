@@ -17,6 +17,27 @@
 #define PCLOSE pclose
 #endif
 
+namespace {
+
+bool ApplyWorkingDirectory(const CoreTerminal::TerminalCommandRequest& request, std::string& command) {
+    if (request.workingDirectory.empty()) {
+        return true;
+    }
+
+    if (request.workingDirectory.find_first_of("\"\r\n") != std::string::npos) {
+        return false;
+    }
+
+#ifdef _WIN32
+    command = "cd /d \"" + request.workingDirectory + "\" && " + command;
+#else
+    command = "cd \"" + request.workingDirectory + "\" && " + command;
+#endif
+    return true;
+}
+
+} // namespace
+
 TerminalAgentModule::TerminalAgentModule() {}
 TerminalAgentModule::~TerminalAgentModule() {}
 
@@ -89,6 +110,11 @@ CoreTerminal::TerminalCommandResult TerminalAgentModule::ExecuteCommandSync(cons
 
     std::string commandToExecute = request.command;
     std::string password;
+
+    if (!ApplyWorkingDirectory(request, commandToExecute)) {
+        result.stdErr = "Working directory contains unsupported characters.";
+        return result;
+    }
 
     if (request.bRequireEscalation) {
         auto* escalationAgent = GetEscalationAgent();
@@ -227,6 +253,15 @@ std::string TerminalAgentModule::ExecuteCommandAsync(const CoreTerminal::Termina
     
     std::string commandToExecute = request.command;
     std::string password;
+
+    if (!ApplyWorkingDirectory(request, commandToExecute)) {
+        if (callback) {
+            CoreTerminal::TerminalCommandResult result;
+            result.stdErr = "Working directory contains unsupported characters.";
+            callback(result);
+        }
+        return "";
+    }
 
     if (request.bRequireEscalation) {
         auto* escalationAgent = GetEscalationAgent();

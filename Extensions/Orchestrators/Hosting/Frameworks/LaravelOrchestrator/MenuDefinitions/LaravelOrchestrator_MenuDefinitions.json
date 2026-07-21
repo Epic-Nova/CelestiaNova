@@ -1,0 +1,55 @@
+{
+  "$schema": "../../../../../Core/CanvasCore/MenuDefinitions/CanvasMenuDefinitions.schema.json",
+  "schema": "canvas.menu.definitions.v1",
+  "ownerExtensionId": "laravelorchestrator",
+  "menus": [
+    {
+      "id": "laravel_main",
+      "title": "Laravel Orchestrator",
+      "subtitle": "Local content deployment management",
+      "icon": "ORCHESTRATOR",
+      "sections": [
+        {
+          "id": "auth_api",
+          "title": "Auth API (Local)",
+          "description": "ContentForge-managed Laravel application at the local Auth-API content path.",
+          "fields": [
+            {
+              "id": "authApiStatus",
+              "label": "Runtime Status",
+              "description": "Use Refresh Status to query the Laravel Compose service.",
+              "type": "TextLabel",
+              "defaultValue": "Runtime Status: Unknown",
+              "valueStorage": "RuntimeOnly"
+            },
+            {
+              "id": "startAuthApi",
+              "label": "Start Auth API",
+              "description": "Start the local Compose stack through DockerOrchestrator.",
+              "type": "ActionButton",
+              "defaultValue": "laravel.auth-api.start",
+              "valueStorage": "RuntimeOnly"
+            },
+            {
+              "id": "stopAuthApi",
+              "label": "Stop Auth API",
+              "description": "Stop the local Compose services without removing volumes.",
+              "type": "ActionButton",
+              "defaultValue": "laravel.auth-api.stop",
+              "valueStorage": "RuntimeOnly"
+            },
+            {
+              "id": "refreshAuthApi",
+              "label": "Refresh Status",
+              "description": "Check whether the Laravel application service is running.",
+              "type": "ActionButton",
+              "defaultValue": "laravel.auth-api.refresh",
+              "valueStorage": "RuntimeOnly"
+            }
+          ]
+        }
+      ],
+      "cancelAction": "menu.back"
+    }
+  ]
+}

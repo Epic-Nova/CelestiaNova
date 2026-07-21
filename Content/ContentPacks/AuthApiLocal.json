@@ -1,0 +1,15 @@
+{
+  "id": "auth-api",
+  "name": "Auth API (Local)",
+  "version": "0.1.0",
+  "source": {
+    "type": "local-path",
+    "path": "../Auth-API"
+  },
+  "deployment": {
+    "orchestrator": "laravelorchestrator",
+    "profile": "minimal",
+    "composeFile": "compose.yaml",
+    "healthEndpoint": "/api/health"
+  }
+}

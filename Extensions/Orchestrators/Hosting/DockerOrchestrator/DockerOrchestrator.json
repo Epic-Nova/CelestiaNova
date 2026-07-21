@@ -5,7 +5,7 @@
     "version":  "0.1.0",
     "autostart":  false,
     "startupDelayMs":  0,
-    "description":  "Hosting orchestrator for Docker installation, compose flows, and container lifecycle tasks.",
+    "description":  "Hosting orchestrator for Docker Compose deployment and container lifecycle tasks.",
     "longDescription":  "DockerOrchestrator provides container runtime orchestration for Celestia Nova, including Docker installation checks, compose-based deployment helpers, network/storage setup, and privileged host integration.",
     "dependencies":  [
                          "coreorchestrator",

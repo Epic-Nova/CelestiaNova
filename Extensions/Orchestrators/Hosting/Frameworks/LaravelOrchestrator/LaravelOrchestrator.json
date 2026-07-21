@@ -3,12 +3,13 @@
     "name":  "LaravelOrchestrator",
     "file":  "libLaravelOrchestrator.so",
     "version":  "0.1.0",
-    "autostart":  false,
+    "autostart":  true,
     "startupDelayMs":  0,
     "description":  "Framework orchestrator for Laravel environment setup, services, and deployment handoff.",
     "longDescription":  "LaravelOrchestrator handles Laravel-specific automation including runtime prerequisites, environment configuration, framework command routing, and containerized deployment preparation.",
     "dependencies":  [
                          "dockerorchestrator",
+                         "terminalagent",
                          "phpagent",
                          "composeragent",
                          "nodeagent",
@@ -21,5 +22,13 @@
     "targetName":  "LaravelOrchestrator",
     "projectName":  "LaravelOrchestrator",
     "outputName":  "LaravelOrchestrator",
-    "linkNovaCore":  true
+    "linkNovaCore":  true,
+    "canvas": {
+        "supportsDirectInvocation": true,
+        "menuDefinitions": {
+            "schema": "canvas.menu.definitions.v1",
+            "file": "MenuDefinitions/LaravelOrchestrator_MenuDefinitions.json",
+            "ownerExtensionId": "laravelorchestrator"
+        }
+    }
 }

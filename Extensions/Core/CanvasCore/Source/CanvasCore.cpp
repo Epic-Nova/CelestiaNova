@@ -1206,10 +1206,13 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
     std::string activeMenuId = startMenuId.empty() ? "main" : startMenuId;
     MenuHistory_.clear();
     std::unordered_map<std::string, std::unordered_map<std::string, std::string>> menuValuesByMenu;
+    auto ignoreMouseEventsUntil = std::chrono::steady_clock::time_point::min();
 
     using namespace ftxui;
-    // Reverting to FitComponent to restore full mouse interactivity on Windows terminals.
-    auto screen = ScreenInteractive::FitComponent();
+    // Use one stable viewport for the whole session. FitComponent recalculates
+    // its dimensions when menus have different content heights, which makes
+    // Windows terminal mouse coordinates drift after navigation.
+    auto screen = ScreenInteractive::Fullscreen();
 
     CanvasCore::UnattendedModeManager unattendedManager;
     
@@ -1306,6 +1309,13 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
         std::string navigateToMenuId;
         bool requestBack = false;
         bool requestRebuild = false;
+        auto exitCurrentMenu = [&]() {
+            // Windows terminals can deliver a second mouse event after a button
+            // has already requested a menu transition. Swallow it in the next
+            // frame so it cannot activate a control in the newly rendered menu.
+            ignoreMouseEventsUntil = std::chrono::steady_clock::now() + std::chrono::milliseconds(180);
+            screen.ExitLoopClosure()();
+        };
 
         const auto loopStart = std::chrono::steady_clock::now();
 
@@ -1552,7 +1562,7 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
                                 }
 
                                 requestRebuild = true;
-                                screen.ExitLoopClosure()();
+                                exitCurrentMenu();
                             },
                             Color::Black,
                             Color::Cyan,
@@ -1766,8 +1776,12 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
                     }
 
                     case ECanvasFieldType::TextLabel: {
-                        const std::string line = field.DefaultValue.empty() ? field.Label : field.DefaultValue;
-                        contentComponents.push_back(Renderer([line] { return text(line) | color(Color::White); }));
+                        auto textSource = std::make_shared<std::string>();
+                        const auto match = menuValues.find(field.Id);
+                        *textSource = match == menuValues.end()
+                            ? (field.DefaultValue.empty() ? field.Label : field.DefaultValue)
+                            : match->second;
+                        contentComponents.push_back(Renderer([textSource] { return text(*textSource) | color(Color::White); }));
                         break;
                     }
 
@@ -2075,7 +2089,7 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
                     requestRebuild = true;
                 }
 
-                screen.ExitLoopClosure()();
+                exitCurrentMenu();
             },
             Color::Black,
             Color::Green,
@@ -2087,7 +2101,7 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
             "Reload active menu schema and sync local state.",
             [&]() {
                 requestRebuild = true;
-                screen.ExitLoopClosure()();
+                exitCurrentMenu();
             },
             Color::Black,
             Color::Cyan,
@@ -2105,7 +2119,7 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
                 } else {
                     requestBack = true;
                 }
-                screen.ExitLoopClosure()();
+                exitCurrentMenu();
             },
             Color::Black,
             Color::Yellow,
@@ -2117,7 +2131,7 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
             "Terminate the current session and exit.",
             [&]() {
                 shouldQuit = true;
-                screen.ExitLoopClosure()();
+                exitCurrentMenu();
             },
             Color::Black,
             Color::Red,
@@ -2395,7 +2409,10 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
 
             auto mainApp = vbox({
                                header,
-                               contentContainer->Render() | flex | vscroll_indicator | frame | border | color(get_rainbow_color(270)),
+                               // Do not place interactive fields inside an FTXUI frame. A frame
+                               // scrolls the visual tree independently of component event boxes,
+                               // which produces vertically offset mouse hit targets.
+                               contentContainer->Render() | flex | border | color(get_rainbow_color(270)),
                                separatorLight() | color(get_rainbow_color(300)),
                                hbox({
                                    vbox(std::move(infoRows)) | flex,
@@ -2438,6 +2455,10 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
         });
 
         auto withEvents = CatchEvent(component, [&](Event event) {
+            if (event.is_mouse() && std::chrono::steady_clock::now() < ignoreMouseEventsUntil) {
+                return true;
+            }
+
             if (event == Event::Escape) {
                 // CancelAction overrides the escape key too.
                 if (!menuFrame.Menu.CancelAction.empty() && (menuFrame.Menu.CancelAction == "menu.back" || menuExists(menuFrame.Menu.CancelAction))) {
@@ -2447,7 +2468,7 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
                 } else {
                     shouldQuit = true;
                 }
-                screen.ExitLoopClosure()();
+                exitCurrentMenu();
                 return true;
             }
 
