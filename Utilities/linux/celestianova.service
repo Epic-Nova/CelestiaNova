@@ -19,7 +19,10 @@ NoNewPrivileges=yes
 PrivateTmp=yes
 ProtectSystem=strict
 ProtectHome=yes
-ReadWritePaths=/var/lib/celestianova
+# Celestia's current logger writes its runtime file below Content/Logs.  Keep
+# the package immutable otherwise and permit only this dedicated log directory
+# plus the StateDirectory used by service-mode status snapshots.
+ReadWritePaths=/var/lib/celestianova /opt/celestianova/Content/Logs
 
 [Install]
 WantedBy=multi-user.target
