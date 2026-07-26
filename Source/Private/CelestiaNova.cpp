@@ -5,13 +5,16 @@
 #include "NovaMinimal.h"
 #include "Core/ExtensionRegistry.h"
 #include "Core/FTSTicker.h"
+#include "Core/StatusApiSurface.h"
 #include "ExtensionSpecific/ICanvasRuntimeSurfaceProvider.h"
 #include "Utils/CommandLineParsing.h"
 #include "Utils/TerminalUtils.h"
 #include <atomic>
+#include <algorithm>
 #include <chrono>
 #include <filesystem>
 #include <thread>
+#include <fstream>
 #include "UnitTests/BaseUnitTest.h"
 #include "UnitTests/UnitTestManager.h"
 #include <cpptrace/cpptrace.hpp>
@@ -25,6 +28,89 @@ using namespace Core;
 using namespace Utils;
 
 #include <csignal>
+
+namespace {
+
+volatile std::sig_atomic_t GServiceStopRequested = 0;
+
+void ServiceStopSignalHandler(int) {
+    // SIGTERM/SIGINT are normal service lifecycle events, not crashes.  Keep
+    // the handler async-signal-safe and let the main loop perform shutdown.
+    GServiceStopRequested = 1;
+}
+
+struct ServiceModeOptions {
+    bool Enabled = false;
+    std::filesystem::path StatusFile = "Runtime/status/service-status.json";
+    int StatusIntervalSeconds = 15;
+};
+
+ServiceModeOptions ParseServiceModeOptions(int argc, const char* argv[]) {
+    ServiceModeOptions options;
+    for (int index = 1; index < argc; ++index) {
+        const std::string argument = argv[index] ? argv[index] : "";
+        if (argument == "--service-mode" || argument == "--daemon") {
+            options.Enabled = true;
+        } else if (argument == "--status-file" && index + 1 < argc) {
+            options.StatusFile = argv[++index];
+        } else if (argument == "--status-interval-seconds" && index + 1 < argc) {
+            try {
+                options.StatusIntervalSeconds = std::stoi(argv[++index]);
+            } catch (...) {
+                options.StatusIntervalSeconds = 15;
+            }
+        }
+    }
+    options.StatusIntervalSeconds = std::max(5, std::min(options.StatusIntervalSeconds, 3600));
+    return options;
+}
+
+bool WriteServiceStatusSnapshot(const std::filesystem::path& statusFile) {
+    try {
+        std::filesystem::create_directories(statusFile.parent_path());
+        const auto temporaryFile = statusFile.string() + ".tmp";
+        std::ofstream output(temporaryFile, std::ios::out | std::ios::trunc);
+        if (!output) {
+            return false;
+        }
+        output << Core::StatusApiSurface::BuildExtensionsStatusJson();
+        output << '\n';
+        output.close();
+        std::filesystem::rename(temporaryFile, statusFile);
+        return true;
+    } catch (const std::exception& ex) {
+        NOVA_LOG((std::string("Service-mode status write failed: ") + ex.what()).c_str(), LogType::Warning);
+        return false;
+    }
+}
+
+int RunServiceMode(const ServiceModeOptions& options) {
+    NOVA_LOG(("Service mode started; reporting status to " + options.StatusFile.string()).c_str(), LogType::Log);
+    std::signal(SIGTERM, ServiceStopSignalHandler);
+    std::signal(SIGINT, ServiceStopSignalHandler);
+
+    auto nextStatusWrite = std::chrono::steady_clock::now();
+    auto lastTick = std::chrono::steady_clock::now();
+    while (!GServiceStopRequested) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        const auto now = std::chrono::steady_clock::now();
+        Core::FTSTicker::GetCoreTicker().Tick(std::chrono::duration<float>(now - lastTick).count());
+        lastTick = now;
+
+        if (now >= nextStatusWrite) {
+            WriteServiceStatusSnapshot(options.StatusFile);
+            nextStatusWrite = now + std::chrono::seconds(options.StatusIntervalSeconds);
+        }
+    }
+
+    // Always leave a final snapshot so the API/dashboard can distinguish a
+    // clean stop from a stale heartbeat.
+    WriteServiceStatusSnapshot(options.StatusFile);
+    NOVA_LOG("Service mode stopped cleanly", LogType::Log);
+    return 0;
+}
+
+} // namespace
 
 void SignalHandler(int signum)
 {
@@ -65,6 +151,8 @@ int main(int argc, const char* argv[])
 #endif
     // Keep the user's terminal dimensions intact. FTXUI needs the real viewport
     // dimensions to align mouse hitboxes with rendered components.
+
+    const ServiceModeOptions serviceModeOptions = ParseServiceModeOptions(argc, argv);
 
     // Initialize Logging system & Default directories
     NovaLog::StartLogFile();
@@ -149,6 +237,10 @@ int main(int argc, const char* argv[])
     }
 
     
+
+    if (serviceModeOptions.Enabled) {
+        return RunServiceMode(serviceModeOptions);
+    }
 
     auto* canvasRuntimeSurface = dynamic_cast<Core::ICanvasRuntimeSurfaceProvider*>(
         Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("canvascore"));

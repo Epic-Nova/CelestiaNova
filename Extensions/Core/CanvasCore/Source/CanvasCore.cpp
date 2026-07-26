@@ -1481,6 +1481,13 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
                             field.Label.empty() ? std::string("RUN_EXEC") : field.Label,
                             field.Description,
                             [&, actionTarget, fieldId = field.Id]() {
+                                // Inputs and selectors keep their state in FTXUI-owned values until
+                                // the next render.  A direct action must synchronise those values
+                                // before it builds its request; otherwise the provider sees an empty
+                                // or stale selection when the user clicks immediately after choosing it.
+                                for (const auto& syncCallback : syncValueCallbacks) {
+                                    syncCallback();
+                                }
                                 menuValues[fieldId] = actionTarget;
 
                                 if (actionTarget == "test_success") unattendedManager.Trigger("SUCCESS");
@@ -1531,6 +1538,15 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
                                     const auto descriptors = registry.ListExtensionDescriptors();
                                     const std::string ownerExtensionId = Runtime_ ? Runtime_->GetMenuOwnerExtensionId(activeMenuId) : std::string();
 
+                                    // Menu definitions are discoverable before their owner library is
+                                    // loaded.  Direct actions must therefore activate that owner on
+                                    // demand instead of silently finding no provider.
+                                    if (!ownerExtensionId.empty() && !registry.IsExtensionLoaded(ownerExtensionId)) {
+                                        registry.LoadExtensionById(ownerExtensionId);
+                                    }
+
+                                    bool actionHandled = false;
+
                                     for (const auto& descriptor : descriptors) {
                                         if (!ownerExtensionId.empty() && descriptor.id != ownerExtensionId) {
                                             continue;
@@ -1541,6 +1557,7 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
                                             if (actionProvider) {
                                                 Core::CanvasMenuActionResult actionResult = actionProvider->OnMenuAction(actionReq);
                                                 if (actionResult.Success) {
+                                                    actionHandled = true;
                                                     for (const auto& updateEntry : actionResult.ConfigUpdates) {
                                                         menuValues[updateEntry.first] = updateEntry.second;
                                                     }
@@ -1548,6 +1565,7 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
                                                         navigateToMenuId = actionResult.NavigateToMenuId;
                                                     }
                                                 } else if (!actionResult.ErrorMessage.empty()) {
+                                                    actionHandled = true;
                                                     Core::CanvasToastNotification errToast;
                                                     errToast.SourceExtensionId = descriptor.id;
                                                     errToast.TargetMenuId = NormalizeMenuId(activeMenuId);
@@ -1558,6 +1576,16 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
                                                 }
                                             }
                                         }
+                                    }
+
+                                    if (!actionHandled) {
+                                        Core::CanvasToastNotification errToast;
+                                        errToast.SourceExtensionId = "canvascore";
+                                        errToast.TargetMenuId = NormalizeMenuId(activeMenuId);
+                                        errToast.Title = "ACTION_UNAVAILABLE";
+                                        errToast.Message = "No loaded extension can handle action '" + actionTarget + "'.";
+                                        errToast.Severity = Core::CanvasNotificationSeverity::Error;
+                                        PublishCanvasToast(errToast);
                                     }
                                 }
 

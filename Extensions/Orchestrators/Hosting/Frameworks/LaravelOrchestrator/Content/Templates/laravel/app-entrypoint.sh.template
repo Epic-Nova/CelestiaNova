@@ -1,0 +1,27 @@
+#!/usr/bin/env sh
+set -eu
+
+APP_ROOT="${APP_ROOT:-/var/www/html}"
+
+mkdir -p \
+  "${APP_ROOT}/storage/app/public" \
+  "${APP_ROOT}/storage/framework/cache" \
+  "${APP_ROOT}/storage/framework/sessions" \
+  "${APP_ROOT}/storage/framework/views" \
+  "${APP_ROOT}/storage/logs" \
+  "${APP_ROOT}/bootstrap/cache"
+
+if [ "$(id -u)" -eq 0 ]; then
+  chown -R www-data:www-data "${APP_ROOT}/storage" "${APP_ROOT}/bootstrap/cache"
+  chmod -R ug+rw "${APP_ROOT}/storage" "${APP_ROOT}/bootstrap/cache"
+fi
+
+if [ ! -e "${APP_ROOT}/public/storage" ]; then
+  ln -s "${APP_ROOT}/storage/app/public" "${APP_ROOT}/public/storage" 2>/dev/null || true
+fi
+
+if [ "$(id -u)" -eq 0 ] && [ "${1:-}" != "php-fpm" ]; then
+  exec su-exec www-data "$@"
+fi
+
+exec "$@"

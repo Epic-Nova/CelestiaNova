@@ -30,6 +30,7 @@ foreach(_descriptor_rel IN LISTS DESCRIPTOR_FILES)
   if(_descriptor_rel MATCHES "\\.schema\\.json$" OR 
      _descriptor_rel MATCHES "_MenuDefinitions\\.json$" OR 
      _descriptor_rel MATCHES "(^|/)MenuDefinitions(/|$)" OR 
+     _descriptor_rel MATCHES "(^|/)Content(/|$)" OR
      _descriptor_rel MATCHES "(^|/)Intermediate(/|$)" OR 
      _descriptor_rel MATCHES "(^|/)Binaries(/|$)" OR 
      _descriptor_rel MATCHES "(^|/)Install(/|$)")

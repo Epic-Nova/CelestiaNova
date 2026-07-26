@@ -15,6 +15,7 @@ cmake-build-*/
 
 # Runtime logs
 Content/Logs/*
+Content/.runtime/
 
 # CMake-generated files
 CMakeCache.txt

@@ -1,0 +1,26 @@
+# Rendered by CoreDNSOrchestrator from the `coredns-zone-management` action contract.
+# Do not place private keys, certificate bodies, or provider credentials in this file.
+
+(base) {
+    bind {{bindAddress}}
+    root {{runtimeRoot}}
+    log
+    errors
+    reload
+    cache {{cacheSeconds}}
+    loop
+    minimal
+    metadata
+
+    ready :{{readyPort}}
+    health :{{healthPort}} {
+        lameduck {{lameduckDuration}}
+    }
+    prometheus :{{metricsPort}}
+}
+
+(forwarding) {
+    forward . {{forwarders}}
+}
+
+import {{generatedConfigDirectory}}/*.conf

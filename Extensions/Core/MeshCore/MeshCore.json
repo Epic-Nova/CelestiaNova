@@ -2,7 +2,7 @@
   "id": "meshcore",
   "name": "MeshCore",
   "file": "libMeshCore.so",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "autostart": true,
   "startupDelayMs": 130,
   "description": "Federation and remote-management core for host/client Celestia Nova mode.",
@@ -11,7 +11,10 @@
     "nexuscore",
     "aegiscore",
     "httpagent",
-    "terminalagent"
+    "terminalagent",
+    "contentforge",
+    "laravelorchestrator",
+    "canvascore"
   ],
   "publicIncludePaths": [
     "Source"
@@ -23,6 +26,12 @@
   "optional": {
     "contentPacks": [
       "MeshClientMode"
+    ],
+    "menuDefinitions": [
+      {
+        "file": "MenuDefinitions/MeshCore_MenuDefinitions.json",
+        "ownerExtensionId": "meshcore"
+      }
     ],
     "healthEndpoints": [
       "/api/v1/health/meshcore"
@@ -40,7 +49,10 @@
     "serviceCapabilities": [
       "mesh.discovery",
       "mesh.remote.execute",
-      "mesh.node.list"
+      "mesh.node.list",
+      "mesh.remote.command.submit",
+      "mesh.remote.command.status",
+      "mesh.remote.target.allowlist"
     ]
   }
 }

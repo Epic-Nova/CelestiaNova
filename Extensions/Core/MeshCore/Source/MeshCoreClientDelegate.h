@@ -17,6 +17,17 @@ enum class EMeshJobState {
     Failed,     // Finished with an error.
 };
 
+// UI-safe local receipt for an allowlisted command submitted to a peer node.
+// It intentionally contains neither a bearer token nor request payload.
+enum class ERemoteCommandState { Queued, Submitted, Accepted, Completed, Failed, Rejected, Unknown };
+
+struct FRemoteCommandReceipt {
+    bool accepted = false;
+    std::string receiptId;
+    ERemoteCommandState state = ERemoteCommandState::Rejected;
+    std::string message;
+};
+
 /**
  * FMeshWorkJob – represents a unit of delegated work dispatched by a
  * client-mode Celestia Nova instance to an authoritative instance.

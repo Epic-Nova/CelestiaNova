@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "celestianova://schemas/laravel-deployment-context/v1",
+  "title": "Laravel deployment render context",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "content",
+    "deployment",
+    "application",
+    "database",
+    "cache",
+    "routing"
+  ],
+  "properties": {
+    "content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "sourcePath"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,62}$" },
+        "sourcePath": { "type": "string", "minLength": 1 }
+      }
+    },
+    "deployment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile", "projectName", "workspacePath", "imageName", "networkName", "storageVolume"],
+      "properties": {
+        "profile": { "enum": ["auto", "minimal", "normal", "advanced"] },
+        "projectName": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{1,62}$" },
+        "workspacePath": { "type": "string", "minLength": 1 },
+        "imageName": { "type": "string", "minLength": 1 },
+        "networkName": { "type": "string", "minLength": 1 },
+        "storageVolume": { "type": "string", "minLength": 1 }
+      }
+    },
+    "application": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "environment", "url", "keySecretRef"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "environment": { "enum": ["local", "staging", "production"] },
+        "debug": { "type": "boolean", "default": false },
+        "url": { "type": "string", "format": "uri" },
+        "keySecretRef": { "$ref": "#/$defs/keyforgeRef" }
+      }
+    },
+    "database": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["connection", "host", "port", "name", "usernameSecretRef", "passwordSecretRef"],
+      "properties": {
+        "connection": { "enum": ["mysql", "pgsql", "sqlite"] },
+        "host": { "type": "string", "minLength": 1 },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "name": { "type": "string", "minLength": 1 },
+        "usernameSecretRef": { "$ref": "#/$defs/keyforgeRef" },
+        "passwordSecretRef": { "$ref": "#/$defs/keyforgeRef" }
+      }
+    },
+    "cache": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["driver", "queueConnection", "redisHost", "redisPort", "redisPasswordSecretRef"],
+      "properties": {
+        "driver": { "type": "string", "minLength": 1 },
+        "queueConnection": { "type": "string", "minLength": 1 },
+        "redisHost": { "type": "string", "minLength": 1 },
+        "redisPort": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "redisPasswordSecretRef": { "$ref": "#/$defs/keyforgeRef" }
+      }
+    },
+    "routing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hostRule", "healthUrl", "traefikNetwork", "certResolver"],
+      "properties": {
+        "hostRule": { "type": "string", "minLength": 1 },
+        "healthUrl": { "type": "string", "format": "uri" },
+        "traefikNetwork": { "type": "string", "minLength": 1 },
+        "certResolver": { "type": "string", "minLength": 1 }
+      }
+    }
+  },
+  "$defs": {
+    "keyforgeRef": {
+      "type": "string",
+      "pattern": "^keyforge://[A-Za-z0-9._/-]+$",
+      "description": "Reference resolved by KeyForge only; never a literal secret."
+    }
+  }
+}

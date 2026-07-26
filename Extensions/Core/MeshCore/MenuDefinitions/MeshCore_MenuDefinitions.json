@@ -1,0 +1,28 @@
+{
+  "$schema": "../../CanvasCore/MenuDefinitions/CanvasMenuDefinitions.schema.json",
+  "schema": "canvas.menu.definitions.v1",
+  "ownerExtensionId": "meshcore",
+  "menus": [
+    {
+      "id": "meshcore_main",
+      "title": "Celestia Mesh",
+      "subtitle": "Capability-bound commands between trusted Celestia Nova instances",
+      "icon": "NETWORK",
+      "sections": [
+        {
+          "id": "remote_command",
+          "title": "Remote Command",
+          "description": "Targets and commands are resolved from verified ContentForge content. Nova ID authentication is mandatory.",
+          "fields": [
+            {"id": "targetId", "label": "Trusted Target", "description": "A content-defined Mesh target ID; arbitrary hosts are never accepted.", "type": "String", "defaultValue": "", "valueStorage": "RuntimeOnly"},
+            {"id": "commandId", "label": "Allowed Command", "description": "An allowlisted command ID, for example node.status.", "type": "String", "defaultValue": "node.status", "valueStorage": "RuntimeOnly"},
+            {"id": "remoteStatus", "label": "Status", "description": "The local command receipt; tokens and command payloads are never displayed.", "type": "TextLabel", "defaultValue": "Mesh: awaiting target selection", "valueStorage": "RuntimeOnly"},
+            {"id": "submitCommand", "label": "Send Command", "description": "Queues an authenticated request without blocking Canvas.", "type": "ActionButton", "defaultValue": "meshcore.command.submit", "valueStorage": "RuntimeOnly"},
+            {"id": "refreshReceipt", "label": "Refresh Receipt", "description": "Shows the local status of the selected receipt.", "type": "ActionButton", "defaultValue": "meshcore.command.status", "valueStorage": "RuntimeOnly"}
+          ]
+        }
+      ],
+      "cancelAction": "menu.back"
+    }
+  ]
+}

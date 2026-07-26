@@ -11,6 +11,31 @@ struct LocalContentDescriptor {
     std::string id;
     std::string path;
     std::string version;
+    std::string framework;
+    std::string orchestrator;
+    std::string composeFile;
+    std::string primaryService;
+    std::string healthEndpoint;
+    std::string manifestPath;
+    // Explicit local-development bridge only. ContentForge never copies this
+    // file; the owning orchestrator may inject it into a materialized release.
+    std::string localEnvironmentFile;
+};
+
+/**
+ * An immutable, local staging release produced from a content pack.
+ *
+ * ContentForge materializes source files and non-secret metadata only. Secret
+ * resolution, template rendering and command execution deliberately happen in
+ * later orchestration stages.
+ */
+struct LocalContentRelease {
+    std::string contentId;
+    std::string releaseId;
+    std::string releasePath;
+    std::string sourcePath;
+    std::string manifestPath;
+    std::string version;
 };
 
 /**
@@ -40,6 +65,18 @@ public:
 
     /** Returns a locally registered content entry, if one exists. */
     virtual bool ResolveLocalContent(const std::string& contentId, LocalContentDescriptor& outDescriptor) const = 0;
+
+    /** Returns the locally available content packs discovered from ContentForge roots. */
+    virtual std::vector<LocalContentDescriptor> ListLocalContent() const = 0;
+
+    /**
+     * Stages a local content pack under Content/.runtime/<contentId>/<releaseId>.
+     * The optional release id must be a safe path segment; an empty value creates
+     * a unique local id. This operation never resolves secrets or executes code.
+     */
+    virtual bool MaterializeLocalContent(const std::string& contentId,
+                                         const std::string& requestedReleaseId,
+                                         LocalContentRelease& outRelease) = 0;
 };
 
 } // namespace Core

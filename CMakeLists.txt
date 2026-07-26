@@ -142,7 +142,9 @@ endif()
 include(FetchContent)
 # Configure FetchContent to use an intermediate folder to avoid "in-source build" errors 
 # in dependencies when the primary solution is generated at the repository root.
-set(FETCHCONTENT_BASE_DIR "${CMAKE_SOURCE_DIR}/Intermediate/_deps")
+if(NOT DEFINED FETCHCONTENT_BASE_DIR)
+  set(FETCHCONTENT_BASE_DIR "${CMAKE_SOURCE_DIR}/Intermediate/_deps")
+endif()
 
 FetchContent_Declare(
   cpptrace
@@ -335,6 +337,24 @@ install(TARGETS PluginTester CelestiaNova
 	ARCHIVE DESTINATION lib
 )
 
+# The host resolves extension libraries relative to the runtime working
+# directory (`Binaries/`).  Keep NovaCore and every built plugin in that
+# portable runtime location instead of relying on a development build tree.
+if(TARGET NovaCore)
+	install(TARGETS NovaCore
+		RUNTIME DESTINATION Binaries
+		LIBRARY DESTINATION Binaries
+		ARCHIVE DESTINATION lib
+	)
+endif()
+
+install(DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/" DESTINATION Binaries
+	FILES_MATCHING
+		PATTERN "*.so"
+		PATTERN "*.dylib"
+		PATTERN "*.dll"
+)
+
 # Discover extension plugin folders recursively. A plugin folder is any
 # Extensions/<...> directory that contains Source/CMakeLists.txt.
 set(PLUGIN_FOLDERS)
@@ -365,9 +385,32 @@ foreach(p ${PLUGIN_FOLDERS})
 	endif()
 endforeach()
 
+# Runtime discovery depends on extension descriptors and their declarative
+# Content/MenuDefinitions directories.  Exclude build and source trees so a
+# Linux package remains a runtime artifact rather than a source checkout.
+if(EXISTS "${CMAKE_SOURCE_DIR}/Extensions")
+	install(DIRECTORY "${CMAKE_SOURCE_DIR}/Extensions/" DESTINATION Extensions
+		PATTERN "Source" EXCLUDE
+		PATTERN "Intermediate" EXCLUDE
+		PATTERN "Binaries" EXCLUDE
+		PATTERN "CMakeLists.txt" EXCLUDE
+	)
+endif()
+
 # Install Content/ (static runtime data) when present
 if(EXISTS "${CMAKE_SOURCE_DIR}/Content")
 	install(DIRECTORY "${CMAKE_SOURCE_DIR}/Content/" DESTINATION Content)
+endif()
+
+# Linux service-mode assets are installed with the application package.  The
+# target host administrator explicitly enables the unit after reviewing it.
+if(EXISTS "${CMAKE_SOURCE_DIR}/Utilities/linux/celestianova.service")
+	install(FILES "${CMAKE_SOURCE_DIR}/Utilities/linux/celestianova.service"
+		DESTINATION "share/celestianova/systemd")
+endif()
+if(EXISTS "${CMAKE_SOURCE_DIR}/Docs/LINUX_SERVICE_MODE.md")
+	install(FILES "${CMAKE_SOURCE_DIR}/Docs/LINUX_SERVICE_MODE.md"
+		DESTINATION "share/doc/celestianova")
 endif()
 
 option(NOVA_ENABLE_EXTENSION_DEPENDENCY_AUTOWIRE "Automatically resolve extension dependency order and exported include paths from extension JSON descriptors." ON)
@@ -473,5 +516,3 @@ foreach(p ${PLUGIN_FOLDERS})
 		endif()
 	endif()
 endforeach()
-
-

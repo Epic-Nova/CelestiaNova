@@ -14,6 +14,7 @@
                          "composeragent",
                          "nodeagent",
                          "contentforge",
+                         "keyforge",
                          "coreorchestrator"
                      ],
     "publicIncludePaths":  [
@@ -30,5 +31,20 @@
             "file": "MenuDefinitions/LaravelOrchestrator_MenuDefinitions.json",
             "ownerExtensionId": "laravelorchestrator"
         }
+    },
+    "optional": {
+        "contentRoots": [
+            "Content"
+        ],
+        "contentPacks": [
+            "laravel.deployment-template.v1"
+        ],
+        "serviceCapabilities": [
+            "laravel.template.render",
+            "laravel.deploy.plan",
+            "laravel.remote.bootstrap",
+            "laravel.remote.stage",
+            "laravel.remote.status"
+        ]
     }
 }

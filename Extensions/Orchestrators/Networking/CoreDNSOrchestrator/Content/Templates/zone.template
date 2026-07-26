@@ -1,0 +1,8 @@
+; Managed by CoreDNSOrchestrator. Source values are rendered from a validated zone spec.
+$ORIGIN {{zoneName}}.
+$TTL {{defaultTtl}}
+
+@ IN SOA {{primaryNameServer}}. {{responsibleMailbox}}. {{soaSerial}} {{soaRefresh}} {{soaRetry}} {{soaExpire}} {{soaMinimum}}
+@ IN NS {{primaryNameServer}}.
+{{nameServerRecords}}
+{{recordSet}}

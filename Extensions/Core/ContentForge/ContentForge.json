@@ -18,6 +18,38 @@
   "projectName": "ContentForge",
   "outputName": "ContentForge",
   "linkNovaCore": true,
+  "canvas": {
+    "requirements": {
+      "definitions": [
+        {
+          "key": "contentforge.local.content",
+          "title": "Local ContentForge Content",
+          "inputType": "Dropdown",
+          "resolveMode": "ValueList",
+          "strategy": "ContentQuery",
+          "requestAction": "contentforge.local.content.list",
+          "responseCollectionPath": "items",
+          "responseLabelPath": "label",
+          "responseValuePath": "value",
+          "requestStructName": "CoreRequirementResolveRequest",
+          "outputStructName": "CoreRequirementResolveResult"
+        }
+      ],
+      "resolver": {
+        "supportedKeys": [
+          "contentforge.local.content"
+        ],
+        "resolverApi": {
+          "typedMethod": "ResolveLocalContentRequirement",
+          "cAbiBridge": {
+            "export": "ContentForge_ResolveRequirement",
+            "requestPointer": "CoreRequirementResolveRequest*",
+            "resultPointer": "CoreRequirementResolveResult*"
+          }
+        }
+      }
+    }
+  },
   "optional": {
     "contentPacks": [
       "ContentPackRuntime"

@@ -1,15 +1,44 @@
 {
+  "$schema": "../../Extensions/Core/ContentForge/Content/Schemas/ContentPack.schema.json",
   "id": "auth-api",
   "name": "Auth API (Local)",
   "version": "0.1.0",
+  "framework": "laravel",
   "source": {
     "type": "local-path",
-    "path": "../Auth-API"
+    "path": "../../Auth-API",
+    "base": "application-root"
   },
   "deployment": {
     "orchestrator": "laravelorchestrator",
     "profile": "minimal",
     "composeFile": "compose.yaml",
+    "primaryService": "laravel.test",
     "healthEndpoint": "/api/health"
+  },
+  "configuration": {
+    "defaultDepth": "minimal",
+    "supportedDepths": ["auto", "minimal", "normal", "advanced"]
+  },
+  "localDevelopment": {
+    "environmentFile": "../../Auth-API/.env",
+    "base": "application-root"
+  },
+  "remoteDeployment": {
+    "targetManifest": "../RemoteTargets/VirtualBoxUbuntu.json",
+    "releaseRoot": "/opt/celestia/releases",
+    "requiresNovaId": true
+  },
+  "novaIdDeviceFlow": {
+    "deviceAuthorizeUrl": "http://localhost:8000/api/v1/oauth/device-authorize",
+    "deviceApproveUrl": "http://localhost:8000/api/v1/oauth/device-approve",
+    "deviceTokenUrl": "http://localhost:8000/api/v1/oauth/device-token",
+    "oauthApplication": {
+      "applicationId": "celestianova-laravel-orchestrator",
+      "authorizationServerId": "auth-api-local",
+      "scopes": ["deployment.remote.control"],
+      "audiences": ["celestianova"],
+      "accessTokenTtlSeconds": 600
+    }
   }
 }

@@ -31,7 +31,8 @@
         "serviceCapabilities": [
             "http.get",
             "http.post",
-            "http.download"
+            "http.download",
+            "http.secure-https.dispatch"
         ]
     }
 }

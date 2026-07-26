@@ -35,6 +35,8 @@ public:
     std::string Get(const std::string& url, const std::map<std::string, std::string>& headers = {}) override;
     std::string Post(const std::string& url, const std::string& body, const std::map<std::string, std::string>& headers = {}) override;
     bool DownloadFile(const std::string& url, const std::string& destinationPath) override;
+    std::string DispatchSecureHttpsAsync(const SecureHttpsRequest& request,
+                                         std::function<void(SecureHttpsResponse)> callback) override;
 
     // IMenuActionProvider
     CanvasMenuActionResult OnMenuAction(const CanvasMenuActionRequest& request) override;

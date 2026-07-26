@@ -39,6 +39,26 @@ struct TerminalCommandResult {
     bool bEscalationRequired = false;
 };
 
+// Remote commands deliberately use the operating system SSH agent. Content
+// descriptors may reference KeyForge for ownership/auditing, but must never
+// carry a private-key path or credential value.
+struct RemoteCommandRequest {
+    std::string host;
+    unsigned short port = 22;
+    std::string user;
+    std::string knownHostsFile;
+    std::string command;
+};
+
+struct RemoteDirectoryUploadRequest {
+    std::string host;
+    unsigned short port = 22;
+    std::string user;
+    std::string knownHostsFile;
+    std::string localDirectory;
+    std::string remoteDirectory;
+};
+
 enum class CommandStatus {
     Running,
     Completed,
@@ -57,6 +77,8 @@ public:
 
     virtual TerminalCommandResult ExecuteCommandSync(const TerminalCommandRequest& request) = 0;
     virtual std::string ExecuteCommandAsync(const TerminalCommandRequest& request, std::function<void(TerminalCommandResult)> callback) = 0;
+    virtual std::string ExecuteRemoteCommandAsync(const RemoteCommandRequest& request, std::function<void(TerminalCommandResult)> callback) = 0;
+    virtual std::string UploadDirectoryAsync(const RemoteDirectoryUploadRequest& request, std::function<void(TerminalCommandResult)> callback) = 0;
     virtual bool StreamCommandOutput(const std::string& commandId, std::function<void(const std::string& output)> onData) = 0;
     virtual CommandStatusResult GetCommandStatus(const std::string& commandId) = 0;
     virtual bool TerminateCommand(const std::string& commandId) = 0;
@@ -85,6 +107,8 @@ public:
     // ITerminalAgent Implementation
     CoreTerminal::TerminalCommandResult ExecuteCommandSync(const CoreTerminal::TerminalCommandRequest& request) override;
     std::string ExecuteCommandAsync(const CoreTerminal::TerminalCommandRequest& request, std::function<void(CoreTerminal::TerminalCommandResult)> callback) override;
+    std::string ExecuteRemoteCommandAsync(const CoreTerminal::RemoteCommandRequest& request, std::function<void(CoreTerminal::TerminalCommandResult)> callback) override;
+    std::string UploadDirectoryAsync(const CoreTerminal::RemoteDirectoryUploadRequest& request, std::function<void(CoreTerminal::TerminalCommandResult)> callback) override;
     bool StreamCommandOutput(const std::string& commandId, std::function<void(const std::string& output)> onData) override;
     CoreTerminal::CommandStatusResult GetCommandStatus(const std::string& commandId) override;
     bool TerminateCommand(const std::string& commandId) override;

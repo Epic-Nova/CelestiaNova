@@ -7,6 +7,14 @@
 #include <iomanip>
 #include <sstream>
 #include <thread>
+#include <atomic>
+#include <algorithm>
+
+#if defined(_WIN32)
+#  include <windows.h>
+#  include <winhttp.h>
+#  pragma comment(lib, "winhttp.lib")
+#endif
 
 namespace Core {
 
@@ -169,6 +177,99 @@ bool HTTPAgentModule::DownloadFile(const std::string& url, const std::string& de
     std::string cmd = "-s -L -o \"" + destinationPath + "\" \"" + url + "\"";
     std::string output;
     return RunCommand(cmd, output);
+}
+
+std::string HTTPAgentModule::DispatchSecureHttpsAsync(const SecureHttpsRequest& request,
+                                                       std::function<void(SecureHttpsResponse)> callback) {
+    static std::atomic<unsigned long long> nextRequestId{1};
+    const auto requestId = "https-" + std::to_string(nextRequestId.fetch_add(1));
+
+    // Do not retain the caller's map beyond this dispatch.  In particular the
+    // Authorization header lives only in this worker copy until WinHTTP has
+    // written it to the TLS connection.
+    std::thread([request, callback = std::move(callback)]() mutable {
+        SecureHttpsResponse response;
+#if defined(_WIN32)
+        if (request.url.rfind("https://", 0) != 0 || request.url.size() > 2048 ||
+            (request.method != "GET" && request.method != "POST") || request.timeoutMs == 0 ||
+            request.timeoutMs > 30000 || request.maxResponseBytes == 0 || request.maxResponseBytes > 1048576) {
+            response.error = "Rejected insecure or invalid HTTPS request.";
+        } else {
+            URL_COMPONENTS parts{};
+            parts.dwStructSize = sizeof(parts);
+            parts.dwSchemeLength = static_cast<DWORD>(-1);
+            parts.dwHostNameLength = static_cast<DWORD>(-1);
+            parts.dwUrlPathLength = static_cast<DWORD>(-1);
+            parts.dwExtraInfoLength = static_cast<DWORD>(-1);
+            parts.dwUserNameLength = static_cast<DWORD>(-1);
+            parts.dwPasswordLength = static_cast<DWORD>(-1);
+            std::wstring wideUrl(request.url.begin(), request.url.end());
+            if (!WinHttpCrackUrl(wideUrl.c_str(), 0, 0, &parts) || parts.nScheme != INTERNET_SCHEME_HTTPS ||
+                parts.dwHostNameLength == 0 || parts.dwUserNameLength != 0 || parts.dwPasswordLength != 0) {
+                response.error = "Rejected malformed HTTPS URL.";
+            } else {
+                const std::wstring host(parts.lpszHostName, parts.dwHostNameLength);
+                std::wstring path(parts.lpszUrlPath, parts.dwUrlPathLength);
+                if (parts.dwExtraInfoLength > 0) path.append(parts.lpszExtraInfo, parts.dwExtraInfoLength);
+                const std::wstring method(request.method.begin(), request.method.end());
+                HINTERNET session = WinHttpOpen(L"CelestiaNova/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+                                                WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+                if (!session) {
+                    response.error = "HTTPS transport initialization failed.";
+                } else {
+                    WinHttpSetTimeouts(session, static_cast<int>(request.timeoutMs), static_cast<int>(request.timeoutMs),
+                                       static_cast<int>(request.timeoutMs), static_cast<int>(request.timeoutMs));
+                    HINTERNET connection = WinHttpConnect(session, host.c_str(), parts.nPort, 0);
+                    HINTERNET httpRequest = connection ? WinHttpOpenRequest(connection, method.c_str(), path.c_str(), nullptr,
+                                                                              WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES,
+                                                                              WINHTTP_FLAG_SECURE) : nullptr;
+                    if (!httpRequest) {
+                        response.error = "HTTPS connection setup failed.";
+                    } else {
+                        std::wstring headers;
+                        bool validHeaders = true;
+                        for (const auto& [key, value] : request.headers) {
+                            if (key.empty() || key.find_first_of("\r\n:") != std::string::npos ||
+                                value.find_first_of("\r\n") != std::string::npos) { validHeaders = false; break; }
+                            headers += std::wstring(key.begin(), key.end()) + L": " + std::wstring(value.begin(), value.end()) + L"\r\n";
+                        }
+                        if (!validHeaders || request.body.size() > 1048576) {
+                            response.error = "Rejected unsafe HTTPS request headers or body.";
+                        } else if (WinHttpSendRequest(httpRequest, headers.empty() ? WINHTTP_NO_ADDITIONAL_HEADERS : headers.c_str(),
+                                                      headers.empty() ? 0 : static_cast<DWORD>(headers.size()),
+                                                      request.body.empty() ? WINHTTP_NO_REQUEST_DATA : const_cast<char*>(request.body.data()),
+                                                      static_cast<DWORD>(request.body.size()), static_cast<DWORD>(request.body.size()), 0) &&
+                                   WinHttpReceiveResponse(httpRequest, nullptr)) {
+                            DWORD status = 0, statusSize = sizeof(status);
+                            WinHttpQueryHeaders(httpRequest, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
+                                                WINHTTP_HEADER_NAME_BY_INDEX, &status, &statusSize, WINHTTP_NO_HEADER_INDEX);
+                            response.statusCode = status;
+                            for (;;) {
+                                DWORD available = 0;
+                                if (!WinHttpQueryDataAvailable(httpRequest, &available)) { response.error = "HTTPS response read failed."; break; }
+                                if (available == 0) { response.transportSucceeded = true; break; }
+                                if (response.body.size() + available > request.maxResponseBytes) { response.error = "HTTPS response exceeded configured limit."; break; }
+                                std::string chunk(available, '\0'); DWORD read = 0;
+                                if (!WinHttpReadData(httpRequest, chunk.data(), available, &read)) { response.error = "HTTPS response read failed."; break; }
+                                response.body.append(chunk.data(), read);
+                            }
+                        } else {
+                            response.error = "HTTPS request failed.";
+                        }
+                    }
+                    if (httpRequest) WinHttpCloseHandle(httpRequest);
+                    if (connection) WinHttpCloseHandle(connection);
+                    WinHttpCloseHandle(session);
+                }
+            }
+        }
+#else
+        (void)request;
+        response.error = "Secure HTTPS transport is unavailable on this platform.";
+#endif
+        if (callback) callback(std::move(response));
+    }).detach();
+    return requestId;
 }
 
 } // namespace Core

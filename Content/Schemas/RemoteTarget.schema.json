@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "celestianova.remote-target.v1",
+  "type": "object",
+  "required": ["id", "provider", "host", "port", "user", "knownHostsFile", "sshAgentCredentialRef", "releaseRoot"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$"},
+    "provider": {"const": "ssh"},
+    "host": {"type": "string", "pattern": "^[A-Za-z0-9._-]+$"},
+    "port": {"type": "integer", "minimum": 1, "maximum": 65535},
+    "user": {"type": "string", "pattern": "^[A-Za-z0-9_-]+$"},
+    "knownHostsFile": {"type": "string", "minLength": 1},
+    "sshAgentCredentialRef": {"type": "string", "pattern": "^keyforge://[A-Za-z0-9._/-]+$"},
+    "releaseRoot": {"type": "string", "pattern": "^/[A-Za-z0-9._/-]+$"}
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,26 @@
+{
+  "id": "coredns-zone-management",
+  "version": "0.1.0",
+  "owner": "corednsorchestrator",
+  "kind": "render-plan",
+  "inputSchema": "../Schemas/coredns-zone-management.schema.json",
+  "templates": [
+    "../Templates/Corefile.template",
+    "../Templates/zone.template"
+  ],
+  "execution": {
+    "dryRunOnly": true,
+    "requiresExplicitApplyImplementation": true,
+    "requiresConfirmation": true,
+    "output": "rendered-config-plan"
+  },
+  "security": {
+    "secretHandling": "keyforge-references-only",
+    "forbiddenInputs": ["privateKey", "certificatePem", "credential", "token", "password"]
+  },
+  "effects": {
+    "plannedArtifacts": ["Corefile", "Zones/*.zone", "AutoZoneGen/*.conf"],
+    "healthEndpoints": ["http://{{bindAddress}}:{{healthPort}}/health", "http://{{bindAddress}}:{{readyPort}}/ready"],
+    "rollback": "No mutation is performed by this action."
+  }
+}

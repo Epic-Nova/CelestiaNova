@@ -8,6 +8,7 @@
 #include <memory>
 #include <stdexcept>
 #include <array>
+#include <cctype>
 
 #ifdef _WIN32
 #define POPEN _popen
@@ -34,6 +35,62 @@ bool ApplyWorkingDirectory(const CoreTerminal::TerminalCommandRequest& request, 
     command = "cd \"" + request.workingDirectory + "\" && " + command;
 #endif
     return true;
+}
+
+bool IsSafeRemoteHost(const std::string& value) {
+    if (value.empty()) {
+        return false;
+    }
+    for (const unsigned char character : value) {
+        if (!(std::isalnum(character) || character == '.' || character == '-' || character == '_')) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool IsSafeRemoteUser(const std::string& value) {
+    if (value.empty()) {
+        return false;
+    }
+    for (const unsigned char character : value) {
+        if (!(std::isalnum(character) || character == '-' || character == '_')) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool IsSafeCommandPath(const std::string& value) {
+    return !value.empty() && value.find_first_of("\"\r\n") == std::string::npos;
+}
+
+bool IsSafeRemoteDirectory(const std::string& value) {
+    if (value.empty() || value.front() != '/') {
+        return false;
+    }
+    for (const unsigned char character : value) {
+        if (!(std::isalnum(character) || character == '/' || character == '-' || character == '_' || character == '.')) {
+            return false;
+        }
+    }
+    return value.find("..") == std::string::npos;
+}
+
+std::string Base64Encode(const std::string& value) {
+    static constexpr char alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    std::string encoded;
+    encoded.reserve(((value.size() + 2) / 3) * 4);
+    for (std::size_t index = 0; index < value.size(); index += 3) {
+        const auto first = static_cast<unsigned char>(value[index]);
+        const auto second = index + 1 < value.size() ? static_cast<unsigned char>(value[index + 1]) : 0;
+        const auto third = index + 2 < value.size() ? static_cast<unsigned char>(value[index + 2]) : 0;
+        encoded.push_back(alphabet[first >> 2]);
+        encoded.push_back(alphabet[((first & 0x03) << 4) | (second >> 4)]);
+        encoded.push_back(index + 1 < value.size() ? alphabet[((second & 0x0F) << 2) | (third >> 6)] : '=');
+        encoded.push_back(index + 2 < value.size() ? alphabet[third & 0x3F] : '=');
+    }
+    return encoded;
 }
 
 } // namespace
@@ -407,6 +464,52 @@ std::string TerminalAgentModule::ExecuteCommandAsync(const CoreTerminal::Termina
     }
 
     return commandId;
+}
+
+std::string TerminalAgentModule::ExecuteRemoteCommandAsync(const CoreTerminal::RemoteCommandRequest& request,
+                                                            std::function<void(CoreTerminal::TerminalCommandResult)> callback) {
+    if (!IsSafeRemoteHost(request.host) || !IsSafeRemoteUser(request.user) || request.port == 0 ||
+        !IsSafeCommandPath(request.knownHostsFile) || request.command.empty()) {
+        if (callback) {
+            CoreTerminal::TerminalCommandResult result;
+            result.stdErr = "Remote command request contains an invalid host, user, known-hosts path, or command.";
+            callback(result);
+        }
+        return "";
+    }
+
+    // The payload is base64 encoded before it crosses the local command shell.
+    // It is decoded only on the authenticated remote POSIX host, preventing
+    // host/user/path values or shell metacharacters from becoming executable.
+    const auto remotePayload = Base64Encode(request.command);
+    CoreTerminal::TerminalCommandRequest localRequest;
+    localRequest.command = "ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=\"" + request.knownHostsFile +
+        "\" -p " + std::to_string(request.port) + " \"" + request.user + "@" + request.host +
+        "\" \"echo " + remotePayload + " | base64 -d | sh\"";
+    return ExecuteCommandAsync(localRequest, std::move(callback));
+}
+
+std::string TerminalAgentModule::UploadDirectoryAsync(const CoreTerminal::RemoteDirectoryUploadRequest& request,
+                                                       std::function<void(CoreTerminal::TerminalCommandResult)> callback) {
+    if (!IsSafeRemoteHost(request.host) || !IsSafeRemoteUser(request.user) || request.port == 0 ||
+        !IsSafeCommandPath(request.knownHostsFile) || !IsSafeCommandPath(request.localDirectory) ||
+        !IsSafeRemoteDirectory(request.remoteDirectory)) {
+        if (callback) {
+            CoreTerminal::TerminalCommandResult result;
+            result.stdErr = "Remote directory upload request contains an invalid target or path.";
+            callback(result);
+        }
+        return "";
+    }
+
+    // The source is streamed directly to the authenticated target. Secrets are
+    // still excluded by ContentForge before this stage, so no .env or key file
+    // is uploaded by this primitive.
+    CoreTerminal::TerminalCommandRequest localRequest;
+    localRequest.command = "tar -C \"" + request.localDirectory + "\" -czf - . | ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=\"" + request.knownHostsFile +
+        "\" -p " + std::to_string(request.port) + " \"" + request.user + "@" + request.host +
+        "\" \"mkdir -p " + request.remoteDirectory + " && tar -xzf - -C " + request.remoteDirectory + "\"";
+    return ExecuteCommandAsync(localRequest, std::move(callback));
 }
 
 bool TerminalAgentModule::StreamCommandOutput(const std::string& commandId, std::function<void(const std::string& output)> onData) {

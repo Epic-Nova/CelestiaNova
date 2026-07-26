@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "celestianova.keyforge-local-vault.v1",
+  "title": "KeyForge Windows local vault wiring",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["backend", "vaultPath", "bootstrapSecretReference"],
+  "properties": {
+    "backend": { "const": "windows-dpapi-current-user" },
+    "vaultPath": { "const": "Content/.runtime/keyforge-v1.dpapi" },
+    "authApiProvisionEndpoint": { "type": "string", "format": "uri", "pattern": "^https://" },
+    "bootstrapSecretReference": { "type": "string", "pattern": "^keyforge://[A-Za-z0-9._/-]+$" },
+    "authApiRegisterCommand": { "type": "string" },
+    "deviceAuthorizationEndpoint": { "type": "string", "format": "uri", "pattern": "^https://" }
+  }
+}

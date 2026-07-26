@@ -1,0 +1,74 @@
+services:
+  app:
+    image: {{deployment.imageName}}
+    build:
+      context: {{deployment.workspacePath}}
+      dockerfile: Dockerfile
+      target: app
+    # KeyForge materializes this file after context validation with mode 0600.
+    # It contains both non-secret Laravel settings and resolved secret values,
+    # and is excluded from ContentForge state and source control.
+    env_file: .runtime.env
+    volumes:
+      - {{deployment.storageVolume}}:/var/www/html/storage
+    healthcheck:
+      test: ["CMD", "php", "artisan", "about", "--ansi"]
+      interval: 60s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    networks: [application]
+
+  queue:
+    image: {{deployment.imageName}}
+    profiles: [queue]
+    depends_on: [app]
+    command: php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+    env_file: .runtime.env
+    volumes:
+      - {{deployment.storageVolume}}:/var/www/html/storage
+    restart: unless-stopped
+    networks: [application]
+
+  scheduler:
+    image: {{deployment.imageName}}
+    profiles: [scheduler]
+    depends_on: [app]
+    command: php artisan schedule:work
+    env_file: .runtime.env
+    volumes:
+      - {{deployment.storageVolume}}:/var/www/html/storage
+    restart: unless-stopped
+    networks: [application]
+
+  nginx:
+    image: nginx:1.29-alpine
+    build:
+      context: {{deployment.workspacePath}}
+      dockerfile: Dockerfile
+      target: nginx
+    depends_on: [app]
+    expose: ["80"]
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: {{routing.traefikNetwork}}
+      traefik.http.routers.{{deployment.projectName}}.rule: {{routing.hostRule}}
+      traefik.http.routers.{{deployment.projectName}}.entrypoints: websecure
+      traefik.http.routers.{{deployment.projectName}}.tls: "true"
+      traefik.http.routers.{{deployment.projectName}}.tls.certresolver: {{routing.certResolver}}
+      traefik.http.services.{{deployment.projectName}}.loadbalancer.server.port: "80"
+    volumes:
+      - {{deployment.storageVolume}}:/var/www/html/storage:ro
+    restart: unless-stopped
+    networks: [application, traefik]
+
+networks:
+  application:
+    name: {{deployment.networkName}}
+  traefik:
+    name: {{routing.traefikNetwork}}
+    external: true
+
+volumes:
+  {{deployment.storageVolume}}:
+    name: {{deployment.storageVolume}}

@@ -1,0 +1,17 @@
+{
+  "schema": "celestianova.remote-control.targets.v1",
+  "description": "Declarative trust boundary for Celestia-to-Celestia Mesh commands. This content contains no credentials or bearer tokens.",
+  "targets": [
+    {
+      "id": "local-development-node",
+      "transport": "https",
+      "endpoint": "https://127.0.0.1:9443/api/v1/mesh/remote-control",
+      "serverTrustRef": "keyforge://mesh/local-development-node/server-ca",
+      "requiredAudience": "celestia-nova",
+      "allowedCommands": [
+        {"id": "node.status", "requiredCapability": "mesh.remote.execute", "method": "GET", "path": "/status"},
+        {"id": "orchestrator.status", "requiredCapability": "mesh.remote.execute", "method": "GET", "path": "/orchestrators/status"}
+      ]
+    }
+  ]
+}

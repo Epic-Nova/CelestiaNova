@@ -4,6 +4,9 @@
 #include "Core/IExtensionInterface.h"
 #include "ExtensionSpecific/IExtensionCliProvider.h"
 #include "ExtensionSpecific/IMenuActionProvider.h"
+#include "ExtensionSpecific/IRemoteControl.h"
+#include <map>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -20,7 +23,8 @@ struct LaravelDeploymentResult {
 
 class LARAVELORCHESTRATOR_API LaravelOrchestratorModule : public IExtensionInterface,
                                                            public Core::IExtensionCliProvider,
-                                                           public Core::IMenuActionProvider {
+                                                           public Core::IMenuActionProvider,
+                                                           public Core::INovaIdSessionCapabilityProvider {
 public:
     LaravelOrchestratorModule();
     ~LaravelOrchestratorModule() override;
@@ -30,7 +34,35 @@ public:
     std::vector<Core::FExtensionCliArgDescriptor> GetCliArgDescriptors() const override;
     void ApplyCliArgs(const std::vector<Core::FExtensionCliArg>& args) override;
     Core::CanvasMenuActionResult OnMenuAction(const Core::CanvasMenuActionRequest& request) override;
-    LaravelDeploymentResult DeployLocalContent(const std::string& contentId, const std::string& profile = "minimal") const;
+    LaravelDeploymentResult DeployLocalContent(const std::string& contentId, const std::string& profile = "auto");
+    LaravelDeploymentResult DeployRemoteContent(const std::string& contentId, const std::string& profile = "auto");
+    bool HasAuthenticatedNovaIdSession() const override;
+    bool AuthorizeRemoteControlDispatch(const std::string& targetId,
+                                        const std::string& requiredCapability,
+                                        Core::RemoteControlDispatchAuthorization& outAuthorization,
+                                        std::string& outError) const override;
+
+private:
+    struct NovaIdSessionState {
+        std::string sessionId;
+        std::string loginUrl;
+        std::string status = "Login Required";
+        // Access tokens are deliberately memory-only. They must never enter
+        // Canvas config updates, menu values, content manifests, or logs.
+        std::string accessToken;
+    };
+
+    std::string GetActiveReleasePath(const std::string& contentId) const;
+    void RememberActiveRelease(const std::string& contentId, const std::string& releasePath);
+    bool BeginNovaIdLogin(const Core::LocalContentDescriptor& content, std::string& outLoginUrl, std::string& outError);
+    bool PollNovaIdLogin(const Core::LocalContentDescriptor& content, std::string& outStatus, std::string& outError);
+    void LogoutNovaId(const std::string& contentId);
+    bool HasNovaIdToken(const std::string& contentId) const;
+
+    mutable std::mutex ActiveReleaseMutex_;
+    std::map<std::string, std::string> ActiveReleasePaths_;
+    mutable std::mutex NovaIdSessionMutex_;
+    std::map<std::string, NovaIdSessionState> NovaIdSessions_;
 };
 
 #ifdef LaravelOrchestrator_EXPORTS

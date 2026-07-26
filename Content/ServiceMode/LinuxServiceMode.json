@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "linux-service-mode",
+  "displayName": "Celestia Nova Linux Service Mode",
+  "runtime": {
+    "command": "CelestiaNova --service-mode --status-file /var/lib/celestianova/status/service-status.json --status-interval-seconds 15",
+    "statusFile": "/var/lib/celestianova/status/service-status.json",
+    "statusIntervalSeconds": 15,
+    "gracefulShutdownSeconds": 30
+  },
+  "reporting": {
+    "source": "Core::StatusApiSurface::BuildExtensionsStatusJson",
+    "contains": ["extension lifecycle", "extension health", "declared API/dashboard capabilities"],
+    "consumerContract": "A status API or dashboard reads the atomically-written JSON snapshot; the daemon deliberately does not expose an unauthenticated HTTP listener."
+  },
+  "security": {
+    "runAsUser": "celestianova",
+    "noSecretsInStatusFile": true,
+    "secretMaterialization": "KeyForge only"
+  }
+}

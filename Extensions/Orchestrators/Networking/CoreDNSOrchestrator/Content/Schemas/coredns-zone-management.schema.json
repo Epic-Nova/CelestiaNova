@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "celestianova://corednsorchestrator/schemas/coredns-zone-management/v1",
+  "title": "CoreDNS zone-management dry-run input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["mode", "runtimeRoot", "bindAddress", "zones"],
+  "properties": {
+    "mode": {
+      "type": "string",
+      "const": "dry-run",
+      "description": "This scaffold supports planning and rendering only; it must never apply a DNS change."
+    },
+    "runtimeRoot": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Target CoreDNS runtime root, e.g. /etc/coredns."
+    },
+    "bindAddress": { "type": "string", "minLength": 1 },
+    "forwarders": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 1
+    },
+    "zones": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/zone" },
+      "minItems": 1
+    },
+    "dnssec": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "default": false },
+        "keyReference": {
+          "type": "string",
+          "pattern": "^keyforge://",
+          "description": "Reference only. Key material is resolved by KeyForge at apply time in a future implementation."
+        }
+      },
+      "required": ["enabled"]
+    },
+    "tls": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "default": false },
+        "certificateReference": { "type": "string", "pattern": "^keyforge://" },
+        "privateKeyReference": { "type": "string", "pattern": "^keyforge://" },
+        "caBundleReference": { "type": "string", "pattern": "^keyforge://" }
+      },
+      "required": ["enabled"]
+    }
+  },
+  "$defs": {
+    "zone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "records"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[A-Za-z0-9.-]+$" },
+        "records": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/record" }
+        }
+      }
+    },
+    "record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "type", "value"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "enum": ["A", "AAAA", "CNAME", "MX", "NS", "TXT", "CAA"] },
+        "value": { "type": "string", "minLength": 1 },
+        "ttl": { "type": "integer", "minimum": 0, "default": 3600 }
+      }
+    }
+  }
+}

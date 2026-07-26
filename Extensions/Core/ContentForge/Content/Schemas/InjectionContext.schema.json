@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "celestianova.injection-context.v1",
+  "title": "Celestia Nova Render and Execution Context",
+  "type": "object",
+  "required": ["contentId", "releaseId", "action", "configurationDepth", "public", "derived", "secretRefs"],
+  "properties": {
+    "contentId": { "type": "string" },
+    "releaseId": { "type": "string" },
+    "action": { "type": "string" },
+    "configurationDepth": { "enum": ["auto", "minimal", "normal", "advanced"] },
+    "public": { "type": "object", "description": "Non-secret, operator-provided values validated by the owning extension." },
+    "derived": { "type": "object", "description": "Values derived by the owning extension and never manually trusted." },
+    "secretRefs": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "pattern": "^keyforge://" },
+      "description": "References only. KeyForge resolves values immediately before process execution."
+    }
+  },
+  "additionalProperties": false
+}

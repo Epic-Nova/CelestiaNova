@@ -1,0 +1,9 @@
+{
+  "$schema": "../../Content/Schemas/KeyForgeLocalVault.schema.json",
+  "backend": "windows-dpapi-current-user",
+  "vaultPath": "Content/.runtime/keyforge-v1.dpapi",
+  "authApiProvisionEndpoint": "",
+  "bootstrapSecretReference": "keyforge://bootstrap/auth-api/provisioning",
+  "authApiRegisterCommand": "",
+  "deviceAuthorizationEndpoint": ""
+}

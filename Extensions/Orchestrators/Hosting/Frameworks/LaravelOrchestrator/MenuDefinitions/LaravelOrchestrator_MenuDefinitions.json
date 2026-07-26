@@ -10,12 +10,51 @@
       "icon": "ORCHESTRATOR",
       "sections": [
         {
-          "id": "auth_api",
-          "title": "Auth API (Local)",
-          "description": "ContentForge-managed Laravel application at the local Auth-API content path.",
+          "id": "content_lifecycle",
+          "title": "Laravel Content Lifecycle",
+          "description": "Select a ContentForge-managed Laravel pack, then manage its Compose lifecycle.",
           "fields": [
             {
-              "id": "authApiStatus",
+              "id": "contentId",
+              "label": "Content Pack",
+              "description": "Choose a locally registered Laravel ContentForge pack.",
+              "type": "Dropdown",
+              "requirementBinding": {
+                "key": "contentforge.local.content",
+                "source": "Core",
+                "resolveMode": "ValueList",
+                "allowMultiple": false,
+                "strategy": "ContentQuery",
+                "requestAction": "contentforge.local.content.list",
+                "responseCollectionPath": "items",
+                "responseLabelPath": "label",
+                "responseValuePath": "value",
+                "preferredResolverExtensionIds": [
+                  "contentforge"
+                ],
+                "requestStructName": "CoreRequirementResolveRequest",
+                "outputStructName": "CoreRequirementResolveResult",
+                "contextBindings": [
+                  {
+                    "requestKey": "framework",
+                    "fallbackValue": "laravel"
+                  },
+                  {
+                    "requestKey": "orchestrator",
+                    "fallbackValue": "laravelorchestrator"
+                  }
+                ]
+              },
+              "validations": [
+                {
+                  "kind": "Required",
+                  "message": "A ContentForge content pack ID is required."
+                }
+              ],
+              "valueStorage": "RuntimeOnly"
+            },
+            {
+              "id": "contentStatus",
               "label": "Runtime Status",
               "description": "Use Refresh Status to query the Laravel Compose service.",
               "type": "TextLabel",
@@ -23,27 +62,121 @@
               "valueStorage": "RuntimeOnly"
             },
             {
-              "id": "startAuthApi",
-              "label": "Start Auth API",
-              "description": "Start the local Compose stack through DockerOrchestrator.",
-              "type": "ActionButton",
-              "defaultValue": "laravel.auth-api.start",
+              "id": "contentDetails",
+              "label": "Selected Content",
+              "description": "Pack metadata is refreshed after a lifecycle or status action.",
+              "type": "TextLabel",
+              "defaultValue": "Selected Content: Not validated",
               "valueStorage": "RuntimeOnly"
             },
             {
-              "id": "stopAuthApi",
-              "label": "Stop Auth API",
-              "description": "Stop the local Compose services without removing volumes.",
+              "id": "startContent",
+              "label": "Start Content",
+              "description": "Start the selected local Compose stack through DockerOrchestrator.",
               "type": "ActionButton",
-              "defaultValue": "laravel.auth-api.stop",
+              "defaultValue": "laravel.content.start",
               "valueStorage": "RuntimeOnly"
             },
             {
-              "id": "refreshAuthApi",
+              "id": "stopContent",
+              "label": "Stop Content",
+              "description": "Stop the selected local Compose services without removing volumes.",
+              "type": "ActionButton",
+              "defaultValue": "laravel.content.stop",
+              "valueStorage": "RuntimeOnly"
+            },
+            {
+              "id": "refreshContent",
               "label": "Refresh Status",
               "description": "Check whether the Laravel application service is running.",
               "type": "ActionButton",
-              "defaultValue": "laravel.auth-api.refresh",
+              "defaultValue": "laravel.content.refresh",
+              "valueStorage": "RuntimeOnly"
+            }
+          ]
+        },
+        {
+          "id": "novaid_login",
+          "title": "Nova ID Login",
+          "description": "Remote control requires a Nova ID OAuth device session. Credential materialization is owned by KeyForge; tokens never appear in this menu.",
+          "fields": [
+            {
+              "id": "novaIdStatus",
+              "label": "Nova ID Status",
+              "description": "Login becomes available after KeyForge can materialize the OAuth app credentials for the configured device flow.",
+              "type": "TextLabel",
+              "defaultValue": "Nova ID: Login Required",
+              "valueStorage": "RuntimeOnly"
+            },
+            {
+              "id": "novaIdLoginUrl",
+              "label": "Login API URL",
+              "description": "This URL is safe to open or copy into Postman. It contains only a short-lived login session identifier, never a token.",
+              "type": "TextLabel",
+              "defaultValue": "Login URL: Waiting for KeyForge OAuth credential materialization",
+              "valueStorage": "RuntimeOnly"
+            },
+            {
+              "id": "beginNovaIdLogin",
+              "label": "Start OAuth Device Login",
+              "description": "Fails closed until KeyForge can safely materialize the dedicated Celestia OAuth app credentials.",
+              "type": "ActionButton",
+              "defaultValue": "laravel.novaid.begin",
+              "valueStorage": "RuntimeOnly"
+            },
+            {
+              "id": "pollNovaIdLogin",
+              "label": "Refresh Login",
+              "description": "Queues a non-blocking device-token poll after a device login has been started.",
+              "type": "ActionButton",
+              "defaultValue": "laravel.novaid.poll",
+              "valueStorage": "RuntimeOnly"
+            },
+            {
+              "id": "logoutNovaId",
+              "label": "Forget Local Session",
+              "description": "Removes the in-memory Nova ID token from Celestia Nova. It does not revoke the API-side token.",
+              "type": "ActionButton",
+              "defaultValue": "laravel.novaid.logout",
+              "valueStorage": "RuntimeOnly"
+            }
+          ]
+        },
+        {
+          "id": "remote_lifecycle",
+          "title": "Remote VM Lifecycle",
+          "description": "Uses the selected pack's declarative SSH target. SSH agent authentication and a verified host key are mandatory.",
+          "fields": [
+            {
+              "id": "remoteStatus",
+              "label": "Remote Status",
+              "description": "Remote actions are queued and never block menu rendering.",
+              "type": "TextLabel",
+              "defaultValue": "Remote Status: Not queried",
+              "valueStorage": "RuntimeOnly"
+            },
+            {
+              "id": "bootstrapRemote",
+              "label": "Bootstrap Remote VM",
+              "description": "Install and enable Docker using passwordless sudo on the selected VM.",
+              "type": "ActionButton",
+              "defaultValue": "laravel.remote.bootstrap",
+              "valueStorage": "RuntimeOnly"
+            },
+            {
+              "id": "stageRemote",
+              "label": "Stage Remote Release",
+              "description": "Upload a ContentForge materialized release. Secrets and .env files are excluded.",
+              "type": "ActionButton",
+              "defaultValue": "laravel.remote.stage",
+              "valueStorage": "RuntimeOnly"
+            },
+            {
+              "id": "refreshRemote",
+              "label": "Refresh Remote Status",
+              "description": "Query the active remote Compose release over verified SSH.",
+              "type": "ActionButton",
+              "defaultValue": "laravel.remote.refresh",
               "valueStorage": "RuntimeOnly"
             }
           ]

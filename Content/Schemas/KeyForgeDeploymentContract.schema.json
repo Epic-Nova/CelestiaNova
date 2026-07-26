@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "celestianova.keyforge-deployment-contract.v1",
+  "title": "KeyForge deployment secret contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["oauthApplication", "runtimeEnvironment"],
+  "properties": {
+    "oauthApplication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["applicationId", "authorizationServerId", "scopes", "audiences"],
+      "properties": {
+        "applicationId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,95}$" },
+        "authorizationServerId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,95}$" },
+        "scopes": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._:-]*$" } },
+        "audiences": { "type": "array", "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._:-]*$" } },
+        "accessTokenTtlSeconds": { "type": "integer", "minimum": 60, "maximum": 3600, "default": 600 }
+      }
+    },
+    "runtimeEnvironment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["secretRefs", "remoteWriteMode"],
+      "properties": {
+        "publicValues": { "type": "object", "additionalProperties": { "type": "string" } },
+        "secretRefs": { "type": "object", "minProperties": 1, "additionalProperties": { "type": "string", "pattern": "^keyforge://[A-Za-z0-9._/-]+$" } },
+        "remoteWriteMode": { "const": "0600" },
+        "removeAfterActivation": { "type": "boolean", "default": false }
+      }
+    }
+  }
+}

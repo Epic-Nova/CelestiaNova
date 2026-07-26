@@ -1,0 +1,25 @@
+[Unit]
+Description=Celestia Nova service runtime
+Documentation=file:///opt/celestianova/share/doc/celestianova/LINUX_SERVICE_MODE.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=celestianova
+Group=celestianova
+WorkingDirectory=/opt/celestianova
+ExecStart=/opt/celestianova/bin/CelestiaNova --service-mode --status-file /var/lib/celestianova/status/service-status.json --status-interval-seconds 15
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+UMask=0077
+StateDirectory=celestianova
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/celestianova
+
+[Install]
+WantedBy=multi-user.target

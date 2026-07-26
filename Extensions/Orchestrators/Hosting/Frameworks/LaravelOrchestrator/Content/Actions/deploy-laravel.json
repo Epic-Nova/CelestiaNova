@@ -1,0 +1,79 @@
+{
+  "id": "laravel.deploy.plan.v1",
+  "version": "1.0.0",
+  "ownerExtensionId": "laravelorchestrator",
+  "title": "Render Laravel deployment plan",
+  "description": "Validates a Laravel deployment context and materializes Docker artifacts. Lifecycle execution is delegated to DockerOrchestrator.",
+  "inputSchema": "../Schemas/laravel-deployment-context.schema.json",
+  "workspace": {
+    "source": "{{content.sourcePath}}",
+    "target": "{{deployment.workspacePath}}",
+    "copySource": true,
+    "exclude": [".git", ".env", ".runtime.env", "vendor", "node_modules"]
+  },
+  "templates": [
+    {
+      "source": "../Templates/laravel/compose.yaml.template",
+      "target": "compose.yaml"
+    },
+    {
+      "source": "../Templates/laravel/Dockerfile.template",
+      "target": "Dockerfile"
+    },
+    {
+      "source": "../Templates/laravel/app-entrypoint.sh.template",
+      "target": "docker/php/app-entrypoint.sh",
+      "mode": "0755"
+    },
+    {
+      "source": "../Templates/laravel/nginx-default.conf.template",
+      "target": "docker/nginx/default.conf"
+    }
+  ],
+  "runtimeEnvironment": {
+    "target": ".runtime.env",
+    "mode": "0600",
+    "redactFromLogs": true,
+    "values": {
+      "APP_NAME": "{{application.name}}",
+      "APP_ENV": "{{application.environment}}",
+      "APP_DEBUG": "{{application.debug}}",
+      "APP_URL": "{{application.url}}",
+      "APP_KEY": "{{application.keySecretRef}}",
+      "DB_CONNECTION": "{{database.connection}}",
+      "DB_HOST": "{{database.host}}",
+      "DB_PORT": "{{database.port}}",
+      "DB_DATABASE": "{{database.name}}",
+      "DB_USERNAME": "{{database.usernameSecretRef}}",
+      "DB_PASSWORD": "{{database.passwordSecretRef}}",
+      "CACHE_STORE": "{{cache.driver}}",
+      "QUEUE_CONNECTION": "{{cache.queueConnection}}",
+      "REDIS_HOST": "{{cache.redisHost}}",
+      "REDIS_PORT": "{{cache.redisPort}}",
+      "REDIS_PASSWORD": "{{cache.redisPasswordSecretRef}}"
+    }
+  },
+  "delegates": {
+    "extensionId": "dockerorchestrator",
+    "action": "docker.compose.apply",
+    "arguments": {
+      "composeFile": "compose.yaml",
+      "projectName": "{{deployment.projectName}}"
+    }
+  },
+  "healthCheck": {
+    "type": "http",
+    "url": "{{routing.healthUrl}}",
+    "expectedStatus": 200
+  },
+  "confirmation": {
+    "required": false,
+    "reason": "This action only renders a plan and delegates a non-destructive compose apply."
+  },
+  "prohibitedOperations": [
+    "docker.compose.down",
+    "database.migrate",
+    "certificate.issue",
+    "host.crontab.write"
+  ]
+}
