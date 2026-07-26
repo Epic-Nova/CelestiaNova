@@ -48,6 +48,17 @@ endif()
 
 set_target_properties(CelestiaNova PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
+# The portable Linux installation keeps NovaCore in <prefix>/Binaries while
+# the host executable is installed in <prefix>/bin.  Preserve this relative
+# relationship in the ELF runtime search path so systemd does not depend on
+# LD_LIBRARY_PATH or a host-wide linker configuration.
+if(UNIX AND NOT APPLE)
+  set_target_properties(CelestiaNova PROPERTIES
+    BUILD_RPATH "\$ORIGIN/../Binaries"
+    INSTALL_RPATH "\$ORIGIN/../Binaries"
+  )
+endif()
+
 if (WIN32)
   set_target_properties(CelestiaNova PROPERTIES OUTPUT_NAME "CelestiaNova-${BUILD_CONFIGURATION}")
 endif()
