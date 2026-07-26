@@ -9,6 +9,7 @@ Type=simple
 User=celestianova
 Group=celestianova
 WorkingDirectory=/opt/celestianova
+Environment=CELESTIA_RUNTIME_ROOT=/var/lib/celestianova/content
 ExecStart=/opt/celestianova/bin/CelestiaNova --service-mode --status-file /var/lib/celestianova/status/service-status.json --status-interval-seconds 15
 Restart=on-failure
 RestartSec=5

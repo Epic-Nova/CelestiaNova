@@ -8,6 +8,7 @@
 #include <fstream>
 #include <chrono>
 #include <cctype>
+#include <cstdlib>
 #include <json.hpp>
 
 namespace {
@@ -87,6 +88,14 @@ bool IsWithin(const std::filesystem::path& candidate, const std::filesystem::pat
     const auto relative = candidate.lexically_relative(root);
     const auto genericRelative = relative.generic_string();
     return !genericRelative.empty() && genericRelative.rfind("..", 0) != 0;
+}
+
+std::filesystem::path ResolveRuntimeRoot(const std::filesystem::path& applicationRoot) {
+    const char* configuredRoot = std::getenv("CELESTIA_RUNTIME_ROOT");
+    if (configuredRoot != nullptr && configuredRoot[0] == '/') {
+        return std::filesystem::path(configuredRoot);
+    }
+    return applicationRoot / "Content" / ".runtime";
 }
 
 bool RegisterLocalManifest(const std::filesystem::path& manifestPath,
@@ -369,7 +378,7 @@ bool ContentForgeModule::MaterializeLocalContent(const std::string& contentId,
     }
 
     const auto applicationRoot = ApplicationRoot_.empty() ? std::filesystem::current_path() : std::filesystem::path(ApplicationRoot_);
-    const auto runtimeRoot = applicationRoot / "Content" / ".runtime";
+    const auto runtimeRoot = ResolveRuntimeRoot(applicationRoot);
     std::filesystem::create_directories(runtimeRoot, error);
     if (error) {
         NOVA_LOG(("[ContentForge] Cannot create runtime root: " + runtimeRoot.string()).c_str(), LogType::Warning);
