@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 #include <functional>
+#include <memory>
 #include <map>
 #include <thread>
 #include <mutex>
