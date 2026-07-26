@@ -16,14 +16,16 @@ Snapshots are written to a temporary sibling and renamed atomically. They contai
 
 ## Install on a VM
 
-Install a packaged Linux build under `/opt/celestianova`, then run:
+Build a Linux package, then install it with the package-owned utility:
 
 ```bash
-sudo useradd --system --home /var/lib/celestianova --shell /usr/sbin/nologin celestianova
-sudo install -D -m 0644 /opt/celestianova/Utilities/linux/celestianova.service /etc/systemd/system/celestianova.service
-sudo systemctl daemon-reload
-sudo systemctl enable --now celestianova
+sudo ./Utilities/linux/install_service_mode.sh \
+  ./Artifacts/CelestiaNova-Linux-Production
 ```
+
+The installer verifies the package layout, creates the dedicated non-login
+account, installs under `/opt/celestianova`, grants write access only to the
+runtime log and status directories, and enables the systemd unit.
 
 Operational lifecycle:
 
