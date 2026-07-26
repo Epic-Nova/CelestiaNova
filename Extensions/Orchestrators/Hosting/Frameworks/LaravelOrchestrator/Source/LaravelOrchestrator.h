@@ -3,6 +3,7 @@
 #include "Core/ModuleAPI.h"
 #include "Core/IExtensionInterface.h"
 #include "ExtensionSpecific/IExtensionCliProvider.h"
+#include "ExtensionSpecific/IContentForge.h"
 #include "ExtensionSpecific/IMenuActionProvider.h"
 #include "ExtensionSpecific/IRemoteControl.h"
 #include <map>
