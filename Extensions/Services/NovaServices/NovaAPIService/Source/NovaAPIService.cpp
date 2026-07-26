@@ -19,9 +19,11 @@ void NovaAPIServiceModule::StartupModule() {
     auto* frameworkOrchestrator = dynamic_cast<CoreFramework::ICoreFrameworkOrchestrator*>(
         Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("coreframeworkorchestrator"));
 
+    // Application content is declared by ContentForge packs. NovaAPIService
+    // must never fetch a hard-coded repository or mount a hard-coded host
+    // path during service startup.
     if (contentForge) {
-        contentForge->FetchViaGitAgent("https://github.com/celestianova/nova-api.git", "/opt/celestianova/nova-api");
-        contentForge->MountFileSystemPath("/opt/celestianova/nova-api", "/var/www/html/nova-api");
+        NOVA_LOG("[NovaAPIService] Content is supplied by declared ContentForge packs.", LogType::Log);
     }
 
     if (frameworkOrchestrator) {
