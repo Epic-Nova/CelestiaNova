@@ -374,8 +374,16 @@ bool ContentForgeModule::RegisterLocalContent(const Core::LocalContentDescriptor
     }
 
     auto normalized = descriptor;
-    if (normalized.sourceType == "git" && !AcquireGitContent(normalized)) {
-        return false;
+    // Git sources are deliberately acquired lazily.  GitAgent brings optional
+    // infrastructure dependencies, so making it a ContentForge startup
+    // dependency creates a cycle through the hosting/status graph.  A pack is
+    // still discoverable in menus; acquisition occurs only when an
+    // orchestrator asks ContentForge to materialize a release.
+    if (normalized.sourceType == "git") {
+        std::lock_guard<std::mutex> lock(ProviderMutex_);
+        LocalContent_[normalized.id] = std::move(normalized);
+        NOVA_LOG(("[ContentForge] Registered deferred Git content: " + descriptor.id).c_str(), LogType::Log);
+        return true;
     }
     if (normalized.path.empty()) {
         NOVA_LOG("[ContentForge] Content registration requires a resolved local source path.", LogType::Warning);
@@ -429,8 +437,13 @@ bool ContentForgeModule::AcquireGitContent(Core::LocalContentDescriptor& descrip
         NOVA_LOG(("[ContentForge] Cannot create source-cache directory: " + cacheRoot.parent_path().string()).c_str(), LogType::Warning);
         return false;
     }
+    auto& registry = Core::ExtensionRegistry::Instance();
+    if (!registry.LoadExtensionById("gitagent")) {
+        NOVA_LOG("[ContentForge] GitAgent could not be loaded for a deferred content acquisition.", LogType::Warning);
+        return false;
+    }
     auto* git = dynamic_cast<Core::ISourceControlAgent*>(
-        Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("gitagent"));
+        registry.GetLoadedExtensionInstance("gitagent"));
     if (!git || !git->Clone(descriptor.sourceRepository, cacheRoot.string(), descriptor.sourceRef)) {
         NOVA_LOG(("[ContentForge] GitAgent could not acquire content '" + descriptor.id + "'.").c_str(), LogType::Warning);
         return false;
@@ -479,6 +492,11 @@ bool ContentForgeModule::MaterializeLocalContent(const std::string& contentId,
     Core::LocalContentDescriptor content;
     if (!ResolveLocalContent(contentId, content)) {
         NOVA_LOG(("[ContentForge] Cannot materialize unknown local content: " + contentId).c_str(), LogType::Warning);
+        return false;
+    }
+
+    if (content.sourceType == "git" && !AcquireGitContent(content)) {
+        NOVA_LOG(("[ContentForge] Cannot materialize unavailable Git source: " + contentId).c_str(), LogType::Warning);
         return false;
     }
 

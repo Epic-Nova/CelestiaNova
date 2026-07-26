@@ -11,11 +11,13 @@ the ContentForge runtime root:
 
 `$CELESTIA_RUNTIME_ROOT/sources/<content-id>/<ref>/`
 
-In Linux service mode this is `/var/lib/celestianova/content`. Existing source
-caches are reused without a pull or fetch, so a running host cannot change its
-application source merely because a remote branch changed. Materialized
-releases remain copy-only and still exclude `.env` and private key material;
-KeyForge owns the later secret-injection stage.
+In Linux service mode this is `/var/lib/celestianova/content`. GitAgent is
+loaded lazily only when an orchestrator materializes the pack, avoiding a
+startup dependency cycle through optional hosting/status infrastructure.
+Existing source caches are reused without a pull or fetch, so a running host
+cannot change its application source merely because a remote branch changed.
+Materialized releases remain copy-only and still exclude `.env` and private
+key material; KeyForge owns the later secret-injection stage.
 
 An incomplete cache is intentionally fail-closed. A future content-maintenance
 action, with an audited cache replacement policy, is required to refresh it.
