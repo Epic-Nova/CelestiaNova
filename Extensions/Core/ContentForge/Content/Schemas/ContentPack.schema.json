@@ -70,6 +70,26 @@
       },
       "additionalProperties": false
     },
+    "runtimeEnvironment": {
+      "description": "Runtime environment contract. Secret values are always KeyForge references and never content-pack literals.",
+      "type": "object",
+      "required": ["targetId", "secretReferences"],
+      "properties": {
+        "targetId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,95}$" },
+        "publicValues": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Z][A-Z0-9_]{0,127}$" },
+          "additionalProperties": { "type": "string", "pattern": "^[^\\r\\n\\u0000]*$" }
+        },
+        "secretReferences": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "pattern": "^[A-Z][A-Z0-9_]{0,127}$" },
+          "additionalProperties": { "type": "string", "pattern": "^keyforge://[A-Za-z0-9._/-]+$" }
+        }
+      },
+      "additionalProperties": false
+    },
     "remoteDeployment": {
       "description": "Non-secret remote staging target owned by the content pack. Credentials remain KeyForge references only.",
       "type": "object",

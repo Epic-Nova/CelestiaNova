@@ -8,6 +8,11 @@
 #include <fstream>
 #include <optional>
 #include <sstream>
+#include <cstdlib>
+
+#ifndef _WIN32
+#include <sys/stat.h>
+#endif
 
 #ifdef _WIN32
 #include <windows.h>
@@ -54,6 +59,14 @@ bool IsSafeReleasePath(const std::string& value) {
 
 std::string ReferenceKey(const std::string& reference) {
     return reference.substr(std::string("keyforge://").size());
+}
+
+std::string CredentialFileName(const std::string& reference) {
+    std::string name = ReferenceKey(reference);
+    for (char& character : name) {
+        if (character == '/') character = '-';
+    }
+    return name;
 }
 
 // The vault file is a sequence of DPAPI-protected values.  Names remain only
@@ -173,7 +186,11 @@ void KeyForgeModule::StartupModule() {
     std::filesystem::create_directories(std::filesystem::path(VaultPath()).parent_path(), error);
     NOVA_LOG(error ? "[KeyForge] DPAPI vault directory unavailable; vault is fail-closed." : "[KeyForge] Windows DPAPI vault backend ready.", error ? LogType::Warning : LogType::Log);
 #else
-    NOVA_LOG("[KeyForge] No protected vault backend for this platform; fail-closed.", LogType::Warning);
+    const char* credentialDirectory = std::getenv("CREDENTIALS_DIRECTORY");
+    NOVA_LOG(credentialDirectory && credentialDirectory[0]
+        ? "[KeyForge] Linux systemd credential vault backend ready."
+        : "[KeyForge] Linux credential directory is absent; vault is fail-closed.",
+        credentialDirectory && credentialDirectory[0] ? LogType::Log : LogType::Warning);
 #endif
 }
 
@@ -226,7 +243,15 @@ bool KeyForgeModule::StoreSecret(const std::string& reference, const std::string
 
 std::optional<std::string> KeyForgeModule::ReadSecret(const std::string& reference) const {
 #ifndef _WIN32
-    (void)reference; return std::nullopt;
+    if (!IsKeyForgeReference(reference)) return std::nullopt;
+    const char* credentialDirectory = std::getenv("CREDENTIALS_DIRECTORY");
+    if (!credentialDirectory || credentialDirectory[0] == '\0') return std::nullopt;
+    const auto path = std::filesystem::path(credentialDirectory) / "keyforge" / CredentialFileName(reference);
+    std::ifstream input(path, std::ios::binary);
+    if (!input) return std::nullopt;
+    std::string value((std::istreambuf_iterator<char>(input)), {});
+    while (!value.empty() && (value.back() == '\n' || value.back() == '\r')) value.pop_back();
+    return value.empty() || value.find('\0') != std::string::npos ? std::nullopt : std::optional<std::string>(std::move(value));
 #else
     if (!IsKeyForgeReference(reference)) return std::nullopt;
     std::ifstream input(VaultPath(), std::ios::binary); char magic[8]{}; std::uint32_t count=0;
@@ -391,6 +416,26 @@ KeyForge::RuntimeEnvironmentReceipt KeyForgeModule::MaterializeRemoteRuntimeEnvi
         }
         content += entry.first + "=" + *secret + "\n";
     }
+#ifndef _WIN32
+    if (request.targetId == "local-service") {
+        const auto destination = std::filesystem::path(request.remoteReleasePath) / ".runtime.env";
+        std::error_code error;
+        std::filesystem::create_directories(destination.parent_path(), error);
+        if (!error) {
+            std::ofstream output(destination, std::ios::binary | std::ios::trunc);
+            if (output) {
+                output.write(content.data(), static_cast<std::streamsize>(content.size()));
+                output.close();
+                chmod(destination.c_str(), S_IRUSR | S_IWUSR);
+                receipt.accepted = static_cast<bool>(output);
+                receipt.receipt = receipt.accepted ? "accepted: protected local runtime environment written" : "rejected: local runtime environment write failed";
+                return receipt;
+            }
+        }
+        receipt.receipt = "rejected: protected local runtime environment write failed";
+        return receipt;
+    }
+#endif
 #ifdef _WIN32
     if (WriteRemoteEnvironment(request.targetId, receipt.remoteEnvironmentPath, content)) {
         receipt.accepted = true; receipt.receipt = "accepted: protected runtime environment written";

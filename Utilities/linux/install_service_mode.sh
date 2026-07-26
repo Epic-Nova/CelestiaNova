@@ -51,6 +51,7 @@ chown -R root:root "${INSTALL_ROOT}"
 install -d -o "${SERVICE_USER}" -g "${SERVICE_USER}" -m 0750 "${INSTALL_ROOT}/Content/Logs"
 install -D -m 0644 "${UNIT_SOURCE}" /etc/systemd/system/celestianova.service
 install -D -o root -g root -m 0755 "${DOCKER_BOOTSTRAP_SOURCE}" /usr/local/lib/celestianova/bootstrap-docker
+install -d -o root -g root -m 0700 /etc/celestianova/credentials
 printf 'celestianova ALL=(root) NOPASSWD: /usr/local/lib/celestianova/bootstrap-docker\n' \
     >/etc/sudoers.d/celestianova-docker-bootstrap
 chmod 0440 /etc/sudoers.d/celestianova-docker-bootstrap

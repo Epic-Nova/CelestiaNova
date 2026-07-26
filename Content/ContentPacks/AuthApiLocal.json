@@ -25,6 +25,17 @@
     "environmentFile": "../../Auth-API/.env",
     "base": "application-root"
   },
+  "runtimeEnvironment": {
+    "targetId": "local-service",
+    "publicValues": {
+      "APP_ENV": "production",
+      "APP_DEBUG": "false"
+    },
+    "secretReferences": {
+      "APP_KEY": "keyforge://content/auth-api/app-key",
+      "DB_PASSWORD": "keyforge://content/auth-api/db-password"
+    }
+  },
   "remoteDeployment": {
     "targetManifest": "../RemoteTargets/VirtualBoxUbuntu.json",
     "releaseRoot": "/opt/celestia/releases",
