@@ -408,6 +408,10 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/Utilities/linux/celestianova.service")
 	install(FILES "${CMAKE_SOURCE_DIR}/Utilities/linux/celestianova.service"
 		DESTINATION "share/celestianova/systemd")
 endif()
+if(EXISTS "${CMAKE_SOURCE_DIR}/Utilities/linux/bootstrap-docker.sh")
+	install(PROGRAMS "${CMAKE_SOURCE_DIR}/Utilities/linux/bootstrap-docker.sh"
+		DESTINATION "share/celestianova/bootstrap")
+endif()
 if(EXISTS "${CMAKE_SOURCE_DIR}/Docs/LINUX_SERVICE_MODE.md")
 	install(FILES "${CMAKE_SOURCE_DIR}/Docs/LINUX_SERVICE_MODE.md"
 		DESTINATION "share/doc/celestianova")

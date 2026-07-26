@@ -14,6 +14,16 @@ The declarative contract is [LinuxServiceMode.json](../Content/ServiceMode/Linux
 
 Snapshots are written to a temporary sibling and renamed atomically. They contain only the existing `StatusApiSurface` extension lifecycle/health payload; KeyForge material, access tokens, and runtime secrets are excluded.
 
+## Docker bootstrap boundary
+
+The installer deploys a root-owned, argumentless helper at
+`/usr/local/lib/celestianova/bootstrap-docker` and grants the `celestianova`
+service user passwordless sudo for that exact path only. DockerOrchestrator may
+use it to install `docker.io` and `docker-compose-v2`, enable Docker, and add
+the service account to the Docker group. It cannot execute arbitrary package
+or shell commands. Restart `celestianova.service` after a successful bootstrap
+before running Compose actions.
+
 ## Install on a VM
 
 Build a Linux package, then install it with the package-owned utility:

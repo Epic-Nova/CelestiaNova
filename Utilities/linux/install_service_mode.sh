@@ -25,8 +25,13 @@ if [[ ! -x "${PACKAGE_ROOT}/bin/CelestiaNova" ]]; then
 fi
 
 UNIT_SOURCE="${PACKAGE_ROOT}/share/celestianova/systemd/celestianova.service"
+DOCKER_BOOTSTRAP_SOURCE="${PACKAGE_ROOT}/share/celestianova/bootstrap/bootstrap-docker.sh"
 if [[ ! -f "${UNIT_SOURCE}" ]]; then
     printf 'Package does not contain the Celestia systemd unit: %s\n' "${UNIT_SOURCE}" >&2
+    exit 1
+fi
+if [[ ! -f "${DOCKER_BOOTSTRAP_SOURCE}" ]]; then
+    printf 'Package does not contain the Docker bootstrap helper: %s\n' "${DOCKER_BOOTSTRAP_SOURCE}" >&2
     exit 1
 fi
 
@@ -45,6 +50,11 @@ cp -a "${PACKAGE_ROOT}/." "${INSTALL_ROOT}/"
 chown -R root:root "${INSTALL_ROOT}"
 install -d -o "${SERVICE_USER}" -g "${SERVICE_USER}" -m 0750 "${INSTALL_ROOT}/Content/Logs"
 install -D -m 0644 "${UNIT_SOURCE}" /etc/systemd/system/celestianova.service
+install -D -o root -g root -m 0755 "${DOCKER_BOOTSTRAP_SOURCE}" /usr/local/lib/celestianova/bootstrap-docker
+printf 'celestianova ALL=(root) NOPASSWD: /usr/local/lib/celestianova/bootstrap-docker\n' \
+    >/etc/sudoers.d/celestianova-docker-bootstrap
+chmod 0440 /etc/sudoers.d/celestianova-docker-bootstrap
+visudo -cf /etc/sudoers.d/celestianova-docker-bootstrap >/dev/null
 
 systemctl daemon-reload
 systemctl enable --now celestianova

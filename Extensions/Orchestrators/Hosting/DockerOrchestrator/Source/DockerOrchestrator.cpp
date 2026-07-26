@@ -143,6 +143,20 @@ DockerComposeResult DockerOrchestratorModule::StartCompose(const std::string& pr
     return ExecuteComposeCommand(projectPath, composeFile, "up -d");
 }
 
+std::vector<Core::FExtensionCliArgDescriptor> DockerOrchestratorModule::GetCliArgDescriptors() const {
+    return {{"docker-bootstrap", "Install the local Docker runtime through the restricted DockerOrchestrator helper.", false}};
+}
+
+void DockerOrchestratorModule::ApplyCliArgs(const std::vector<Core::FExtensionCliArg>& args) {
+    for (const auto& argument : args) {
+        if (argument.Flag != "docker-bootstrap") continue;
+        const auto result = BootstrapLocalRuntime();
+        const auto message = "[DockerOrchestrator] Local Docker bootstrap " +
+            std::string(result.succeeded ? "succeeded. " : "failed. ") + result.output;
+        NOVA_LOG(message.c_str(), result.succeeded ? LogType::Log : LogType::Error);
+    }
+}
+
 DockerComposeResult DockerOrchestratorModule::StopCompose(const std::string& projectPath, const std::string& composeFile) const {
     return ExecuteComposeCommand(projectPath, composeFile, "stop");
 }
@@ -177,6 +191,25 @@ bool DockerOrchestratorModule::IsComposeServiceRunning(const std::string& projec
 DockerComposeResult DockerOrchestratorModule::ValidateCompose(const std::string& projectPath,
                                                               const std::string& composeFile) const {
     return ExecuteComposeCommand(projectPath, composeFile, "config -q");
+}
+
+DockerComposeResult DockerOrchestratorModule::BootstrapLocalRuntime() const {
+    DockerComposeResult result;
+    auto* terminal = dynamic_cast<CoreTerminal::ITerminalAgent*>(
+        Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("terminalagent"));
+    if (!terminal) {
+        result.output = "TerminalAgent is not loaded.";
+        return result;
+    }
+    // This is intentionally a fixed path with no caller-provided input. The
+    // service installer owns both the root-owned script and its sudoers rule.
+    CoreTerminal::TerminalCommandRequest request;
+    request.command = "sudo -n /usr/local/lib/celestianova/bootstrap-docker";
+    const auto terminalResult = terminal->ExecuteCommandSync(request);
+    result.exitCode = terminalResult.exitCode;
+    result.output = terminalResult.stdOut.empty() ? terminalResult.stdErr : terminalResult.stdOut;
+    result.succeeded = terminalResult.exitCode == 0;
+    return result;
 }
 
 DockerComposeJob DockerOrchestratorModule::SubmitComposeJob(DockerComposeJobAction action,

@@ -2,11 +2,13 @@
 
 #include "Core/ModuleAPI.h"
 #include "Core/IExtensionInterface.h"
+#include "ExtensionSpecific/IExtensionCliProvider.h"
 #include "TerminalAgent.h"
 #include <functional>
 #include <map>
 #include <mutex>
 #include <string>
+#include <vector>
 
 struct DockerComposeResult {
     bool succeeded = false;
@@ -53,6 +55,9 @@ public:
     virtual bool StopComposeAsync(const std::string& projectPath, std::function<void(DockerComposeResult)> onComplete, const std::string& composeFile = "compose.yaml") const = 0;
     virtual bool IsComposeServiceRunning(const std::string& projectPath, const std::string& serviceName, const std::string& composeFile = "compose.yaml") const = 0;
     virtual DockerComposeResult ValidateCompose(const std::string& projectPath, const std::string& composeFile = "compose.yaml") const = 0;
+    // Executes the fixed, root-owned local bootstrap helper installed by the
+    // service installer. It has no caller-provided arguments.
+    virtual DockerComposeResult BootstrapLocalRuntime() const = 0;
     virtual DockerComposeJob SubmitComposeJob(DockerComposeJobAction action, const std::string& projectPath, const std::string& composeFile = "compose.yaml") = 0;
     virtual DockerComposeJob GetComposeJob(const std::string& jobId) const = 0;
     virtual std::string BootstrapRemoteAsync(const DockerRemoteTarget& target, std::function<void(DockerComposeResult)> onComplete) = 0;
@@ -65,13 +70,17 @@ public:
 #  define DOCKERORCHESTRATOR_API NOVA_IMPORT
 #endif
 
-class DOCKERORCHESTRATOR_API DockerOrchestratorModule : public IExtensionInterface, public IDockerOrchestrator {
+class DOCKERORCHESTRATOR_API DockerOrchestratorModule : public IExtensionInterface,
+                                                        public IDockerOrchestrator,
+                                                        public Core::IExtensionCliProvider {
 public:
     DockerOrchestratorModule();
     ~DockerOrchestratorModule() override;
 
     void StartupModule() override;
     void ShutdownModule() override;
+    std::vector<Core::FExtensionCliArgDescriptor> GetCliArgDescriptors() const override;
+    void ApplyCliArgs(const std::vector<Core::FExtensionCliArg>& args) override;
 
     DockerComposeResult StartCompose(const std::string& projectPath, const std::string& composeFile = "compose.yaml") const override;
     DockerComposeResult StopCompose(const std::string& projectPath, const std::string& composeFile = "compose.yaml") const override;
@@ -79,6 +88,7 @@ public:
     bool StopComposeAsync(const std::string& projectPath, std::function<void(DockerComposeResult)> onComplete, const std::string& composeFile = "compose.yaml") const override;
     bool IsComposeServiceRunning(const std::string& projectPath, const std::string& serviceName, const std::string& composeFile = "compose.yaml") const override;
     DockerComposeResult ValidateCompose(const std::string& projectPath, const std::string& composeFile = "compose.yaml") const override;
+    DockerComposeResult BootstrapLocalRuntime() const override;
     DockerComposeJob SubmitComposeJob(DockerComposeJobAction action, const std::string& projectPath, const std::string& composeFile = "compose.yaml") override;
     DockerComposeJob GetComposeJob(const std::string& jobId) const override;
     std::string BootstrapRemoteAsync(const DockerRemoteTarget& target, std::function<void(DockerComposeResult)> onComplete) override;
