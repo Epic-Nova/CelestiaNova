@@ -9,7 +9,8 @@
   "longDescription": "ContentForge manages extension-delivered scripts, templates, and content packs with version-aware fetch, validation, and local materialization hooks.",
   "dependencies": [
     "keyforge",
-    "syncforge"
+    "syncforge",
+    "gitagent"
   ],
   "publicIncludePaths": [
     "Source"

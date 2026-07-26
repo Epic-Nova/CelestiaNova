@@ -4,11 +4,56 @@
 #include "TerminalAgent.h"
 #include "ExtensionSpecific/IPackageManagerAgent.h"
 #include <chrono>
+#include <cctype>
+#include <filesystem>
 #include <iomanip>
 #include <sstream>
 #include <thread>
 
 namespace Core {
+
+namespace {
+
+bool IsSafeGitHttpsUrl(const std::string& value) {
+    if (value.rfind("https://", 0) != 0 || value.size() <= 8) {
+        return false;
+    }
+    for (const unsigned char character : value) {
+        if (!(std::isalnum(character) || character == ':' || character == '/' ||
+              character == '.' || character == '-' || character == '_')) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool IsSafeGitRef(const std::string& value) {
+    if (value.empty() || value.find("..") != std::string::npos) {
+        return false;
+    }
+    for (const unsigned char character : value) {
+        if (!(std::isalnum(character) || character == '/' || character == '.' ||
+              character == '-' || character == '_')) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool IsSafeAbsoluteDestination(const std::string& value) {
+    if (value.empty() || value.front() != '/' || value.find("..") != std::string::npos) {
+        return false;
+    }
+    for (const unsigned char character : value) {
+        if (!(std::isalnum(character) || character == '/' || character == '.' ||
+              character == '-' || character == '_')) {
+            return false;
+        }
+    }
+    return true;
+}
+
+} // namespace
 
 GitAgentModule::GitAgentModule() = default;
 GitAgentModule::~GitAgentModule() = default;
@@ -162,10 +207,20 @@ bool GitAgentModule::Configure(const std::string& configKey, const std::string& 
 }
 
 bool GitAgentModule::Clone(const std::string& url, const std::string& destination, const std::string& branch) {
-    std::string cmd = "clone " + url + " " + destination;
-    if (!branch.empty()) {
-        cmd += " -b " + branch;
+    // Clone is used by ContentForge in service mode.  It only accepts a
+    // shell-safe HTTPS URL, a declared ref, and an absolute cache location.
+    // This keeps the legacy TerminalAgent bridge from becoming an injection
+    // primitive for declarative content manifests.
+    if (!IsSafeGitHttpsUrl(url) || !IsSafeAbsoluteDestination(destination) ||
+        (!branch.empty() && !IsSafeGitRef(branch))) {
+        AddLog("Rejected an unsafe Git clone declaration.");
+        return false;
     }
+    std::string cmd = "clone --depth 1";
+    if (!branch.empty()) {
+        cmd += " --branch " + branch;
+    }
+    cmd += " -- " + url + " " + destination;
     std::string output;
     return RunCommand(cmd, output);
 }

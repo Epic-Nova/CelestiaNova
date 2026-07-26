@@ -1,13 +1,14 @@
 {
   "$schema": "../../Extensions/Core/ContentForge/Content/Schemas/ContentPack.schema.json",
   "id": "auth-api",
-  "name": "Auth API (Local)",
+  "name": "Auth API",
   "version": "0.1.0",
   "framework": "laravel",
   "source": {
-    "type": "local-path",
-    "path": "../../Auth-API",
-    "base": "application-root"
+    "type": "git",
+    "repository": "https://github.com/Epic-Nova/Auth-API.git",
+    "ref": "master",
+    "allowedHosts": ["github.com"]
   },
   "deployment": {
     "orchestrator": "laravelorchestrator",

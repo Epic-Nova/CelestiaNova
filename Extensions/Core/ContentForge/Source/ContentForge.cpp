@@ -9,6 +9,7 @@
 #include <chrono>
 #include <cctype>
 #include <cstdlib>
+#include <algorithm>
 #include <json.hpp>
 
 namespace {
@@ -41,6 +42,45 @@ bool IsSafePathSegment(const std::string& value) {
 bool IsSafeHttpsUrl(const std::string& value) {
     return value.rfind("https://", 0) == 0 &&
            value.find_first_of(" \t\r\n\"'`|&;<>") == std::string::npos;
+}
+
+bool IsSafeGitRef(const std::string& value) {
+    if (value.empty() || value.find("..") != std::string::npos) {
+        return false;
+    }
+    for (const unsigned char character : value) {
+        if (!(std::isalnum(character) || character == '/' || character == '-' ||
+              character == '_' || character == '.')) {
+            return false;
+        }
+    }
+    return true;
+}
+
+std::string GetHttpsHost(const std::string& url) {
+    if (!IsSafeHttpsUrl(url)) {
+        return {};
+    }
+    const auto hostStart = std::string("https://").size();
+    const auto hostEnd = url.find('/', hostStart);
+    const auto host = url.substr(hostStart, hostEnd == std::string::npos ? std::string::npos : hostEnd - hostStart);
+    if (host.empty() || host.find(':') != std::string::npos) {
+        return {};
+    }
+    std::string normalized = host;
+    for (char& character : normalized) {
+        character = static_cast<char>(std::tolower(static_cast<unsigned char>(character)));
+    }
+    return normalized;
+}
+
+std::string CachePathSegment(std::string value) {
+    for (char& character : value) {
+        if (character == '/') {
+            character = '-';
+        }
+    }
+    return value;
 }
 
 bool IsSafeRemotePath(const std::string& value) {
@@ -110,7 +150,9 @@ bool RegisterLocalManifest(const std::filesystem::path& manifestPath,
         nlohmann::json manifest;
         manifestFile >> manifest;
         const auto source = manifest.value("source", nlohmann::json::object());
-        if (source.value("type", "") != "local-path") {
+        const auto sourceType = source.value("type", "");
+        if (sourceType != "local-path" && sourceType != "git") {
+            NOVA_LOG((std::string("[ContentForge] Content manifest has an unsupported source type: ") + manifestPath.string()).c_str(), LogType::Warning);
             return false;
         }
 
@@ -124,6 +166,7 @@ bool RegisterLocalManifest(const std::filesystem::path& manifestPath,
         content.primaryService = deployment.value("primaryService", "");
         content.healthEndpoint = deployment.value("healthEndpoint", "");
         content.manifestPath = manifestPath.string();
+        content.sourceType = sourceType;
 
         if (content.id.empty() || content.version.empty() || content.framework.empty() ||
             content.orchestrator.empty() || content.composeFile.empty() || content.primaryService.empty()) {
@@ -131,9 +174,24 @@ bool RegisterLocalManifest(const std::filesystem::path& manifestPath,
             return false;
         }
 
-        const auto sourceBase = source.value("base", "application-root");
-        const auto basePath = sourceBase == "manifest-directory" ? manifestPath.parent_path() : applicationRoot;
-        content.path = (basePath / source.value("path", "")).string();
+        if (sourceType == "local-path") {
+            const auto sourceBase = source.value("base", "application-root");
+            const auto basePath = sourceBase == "manifest-directory" ? manifestPath.parent_path() : applicationRoot;
+            content.path = (basePath / source.value("path", "")).string();
+        } else {
+            content.sourceRepository = source.value("repository", "");
+            content.sourceRef = source.value("ref", "");
+            for (const auto& host : source.value("allowedHosts", nlohmann::json::array())) {
+                if (host.is_string()) {
+                    content.sourceAllowedHosts.push_back(ToLower(host.get<std::string>()));
+                }
+            }
+            if (!IsSafeHttpsUrl(content.sourceRepository) || !IsSafeGitRef(content.sourceRef) ||
+                content.sourceAllowedHosts.empty()) {
+                NOVA_LOG((std::string("[ContentForge] Git content manifest has an unsafe source declaration: ") + manifestPath.string()).c_str(), LogType::Warning);
+                return false;
+            }
+        }
         const auto localDevelopment = manifest.value("localDevelopment", nlohmann::json::object());
         const auto environmentFile = localDevelopment.value("environmentFile", "");
         if (!environmentFile.empty()) {
@@ -264,7 +322,9 @@ Core::NovaHealthSnapshot ContentForgeModule::GetHealthSnapshot() const {
 }
 
 bool ContentForgeModule::Clone(const std::string& url, const std::string& destination, const std::string& branch) {
-    return FetchViaGitAgent(url, destination);
+    auto& registry = Core::ExtensionRegistry::Instance();
+    auto* git = dynamic_cast<Core::ISourceControlAgent*>(registry.GetLoadedExtensionInstance("gitagent"));
+    return git && git->Clone(url, destination, branch);
 }
 
 bool ContentForgeModule::Pull(const std::string& repoPath) {
@@ -308,23 +368,75 @@ std::vector<std::string> ContentForgeModule::GetContentProviders() const {
 }
 
 bool ContentForgeModule::RegisterLocalContent(const Core::LocalContentDescriptor& descriptor) {
-    if (descriptor.id.empty() || descriptor.path.empty()) {
-        NOVA_LOG("[ContentForge] Local content registration requires an id and path.", LogType::Warning);
-        return false;
-    }
-
-    std::error_code error;
-    const auto path = std::filesystem::weakly_canonical(descriptor.path, error);
-    if (error || !std::filesystem::is_directory(path)) {
-        NOVA_LOG(("[ContentForge] Local content path is not a directory: " + descriptor.path).c_str(), LogType::Warning);
+    if (descriptor.id.empty()) {
+        NOVA_LOG("[ContentForge] Content registration requires an id.", LogType::Warning);
         return false;
     }
 
     auto normalized = descriptor;
+    if (normalized.sourceType == "git" && !AcquireGitContent(normalized)) {
+        return false;
+    }
+    if (normalized.path.empty()) {
+        NOVA_LOG("[ContentForge] Content registration requires a resolved local source path.", LogType::Warning);
+        return false;
+    }
+
+    std::error_code error;
+    const auto path = std::filesystem::weakly_canonical(normalized.path, error);
+    if (error || !std::filesystem::is_directory(path)) {
+        NOVA_LOG(("[ContentForge] Content source path is not a directory: " + normalized.path).c_str(), LogType::Warning);
+        return false;
+    }
+
     normalized.path = path.string();
     std::lock_guard<std::mutex> lock(ProviderMutex_);
     LocalContent_[normalized.id] = std::move(normalized);
-    NOVA_LOG(("[ContentForge] Registered local content: " + descriptor.id).c_str(), LogType::Log);
+    NOVA_LOG(("[ContentForge] Registered content: " + descriptor.id).c_str(), LogType::Log);
+    return true;
+}
+
+bool ContentForgeModule::AcquireGitContent(Core::LocalContentDescriptor& descriptor) const {
+    if (!IsSafePathSegment(descriptor.id) || !IsSafeHttpsUrl(descriptor.sourceRepository) ||
+        !IsSafeGitRef(descriptor.sourceRef)) {
+        NOVA_LOG("[ContentForge] Refusing an unsafe Git content declaration.", LogType::Warning);
+        return false;
+    }
+    const auto host = GetHttpsHost(descriptor.sourceRepository);
+    if (host.empty() || std::find(descriptor.sourceAllowedHosts.begin(), descriptor.sourceAllowedHosts.end(), host) == descriptor.sourceAllowedHosts.end()) {
+        NOVA_LOG(("[ContentForge] Git source host is not allowlisted for content '" + descriptor.id + "'.").c_str(), LogType::Warning);
+        return false;
+    }
+
+    const auto applicationRoot = ApplicationRoot_.empty() ? std::filesystem::current_path() : std::filesystem::path(ApplicationRoot_);
+    const auto cacheRoot = ResolveRuntimeRoot(applicationRoot) / "sources" / descriptor.id / CachePathSegment(descriptor.sourceRef);
+    std::error_code error;
+    const auto canonicalRoot = std::filesystem::weakly_canonical(ResolveRuntimeRoot(applicationRoot), error);
+    if (error || !IsWithin(cacheRoot.lexically_normal(), canonicalRoot.lexically_normal())) {
+        NOVA_LOG("[ContentForge] Refusing an invalid ContentForge source-cache path.", LogType::Warning);
+        return false;
+    }
+    if (std::filesystem::is_directory(cacheRoot / ".git", error)) {
+        descriptor.path = cacheRoot.string();
+        return true;
+    }
+    if (std::filesystem::exists(cacheRoot, error)) {
+        NOVA_LOG(("[ContentForge] Refusing incomplete Git cache for content '" + descriptor.id + "'; remove it through a future content maintenance action.").c_str(), LogType::Warning);
+        return false;
+    }
+    std::filesystem::create_directories(cacheRoot.parent_path(), error);
+    if (error) {
+        NOVA_LOG(("[ContentForge] Cannot create source-cache directory: " + cacheRoot.parent_path().string()).c_str(), LogType::Warning);
+        return false;
+    }
+    auto* git = dynamic_cast<Core::ISourceControlAgent*>(
+        Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("gitagent"));
+    if (!git || !git->Clone(descriptor.sourceRepository, cacheRoot.string(), descriptor.sourceRef)) {
+        NOVA_LOG(("[ContentForge] GitAgent could not acquire content '" + descriptor.id + "'.").c_str(), LogType::Warning);
+        return false;
+    }
+    descriptor.path = cacheRoot.string();
+    NOVA_LOG(("[ContentForge] Acquired immutable source cache for '" + descriptor.id + "' at ref '" + descriptor.sourceRef + "'.").c_str(), LogType::Log);
     return true;
 }
 
@@ -465,6 +577,9 @@ bool ContentForgeModule::MaterializeLocalContent(const std::string& contentId,
         { "contentId", content.id },
         { "releaseId", releaseId },
         { "version", content.version },
+        { "sourceType", content.sourceType },
+        { "sourceRepository", content.sourceRepository },
+        { "sourceRef", content.sourceRef },
         { "sourcePath", sourcePath.string() },
         { "manifestPath", content.manifestPath },
         { "materialization", "copy-only" },

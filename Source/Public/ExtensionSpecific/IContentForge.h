@@ -10,6 +10,13 @@ namespace Core {
 struct LocalContentDescriptor {
     std::string id;
     std::string path;
+    // The source declaration stays with the content pack.  `path` is always
+    // the resolved local path (a developer path or ContentForge's source
+    // cache), so orchestrators never need to know where a pack came from.
+    std::string sourceType = "local-path";
+    std::string sourceRepository;
+    std::string sourceRef;
+    std::vector<std::string> sourceAllowedHosts;
     std::string version;
     std::string framework;
     std::string orchestrator;
@@ -70,7 +77,7 @@ public:
     virtual std::vector<LocalContentDescriptor> ListLocalContent() const = 0;
 
     /**
-     * Stages a local content pack under Content/.runtime/<contentId>/<releaseId>.
+     * Stages a content pack under the configured ContentForge runtime root.
      * The optional release id must be a safe path segment; an empty value creates
      * a unique local id. This operation never resolves secrets or executes code.
      */

@@ -56,6 +56,7 @@ public:
                                                 std::string& outError) const override;
 
 private:
+    bool AcquireGitContent(Core::LocalContentDescriptor& descriptor) const;
     mutable std::mutex ProviderMutex_;
     std::vector<std::string> ContentProviders_;
     std::map<std::string, Core::LocalContentDescriptor> LocalContent_;

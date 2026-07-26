@@ -2,6 +2,24 @@
 
 ContentForge discovers deployable application packs from `Content/ContentPacks/` and extension-owned packs from `Extensions/<extension>/Content/ContentPacks/`.
 
+## Service-mode Git content
+
+A content pack can declare a Git source instead of a developer-machine path.
+ContentForge accepts only an HTTPS repository, a safe declared ref, and a
+matching `allowedHosts` entry. It asks GitAgent to make a shallow clone into
+the ContentForge runtime root:
+
+`$CELESTIA_RUNTIME_ROOT/sources/<content-id>/<ref>/`
+
+In Linux service mode this is `/var/lib/celestianova/content`. Existing source
+caches are reused without a pull or fetch, so a running host cannot change its
+application source merely because a remote branch changed. Materialized
+releases remain copy-only and still exclude `.env` and private key material;
+KeyForge owns the later secret-injection stage.
+
+An incomplete cache is intentionally fail-closed. A future content-maintenance
+action, with an audited cache replacement policy, is required to refresh it.
+
 Extension-owned content belongs beside its implementation:
 
 ```text
