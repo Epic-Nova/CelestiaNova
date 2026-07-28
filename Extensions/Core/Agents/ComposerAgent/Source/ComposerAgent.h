@@ -34,6 +34,7 @@ public:
     bool IsComposerInstalled() const override;
     bool InstallComposer() const override;
     bool InstallDependencies(const std::string& workingDir, bool noDev = false) const override;
+    bool InstallDependenciesSync(const std::string& workingDir, bool noDev = false) const override;
     bool UpdateDependencies(const std::string& workingDir) const override;
     bool ValidateConfig(const std::string& workingDir) const override;
 

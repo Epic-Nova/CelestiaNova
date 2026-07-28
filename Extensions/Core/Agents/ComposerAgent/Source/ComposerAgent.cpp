@@ -6,6 +6,7 @@
 #include <chrono>
 #include <iomanip>
 #include <sstream>
+#include <filesystem>
 
 namespace Core {
 
@@ -159,6 +160,17 @@ bool ComposerAgentModule::InstallDependencies(const std::string& workingDir, boo
     });
 
     return true;
+}
+
+bool ComposerAgentModule::InstallDependenciesSync(const std::string& workingDir, bool noDev) const {
+    auto terminalAgent = dynamic_cast<CoreTerminal::ITerminalAgent*>(Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("terminalagent"));
+    if (!terminalAgent || !std::filesystem::is_regular_file(std::filesystem::path(workingDir) / "composer.lock")) return false;
+    CoreTerminal::TerminalCommandRequest req;
+    req.workingDirectory = workingDir;
+    req.command = GetComposerCommand(workingDir) + " install --no-interaction --prefer-dist --optimize-autoloader" + (noDev ? " --no-dev" : "");
+    const auto result = terminalAgent->ExecuteCommandSync(req);
+    const_cast<ComposerAgentModule*>(this)->AddLog("Composer synchronous install finished with code " + std::to_string(result.exitCode));
+    return result.exitCode == 0;
 }
 
 bool ComposerAgentModule::UpdateDependencies(const std::string& workingDir) const {

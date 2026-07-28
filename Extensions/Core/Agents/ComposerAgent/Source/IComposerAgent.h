@@ -28,6 +28,7 @@ public:
      * Runs 'composer install' in the specified directory.
      */
     virtual bool InstallDependencies(const std::string& workingDir, bool noDev = false) const = 0;
+    virtual bool InstallDependenciesSync(const std::string& workingDir, bool noDev = false) const = 0;
 
     /**
      * Runs 'composer update' in the specified directory.

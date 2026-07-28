@@ -7,6 +7,7 @@
 #include "KeyForgeDeploymentContracts.h"
 #include "TerminalAgent.h"
 #include "DockerOrchestrator.h"
+#include "IComposerAgent.h"
 
 #include <filesystem>
 #include <fstream>
@@ -97,6 +98,12 @@ bool MaterializeLaravelRelease(Core::IContentForge* contentForge,
     }
     outReleaseContent = content;
     outReleaseContent.path = outRelease.releasePath;
+    auto* composer = dynamic_cast<Core::IComposerAgent*>(
+        Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("composeragent"));
+    if (!composer || !composer->IsComposerInstalled() || !composer->InstallDependenciesSync(outRelease.releasePath, true)) {
+        outError = "ComposerAgent could not materialize production dependencies for the release.";
+        return false;
+    }
     if (!ValidateLocalLaravelProject(outReleaseContent, outError)) {
         return false;
     }
