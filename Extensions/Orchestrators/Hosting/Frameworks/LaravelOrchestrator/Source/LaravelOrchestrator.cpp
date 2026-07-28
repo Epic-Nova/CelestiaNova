@@ -126,6 +126,33 @@ bool InjectLocalDevelopmentEnvironment(const Core::LocalContentDescriptor& conte
     return true;
 }
 
+bool InjectRuntimeEnvironment(const Core::LocalContentDescriptor& content,
+                              const Core::LocalContentRelease& release,
+                              std::string& outError) {
+    if (content.sourceType == "local-path" && !content.localEnvironmentFile.empty()) {
+        return InjectLocalDevelopmentEnvironment(content, release, outError);
+    }
+    try {
+        std::ifstream contentFile(content.manifestPath);
+        nlohmann::json manifest; contentFile >> manifest;
+        const auto environment = manifest.value("runtimeEnvironment", nlohmann::json::object());
+        auto* keyForge = dynamic_cast<KeyForge::IDeploymentSecretBroker*>(
+            Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("keyforge"));
+        if (!keyForge || environment.empty()) { outError = "Production content requires a KeyForge runtimeEnvironment contract."; return false; }
+        KeyForge::RuntimeEnvironmentRequest request;
+        request.requestorExtensionId = "laravelorchestrator";
+        request.targetId = environment.value("targetId", "");
+        request.remoteReleasePath = release.releasePath;
+        request.publicValues = environment.value("publicValues", std::map<std::string, std::string>{});
+        request.secretReferences = environment.value("secretReferences", std::map<std::string, std::string>{});
+        const auto receipt = keyForge->MaterializeRemoteRuntimeEnvironment(request);
+        if (!receipt.accepted || !std::filesystem::is_regular_file(std::filesystem::path(release.releasePath) / ".env")) {
+            outError = "KeyForge runtime environment materialization failed: " + receipt.receipt; return false;
+        }
+        return true;
+    } catch (...) { outError = "The runtimeEnvironment contract is invalid."; return false; }
+}
+
 bool IsConfigurationDepth(const std::string& value) {
     return value == "auto" || value == "minimal" || value == "normal" || value == "advanced";
 }
@@ -664,7 +691,7 @@ Core::CanvasMenuActionResult LaravelOrchestratorModule::OnMenuAction(const Core:
             result.Success = false;
             return result;
         }
-        if (!InjectLocalDevelopmentEnvironment(content, release, result.ErrorMessage)) {
+        if (!InjectRuntimeEnvironment(content, release, result.ErrorMessage)) {
             result.Success = false;
             return result;
         }
@@ -752,7 +779,7 @@ LaravelDeploymentResult LaravelOrchestratorModule::DeployLocalContent(const std:
     if (!MaterializeLaravelRelease(contentForge, content, release, releaseContent, deployment.message)) {
         return deployment;
     }
-    if (!InjectLocalDevelopmentEnvironment(content, release, deployment.message)) {
+    if (!InjectRuntimeEnvironment(content, release, deployment.message)) {
         return deployment;
     }
     const auto job = docker->SubmitComposeJob(DockerComposeJobAction::Start, release.releasePath, content.composeFile);

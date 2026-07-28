@@ -418,7 +418,8 @@ KeyForge::RuntimeEnvironmentReceipt KeyForgeModule::MaterializeRemoteRuntimeEnvi
     }
 #ifndef _WIN32
     if (request.targetId == "local-service") {
-        const auto destination = std::filesystem::path(request.remoteReleasePath) / ".runtime.env";
+        const auto destination = std::filesystem::path(request.remoteReleasePath) / ".env";
+        receipt.remoteEnvironmentPath = destination.string();
         std::error_code error;
         std::filesystem::create_directories(destination.parent_path(), error);
         if (!error) {
