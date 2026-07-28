@@ -29,7 +29,16 @@
     "targetId": "local-service",
     "publicValues": {
       "APP_ENV": "production",
-      "APP_DEBUG": "false"
+      "APP_DEBUG": "false",
+      "APP_PORT": "8081",
+      "APP_URL": "http://127.0.0.1:8081",
+      "WWWUSER": "1000",
+      "WWWGROUP": "1000",
+      "DB_CONNECTION": "mysql",
+      "DB_HOST": "mariadb",
+      "DB_PORT": "3306",
+      "DB_DATABASE": "auth_api",
+      "DB_USERNAME": "sail"
     },
     "secretReferences": {
       "APP_KEY": "keyforge://content/auth-api/app-key",
