@@ -248,7 +248,7 @@ std::optional<std::string> KeyForgeModule::ReadSecret(const std::string& referen
     if (!credentialDirectory || credentialDirectory[0] == '\0') return std::nullopt;
     // systemd credential names are flat identifiers; reference slashes were
     // normalized to dashes by CredentialFileName before encryption.
-    const auto path = std::filesystem::path(credentialDirectory) / CredentialFileName(reference);
+    const auto path = std::filesystem::path(credentialDirectory) / ("keyforge_" + CredentialFileName(reference));
     std::ifstream input(path, std::ios::binary);
     if (!input) return std::nullopt;
     std::string value((std::istreambuf_iterator<char>(input)), {});
