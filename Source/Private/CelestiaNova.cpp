@@ -12,6 +12,7 @@
 #include "Utils/CommandLineParsing.h"
 #include "Utils/TerminalUtils.h"
 #include <atomic>
+#include <array>
 #include <algorithm>
 #include <chrono>
 #include <filesystem>
@@ -61,6 +62,34 @@ struct CelestInvocation {
     std::string completionPrefix;
     std::vector<std::string> translatedArguments;
 };
+
+// A double-clicked Windows executable starts with Binaries as its working
+// directory.  Extensions and Content live one level above it, while a Linux
+// package starts from /opt/celestianova.  Resolve that runtime root from the
+// executable location before any registry or logging work begins.
+void EnsureRuntimeWorkingDirectory(const char* executablePath) {
+    std::error_code error;
+    const auto current = std::filesystem::current_path(error);
+    if (!error && std::filesystem::is_directory(current / "Extensions", error)) return;
+
+    error.clear();
+    const auto executable = std::filesystem::absolute(
+        executablePath ? std::filesystem::path(executablePath) : std::filesystem::path{}, error);
+    if (error || executable.empty()) return;
+
+    const auto binaryDirectory = executable.parent_path();
+    const std::array<std::filesystem::path, 2> candidates{
+        binaryDirectory,
+        binaryDirectory.parent_path()
+    };
+    for (const auto& candidate : candidates) {
+        error.clear();
+        if (std::filesystem::is_directory(candidate / "Extensions", error)) {
+            std::filesystem::current_path(candidate, error);
+            return;
+        }
+    }
+}
 
 CelestInvocation ParseCelestInvocation(int argc, const char* argv[]) {
     CelestInvocation invocation;
@@ -333,6 +362,7 @@ void RegisterCrashHandler()
 int main(int argc, const char* argv[])
 {
     RegisterCrashHandler();
+    EnsureRuntimeWorkingDirectory(argc > 0 ? argv[0] : nullptr);
 
     const CelestInvocation celestInvocation = ParseCelestInvocation(argc, argv);
     std::vector<const char*> effectiveArgv;
