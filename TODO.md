@@ -31,6 +31,9 @@ only operating and architecture contracts; completed work is recorded in Git.
 
 ## Production Auth API hosting pack
 
+- [ ] Make Auth API fully content-declared: remove fixed Auth-API IDs, URLs, secret-reference names, Compose assumptions and service-unit behavior from extension code; derive them from a versioned ContentForge contract.
+- [ ] Replace the local Auth API secret helper with schema-driven KeyForge provisioning for arbitrary content packs, including declared secret types, generation policy, rotation and operator-supplied values.
+- [ ] Support multiple Auth API providers/instances and per-integration OAuth applications without any hardcoded provider, tenant or endpoint assumptions.
 - [ ] Replace Laravel Sail with a production Compose/profile: PHP-FPM or Octane behind Nginx/Caddy and no development bind mounts.
 - [ ] Build and publish versioned immutable application images; target nodes pull verified images rather than build application code.
 - [ ] Define persistent MariaDB, Redis and RabbitMQ volumes, encrypted backups, restore tests and retention policy.
