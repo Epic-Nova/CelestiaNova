@@ -147,5 +147,7 @@ The `Docs` directory now contains only active design and operational contracts:
   credential ownership and secret-materialization boundaries.
 - [MeshCore receiver work](Docs/MESHCORE_CONTROL_RECEIVER_TODO.md): the
   intentionally pending authenticated remote-control receiver.
+- [SyncForge signed updates](Docs/SYNCFORGE_SIGNED_UPDATES.md): release,
+  signing, Auth API publication, and daemon update runbook.
 - [Script/content migration](Docs/SCRIPT_CONTENT_MIGRATION.md): migration map
   for legacy scripts into extension-owned content and typed actions.
