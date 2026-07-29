@@ -11,6 +11,7 @@ struct NovaProgressSnapshot {
     std::string phase;
     int percent = 0;
     bool active = false;
+    bool failed = false;
 };
 
 // Cross-surface progress contract. Extensions publish here; the CLI, Canvas

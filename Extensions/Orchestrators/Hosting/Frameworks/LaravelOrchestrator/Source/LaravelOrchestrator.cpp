@@ -818,41 +818,56 @@ Core::CanvasMenuActionResult LaravelOrchestratorModule::OnMenuAction(const Core:
 
 LaravelDeploymentResult LaravelOrchestratorModule::DeployLocalContent(const std::string& contentId, const std::string& profile) {
     LaravelDeploymentResult deployment;
+    const auto fail = [&contentId](const std::string& phase) {
+        Core::ProgressTracker::Publish({"deploy:" + contentId, "laravelorchestrator", phase, 100, false, true});
+    };
     Core::ProgressTracker::Publish({"deploy:" + contentId, "laravelorchestrator", "Resolving ContentForge pack", 20, true});
     auto* contentForge = dynamic_cast<Core::IContentForge*>(
         Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("contentforge"));
     if (!contentForge) {
         deployment.message = "ContentForge is not loaded.";
+        fail(deployment.message);
         return deployment;
     }
 
     Core::LocalContentDescriptor content;
     if (!ResolveLaravelContent(contentId, contentForge, content, deployment.message)) {
+        fail(deployment.message);
         return deployment;
     }
 
     if (!IsConfigurationDepth(profile)) {
         deployment.message = "Configuration depth must be auto, minimal, normal, or advanced.";
+        fail(deployment.message);
         return deployment;
     }
     auto* docker = dynamic_cast<IDockerOrchestrator*>(
         Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("dockerorchestrator"));
     if (!docker) {
         deployment.message = "DockerOrchestrator is not loaded.";
+        fail(deployment.message);
         return deployment;
     }
 
     Core::LocalContentRelease release;
     Core::LocalContentDescriptor releaseContent;
     if (!MaterializeLaravelRelease(contentForge, content, release, releaseContent, deployment.message)) {
-        Core::ProgressTracker::Publish({"deploy:" + contentId, "laravelorchestrator", "Materialization failed", 100, false});
+        fail("Materialization failed: " + deployment.message);
         return deployment;
     }
     Core::ProgressTracker::Publish({"deploy:" + contentId, "laravelorchestrator", "Injecting KeyForge runtime environment", 55, true});
     if (!InjectRuntimeEnvironment(content, release, deployment.message)) {
-        Core::ProgressTracker::Publish({"deploy:" + contentId, "laravelorchestrator", "Runtime environment injection failed", 100, false});
+        fail("Runtime environment injection failed: " + deployment.message);
         return deployment;
     }
+    Core::ProgressTracker::Publish({"deploy:" + contentId, "laravelorchestrator", "Installing or validating Docker runtime", 70, true});
+    const auto bootstrap = docker->BootstrapLocalRuntime();
+    if (!bootstrap.succeeded) {
+        deployment.message = "Docker runtime bootstrap failed: " + bootstrap.output;
+        fail(deployment.message);
+        return deployment;
+    }
+    Core::ProgressTracker::Publish({"deploy:" + contentId, "laravelorchestrator", "Starting Docker Compose services", 85, true});
     // CLI/service deployments are one-shot transactions.  Waiting here is
     // essential: an async child would be terminated when the one-shot
     // process exits, leaving no Compose project running.
@@ -865,7 +880,7 @@ LaravelDeploymentResult LaravelOrchestratorModule::DeployLocalContent(const std:
         RememberActiveRelease(content.id, release.releasePath);
     }
     Core::ProgressTracker::Publish({"deploy:" + contentId, "laravelorchestrator",
-        deployment.succeeded ? "Docker Compose started" : "Docker Compose failed", 100, false});
+        deployment.succeeded ? "Docker Compose started" : "Docker Compose failed", 100, false, !deployment.succeeded});
     return deployment;
 }
 

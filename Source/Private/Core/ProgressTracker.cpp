@@ -32,7 +32,7 @@ void ProgressTracker::Publish(NovaProgressSnapshot snapshot) {
         const auto temporary = path.string() + ".tmp";
         std::ofstream stream(temporary, std::ios::trunc);
         stream << nlohmann::json{{"operationId", snapshot.operationId}, {"owner", snapshot.owner},
-            {"phase", snapshot.phase}, {"percent", snapshot.percent}, {"active", snapshot.active}}.dump() << '\n';
+            {"phase", snapshot.phase}, {"percent", snapshot.percent}, {"active", snapshot.active}, {"failed", snapshot.failed}}.dump() << '\n';
         stream.close();
         std::filesystem::rename(temporary, path);
     } catch (...) {
@@ -46,7 +46,7 @@ NovaProgressSnapshot ProgressTracker::Read() {
         std::ifstream stream(StatusPath());
         nlohmann::json value; stream >> value;
         return {value.value("operationId", ""), value.value("owner", ""), value.value("phase", ""),
-            value.value("percent", 0), value.value("active", false)};
+            value.value("percent", 0), value.value("active", false), value.value("failed", false)};
     } catch (...) { return Current; }
 }
 } // namespace Core

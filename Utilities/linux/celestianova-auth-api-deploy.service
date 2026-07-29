@@ -1,7 +1,7 @@
 [Unit]
 Description=Celestia Nova one-shot Auth API deployment
-After=network-online.target docker.service
-Wants=network-online.target
+After=network-online.target docker.service celestianova-docker-bootstrap.service
+Wants=network-online.target celestianova-docker-bootstrap.service
 
 [Service]
 Type=oneshot
@@ -19,4 +19,3 @@ PrivateTmp=yes
 ProtectSystem=strict
 ProtectHome=yes
 ReadWritePaths=/var/lib/celestianova /opt/celestianova/Content/Logs
-

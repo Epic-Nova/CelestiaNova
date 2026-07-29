@@ -1,0 +1,10 @@
+[Unit]
+Description=Celestia Nova Docker runtime bootstrap
+ConditionPathExists=!/usr/bin/docker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/celestianova/bootstrap-docker
+TimeoutStartSec=15min

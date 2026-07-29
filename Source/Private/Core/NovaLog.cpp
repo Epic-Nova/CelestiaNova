@@ -173,7 +173,6 @@ namespace Core {
 
 			std::filesystem::path contentDir = base / "Content";
 			std::filesystem::path logsDir = contentDir / "Logs";
-			std::filesystem::path websiteDir = contentDir / "Website";
 
 			if (!std::filesystem::exists(contentDir)) {
 				std::filesystem::create_directories(contentDir);
@@ -185,10 +184,6 @@ namespace Core {
 				std::cout << "Created " << logsDir.string() << std::endl;
 			}
 
-			if (!std::filesystem::exists(websiteDir)) {
-				std::filesystem::create_directories(websiteDir);
-				std::cout << "Created " << websiteDir.string() << std::endl;
-			}
 		} catch (const std::exception& e) {
 			std::cerr << "Error creating required directories: " << e.what() << std::endl;
 		}

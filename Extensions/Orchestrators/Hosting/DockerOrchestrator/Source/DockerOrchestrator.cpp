@@ -201,6 +201,15 @@ DockerComposeResult DockerOrchestratorModule::BootstrapLocalRuntime() const {
         result.output = "TerminalAgent is not loaded.";
         return result;
     }
+    CoreTerminal::TerminalCommandRequest availability;
+    availability.command = "docker --version && docker compose version";
+    const auto availabilityResult = terminal->ExecuteCommandSync(availability);
+    if (availabilityResult.exitCode == 0) {
+        result.succeeded = true;
+        result.exitCode = 0;
+        result.output = "Docker runtime is already available.";
+        return result;
+    }
     // This is intentionally a fixed path with no caller-provided input. The
     // service installer owns both the root-owned script and its sudoers rule.
     CoreTerminal::TerminalCommandRequest request;

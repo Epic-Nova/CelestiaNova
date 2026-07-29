@@ -125,19 +125,34 @@ CelestInvocation ParseCelestInvocation(int argc, const char* argv[]) {
 }
 
 void RenderCelestProgress() {
-    const auto progress = Core::ProgressTracker::Read();
-    const int filled = std::max(0, std::min(30, progress.percent * 30 / 100));
-    const std::string bar(static_cast<size_t>(filled), '#');
-    const std::string empty(static_cast<size_t>(30 - filled), '.');
-    auto document = ftxui::vbox({
-        ftxui::text("Celestia Nova progress") | ftxui::bold,
-        ftxui::text("[" + bar + empty + "] " + std::to_string(progress.percent) + "%"),
-        ftxui::text(progress.owner + ": " + progress.phase),
-        ftxui::text(progress.active ? "active" : "idle")
-    }) | ftxui::border;
-    auto screen = ftxui::Screen::Create(ftxui::Dimension::Fit(document));
-    ftxui::Render(screen, document);
-    std::cout << screen.ToString();
+    auto screen = ftxui::ScreenInteractive::Fullscreen();
+    std::atomic<bool> monitoring{true};
+    std::thread refresh([&] {
+        while (monitoring.load(std::memory_order_relaxed)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(250));
+            screen.PostEvent(ftxui::Event::Custom);
+        }
+    });
+    auto view = ftxui::Renderer([&] {
+        const auto progress = Core::ProgressTracker::Read();
+        const auto state = progress.active ? "running" : (progress.failed ? "failed" : "completed");
+        return ftxui::vbox({
+            ftxui::text(" CELESTIA NOVA / LIVE PROGRESS ") | ftxui::bold | ftxui::color(ftxui::Color::Cyan),
+            ftxui::separator(),
+            ftxui::gauge(progress.percent / 100.0f) | ftxui::color(progress.failed ? ftxui::Color::Red : ftxui::Color::Green),
+            ftxui::text(std::to_string(progress.percent) + "%  " + state),
+            ftxui::text(progress.owner + ": " + progress.phase),
+            ftxui::separator(),
+            ftxui::text("Updates every 250 ms  •  Esc exits") | ftxui::dim,
+        }) | ftxui::border;
+    });
+    auto interactive = ftxui::CatchEvent(view, [&](ftxui::Event event) {
+        if (event == ftxui::Event::Escape) { screen.Exit(); return true; }
+        return false;
+    });
+    screen.Loop(interactive);
+    monitoring.store(false, std::memory_order_relaxed);
+    refresh.join();
 }
 
 void PrintCelestHelp() {
@@ -179,6 +194,13 @@ void RunInteractiveCelestConsole() {
     std::string transcript = "Ready. Type a command; Tab accepts the first suggestion; Esc exits.";
     std::vector<std::string> suggestions;
     auto screen = ScreenInteractive::Fullscreen();
+    std::atomic<bool> consoleRunning{true};
+    std::thread progressRefresh([&] {
+        while (consoleRunning.load(std::memory_order_relaxed)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(250));
+            screen.PostEvent(Event::Custom);
+        }
+    });
     auto input = Input(&commandLine, "command");
 
     auto refreshSuggestions = [&]() {
@@ -261,6 +283,8 @@ void RunInteractiveCelestConsole() {
         return handled;
     });
     screen.Loop(interactive);
+    consoleRunning.store(false, std::memory_order_relaxed);
+    progressRefresh.join();
 }
 
 ServiceModeOptions ParseServiceModeOptions(int argc, const char* argv[]) {
@@ -458,14 +482,17 @@ int main(int argc, const char* argv[])
 
     Core::ProgressTracker::Publish({"cli-dispatch", "celest", "Dispatching extension command", 10, true});
     Core::ExtensionRegistry::Instance().ApplyCliArguments(effectiveArgc, effectiveArgv.data());
-    Core::ProgressTracker::Publish({"cli-dispatch", "celest", "Command dispatch complete", 100, false});
+    const auto extensionProgress = Core::ProgressTracker::Read();
+    if (extensionProgress.owner == "celest") {
+        Core::ProgressTracker::Publish({"cli-dispatch", "celest", "Command dispatch complete", 100, false});
+    }
 
     // A deployment unit performs all of its work during CLI dispatch.  Unlike
     // the long-running status daemon it must return a truthful systemd result
     // once those synchronous orchestration actions have completed.
     if (serviceModeOptions.RunOnce) {
         WriteServiceStatusSnapshot(serviceModeOptions.StatusFile);
-        return 0;
+        return Core::ProgressTracker::Read().failed ? 1 : 0;
     }
 
     const std::string buildConfiguration = BUILD_CONFIGURATION;

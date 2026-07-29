@@ -412,6 +412,10 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/Utilities/linux/celestianova-auth-api-deploy.serv
 	install(FILES "${CMAKE_SOURCE_DIR}/Utilities/linux/celestianova-auth-api-deploy.service"
 		DESTINATION "share/celestianova/systemd")
 endif()
+if(EXISTS "${CMAKE_SOURCE_DIR}/Utilities/linux/celestianova-docker-bootstrap.service")
+	install(FILES "${CMAKE_SOURCE_DIR}/Utilities/linux/celestianova-docker-bootstrap.service"
+		DESTINATION "share/celestianova/systemd")
+endif()
 if(EXISTS "${CMAKE_SOURCE_DIR}/Utilities/linux/bootstrap-docker.sh")
 	install(PROGRAMS "${CMAKE_SOURCE_DIR}/Utilities/linux/bootstrap-docker.sh"
 		DESTINATION "share/celestianova/bootstrap")
