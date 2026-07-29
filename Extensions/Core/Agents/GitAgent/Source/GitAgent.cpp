@@ -41,12 +41,21 @@ bool IsSafeGitRef(const std::string& value) {
 }
 
 bool IsSafeAbsoluteDestination(const std::string& value) {
-    if (value.empty() || value.front() != '/' || value.find("..") != std::string::npos) {
+    if (value.empty() || value.find("..") != std::string::npos) {
         return false;
     }
+
+    // ContentForge hands us an absolute runtime cache location.  Unix uses
+    // /var/..., while Windows uses a drive-qualified path such as E:\\....
+    // `std::filesystem` validates both forms for the active platform.
+    const std::filesystem::path destination(value);
+    if (!destination.is_absolute()) return false;
+    for (const auto& component : destination) {
+        if (component == "..") return false;
+    }
     for (const unsigned char character : value) {
-        if (!(std::isalnum(character) || character == '/' || character == '.' ||
-              character == '-' || character == '_')) {
+        if (!(std::isalnum(character) || character == '/' || character == '\\' ||
+              character == ':' || character == '.' || character == '-' || character == '_')) {
             return false;
         }
     }
