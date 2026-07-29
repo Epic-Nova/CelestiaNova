@@ -69,9 +69,15 @@ public:
     void ConsumePullLine(const std::string& line) {
         const auto event = nlohmann::json::parse(line, nullptr, false);
         if (!event.is_discarded() && event.is_object()) {
-            const auto details = event.value("progressDetail", nlohmann::json::object());
-            const auto total = details.value("total", static_cast<unsigned long long>(0));
-            const auto current = details.value("current", static_cast<unsigned long long>(0));
+            // Docker Compose v2 emits current/total at the top level.  Keep
+            // the nested Docker Engine form as a compatibility fallback.
+            auto total = event.value("total", static_cast<unsigned long long>(0));
+            auto current = event.value("current", static_cast<unsigned long long>(0));
+            if (total == 0 && event.contains("progressDetail") && event["progressDetail"].is_object()) {
+                const auto& details = event["progressDetail"];
+                total = details.value("total", static_cast<unsigned long long>(0));
+                current = details.value("current", static_cast<unsigned long long>(0));
+            }
             const auto layer = event.value("id", std::string{});
             if (!layer.empty() && total > 0) {
                 const auto boundedCurrent = std::min(current, total);
@@ -89,8 +95,8 @@ public:
                     return;
                 }
             }
-            const auto status = event.value("status", std::string{});
-            if (status == "Pull complete" || status == "Already exists") {
+            const auto status = event.value("text", event.value("status", std::string{}));
+            if (status == "Pull complete" || status == "Download complete" || status == "Already exists") {
                 ++completedLayers_;
                 Emit(std::min(96, 86 + completedLayers_),
                      "Docker image layer completed (" + std::to_string(completedLayers_) + ")");
