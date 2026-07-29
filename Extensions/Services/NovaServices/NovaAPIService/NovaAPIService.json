@@ -3,7 +3,7 @@
   "name": "NovaAPIService",
   "file": "libNovaAPIService.so",
   "version": "0.1.0",
-  "autostart": false,
+  "autostart": true,
   "startupDelayMs": 0,
   "description": "Primary API service exposing platform endpoints and integration surfaces.",
   "longDescription": "NovaAPIService serves as the main platform API runtime, exposing operational endpoints, content-pack routes, and service-to-service integration flows backed by security and orchestration dependencies.",
@@ -36,7 +36,9 @@
       "grafana://celestianova/novaapi-overview"
     ],
     "healthEndpoints": [
-      "/api/v1/health/novaapiservice"
+      "/api/v1/health",
+      "/api/v1/status",
+      "/api/v1/progress"
     ],
     "contentEndpoints": [
       "/api/v1/content/novaapiservice",

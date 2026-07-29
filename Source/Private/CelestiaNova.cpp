@@ -20,6 +20,8 @@
 #include <iostream>
 #include <vector>
 #include <ftxui/dom/elements.hpp>
+#include <ftxui/component/component.hpp>
+#include <ftxui/component/screen_interactive.hpp>
 #include <ftxui/screen/screen.hpp>
 #include "UnitTests/BaseUnitTest.h"
 #include "UnitTests/UnitTestManager.h"
@@ -113,6 +115,122 @@ void PrintCelestHelp() {
               << "celest deploy <content-id> [auto|minimal|normal|advanced]\n"
               << "celest start|stop|logs <content-id>\n"
               << "celest run --<extension-command> [value]\n";
+}
+
+std::vector<std::string> CelestSuggestions(const std::string& prefix) {
+    const std::vector<std::string> builtins{"help", "status", "progress", "complete", "deploy", "start", "stop", "logs", "run", "exit"};
+    std::vector<std::string> suggestions;
+    for (const auto& item : builtins) {
+        if (item.rfind(prefix, 0) == 0) suggestions.push_back(item);
+    }
+    for (const auto& descriptor : Core::ExtensionRegistry::Instance().ListExtensionDescriptors()) {
+        auto* provider = dynamic_cast<Core::IExtensionCliProvider*>(
+            Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance(descriptor.id));
+        if (!provider) continue;
+        for (const auto& command : provider->GetCliArgDescriptors()) {
+            const std::string flag = "--" + command.Flag;
+            if (flag.rfind(prefix, 0) == 0) suggestions.push_back(flag);
+        }
+    }
+    return suggestions;
+}
+
+std::vector<std::string> SplitCelestLine(const std::string& line) {
+    std::istringstream stream(line);
+    std::vector<std::string> parts;
+    std::string part;
+    while (stream >> part) parts.push_back(part);
+    return parts;
+}
+
+void RunInteractiveCelestConsole() {
+    using namespace ftxui;
+    std::string commandLine;
+    std::string transcript = "Ready. Type a command; Tab accepts the first suggestion; Esc exits.";
+    std::vector<std::string> suggestions;
+    auto screen = ScreenInteractive::Fullscreen();
+    auto input = Input(&commandLine, "command");
+
+    auto refreshSuggestions = [&]() {
+        const auto parts = SplitCelestLine(commandLine);
+        suggestions = CelestSuggestions(parts.empty() ? commandLine : parts.front());
+        if (suggestions.size() > 6) suggestions.resize(6);
+    };
+    refreshSuggestions();
+
+    auto renderer = Renderer(input, [&] {
+        Elements matches;
+        if (suggestions.empty()) matches.push_back(text("no matching command"));
+        else for (const auto& suggestion : suggestions) matches.push_back(text("  " + suggestion));
+        const auto progress = Core::ProgressTracker::Read();
+        const int filled = std::max(0, std::min(24, progress.percent * 24 / 100));
+        return vbox({
+            text(" CELESTIA NOVA / CELEST COMMAND CONSOLE ") | bold | color(Color::Cyan),
+            separator(),
+            hbox(text("node  ") | bold, text("local daemon command surface")),
+            hbox(text("work  ") | bold, text(progress.owner.empty() ? "idle" : progress.owner + " — " + progress.phase)),
+            gauge(progress.percent / 100.0f) | color(progress.active ? Color::Green : Color::GrayLight),
+            separator(),
+            text(transcript) | flex,
+            separator(),
+            hbox(text("celest> ") | bold | color(Color::Green), input->Render()),
+            text("suggestions") | dim,
+            vbox(std::move(matches)) | border | color(Color::GrayLight),
+            text("Enter executes  •  Tab completes  •  Esc exits") | dim,
+        }) | border | flex;
+    });
+
+    auto interactive = CatchEvent(renderer, [&](Event event) {
+        if (event == Event::Escape) {
+            screen.Exit();
+            return true;
+        }
+        if (event == Event::Tab && !suggestions.empty()) {
+            commandLine = suggestions.front();
+            refreshSuggestions();
+            return true;
+        }
+        if (event == Event::Return) {
+            const auto parts = SplitCelestLine(commandLine);
+            if (parts.empty()) return true;
+            if (parts.front() == "exit" || parts.front() == "quit") {
+                screen.Exit();
+                return true;
+            }
+            if (parts.front() == "help") {
+                transcript = "Built-ins: status, progress, deploy, start, stop, logs, run. Extension flags are listed below as you type.";
+            } else if (parts.front() == "status") {
+                transcript = Core::StatusApiSurface::BuildExtensionsStatusJson();
+            } else if (parts.front() == "progress") {
+                const auto progress = Core::ProgressTracker::Read();
+                transcript = progress.owner + ": " + progress.phase + " (" + std::to_string(progress.percent) + "%)";
+            } else {
+                std::vector<std::string> argvStorage{"celest", "--celest"};
+                argvStorage.insert(argvStorage.end(), parts.begin(), parts.end());
+                std::vector<const char*> argv;
+                for (const auto& item : argvStorage) argv.push_back(item.c_str());
+                const CelestInvocation invocation = ParseCelestInvocation(static_cast<int>(argv.size()), argv.data());
+                if (invocation.command == CelestCommand::Help) {
+                    transcript = "Unknown command. Type help or use a listed extension flag through: run --flag value";
+                } else {
+                    std::vector<const char*> effective;
+                    effective.push_back(argvStorage.front().c_str());
+                    for (const auto& item : invocation.translatedArguments) effective.push_back(item.c_str());
+                    Core::ProgressTracker::Publish({"interactive-cli", "celest", "Dispatching " + commandLine, 10, true});
+                    Core::ExtensionRegistry::Instance().ApplyCliArguments(static_cast<int>(effective.size()), effective.data());
+                    Core::ProgressTracker::Publish({"interactive-cli", "celest", "Command dispatch complete", 100, false});
+                    transcript = "Dispatched: " + commandLine;
+                }
+            }
+            commandLine.clear();
+            refreshSuggestions();
+            return true;
+        }
+        const bool handled = input->OnEvent(event);
+        if (handled) refreshSuggestions();
+        return handled;
+    });
+    screen.Loop(interactive);
 }
 
 ServiceModeOptions ParseServiceModeOptions(int argc, const char* argv[]) {
@@ -286,11 +404,12 @@ int main(int argc, const char* argv[])
     }
 
     // Dispatch CLI arguments to all loaded extensions
-    if (celestInvocation.command == CelestCommand::Help || celestInvocation.command == CelestCommand::Interactive) {
+    if (celestInvocation.command == CelestCommand::Interactive) {
+        RunInteractiveCelestConsole();
+        return 0;
+    }
+    if (celestInvocation.command == CelestCommand::Help) {
         PrintCelestHelp();
-        if (celestInvocation.command == CelestCommand::Interactive) {
-            std::cout << "Type a prefix and use `celest complete <prefix>` for fish-style suggestions.\n";
-        }
         return 0;
     }
     if (celestInvocation.command == CelestCommand::Status) {
@@ -302,16 +421,7 @@ int main(int argc, const char* argv[])
         return 0;
     }
     if (celestInvocation.command == CelestCommand::Complete) {
-        const std::vector<std::string> builtins{"help", "status", "progress", "complete", "deploy", "start", "stop", "logs", "run"};
-        for (const auto& item : builtins) if (item.rfind(celestInvocation.completionPrefix, 0) == 0) std::cout << item << '\n';
-        for (const auto& descriptor : Core::ExtensionRegistry::Instance().ListExtensionDescriptors()) {
-            auto* provider = dynamic_cast<Core::IExtensionCliProvider*>(Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance(descriptor.id));
-            if (!provider) continue;
-            for (const auto& command : provider->GetCliArgDescriptors()) {
-                const auto name = "--" + command.Flag;
-                if (name.rfind(celestInvocation.completionPrefix, 0) == 0) std::cout << name << '\n';
-            }
-        }
+        for (const auto& item : CelestSuggestions(celestInvocation.completionPrefix)) std::cout << item << '\n';
         return 0;
     }
 

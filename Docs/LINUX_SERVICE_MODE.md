@@ -50,6 +50,20 @@ cat /var/lib/celestianova/status/service-status.json
 
 ## Status API/dashboard integration
 
+NovaAPIService exposes the daemon's read-only local status surface on the
+loopback interface only (default port `9080`; configure
+`CELESTIA_STATUS_PORT` through a systemd drop-in):
+
+```bash
+curl http://127.0.0.1:9080/api/v1/health
+curl http://127.0.0.1:9080/api/v1/status
+curl http://127.0.0.1:9080/api/v1/progress
+```
+
+This is intentionally separate from an application health endpoint such as
+Auth API. It must remain loopback-only until an authenticated gateway proxies
+it for a remote dashboard.
+
 The consumer reads `/var/lib/celestianova/status/service-status.json` through the already-authenticated Nova API/status surface. It must report the file modification time as the daemon heartbeat and mark it stale after at least twice `statusIntervalSeconds`. It must not use a missing file as proof that a managed application is healthy.
 
 Managed application health belongs in the owning orchestrator's extension health snapshot; the daemon aggregates it, rather than probing or starting arbitrary applications itself.

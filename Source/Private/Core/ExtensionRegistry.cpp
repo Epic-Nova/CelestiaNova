@@ -125,6 +125,15 @@ int ExtensionRegistry::Discover(const std::string& extensionsDir) {
                 continue;
             }
 
+            // Extension-owned Content is deliberately JSON-based too.  A
+            // content action/target must never be mistaken for a loadable
+            // extension simply because it has an `id`.  A real descriptor
+            // always identifies the module binary through `file`.
+            const ExtensionDescriptor candidate = ParseDescriptorFile(fs::path(file));
+            if (candidate.id.empty() || candidate.file.empty()) {
+                continue;
+            }
+
             if (RegisterDescriptor(file)) ++count;
         }
     } catch (const std::exception& e) {

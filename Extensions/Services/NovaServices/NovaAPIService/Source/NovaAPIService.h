@@ -4,7 +4,9 @@
 #include "Core/IExtensionInterface.h"
 #include "ExtensionSpecific/IExtensionCliProvider.h"
 #include "Utils/RateLimiter.h"
+#include <atomic>
 #include <memory>
+#include <thread>
 
 #ifdef NovaAPIService_EXPORTS
 #  define NOVAAPISERVICE_API NOVA_EXPORT
@@ -27,7 +29,13 @@ public:
     void ApplyCliArgs(const std::vector<Core::FExtensionCliArg>& args) override;
 
 private:
+    void RunLocalStatusServer();
+    int ResolveStatusPort() const;
+
     std::unique_ptr<Utils::RateLimiter> GlobalRateLimiter_;
+    std::atomic<bool> StatusServerRunning_{false};
+    std::thread StatusServerThread_;
+    int StatusServerSocket_ = -1;
 };
 
 #ifdef NovaAPIService_EXPORTS
