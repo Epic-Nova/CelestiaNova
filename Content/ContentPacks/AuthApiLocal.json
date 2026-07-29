@@ -83,7 +83,7 @@
     "deviceApproveUrl": "http://localhost:8000/api/v1/oauth/device-approve",
     "deviceTokenUrl": "http://localhost:8000/api/v1/oauth/device-token",
     "oauthApplication": {
-      "applicationId": "celestianova-aegiscore",
+      "applicationId": "celestianova-laravel-orchestrator",
       "authorizationServerId": "auth-api-local",
       "scopes": ["deployment.remote.control"],
       "audiences": ["celestianova"],
