@@ -138,6 +138,23 @@ std::filesystem::path ResolveRuntimeRoot(const std::filesystem::path& applicatio
     return applicationRoot / "Content" / ".runtime";
 }
 
+std::filesystem::path ResolveApplicationRoot() {
+    std::error_code error;
+    std::filesystem::path candidate = std::filesystem::current_path(error);
+    if (error) return {};
+
+    // A developer may launch the binary from Binaries/, while a package and
+    // systemd service run from the install root.  Resolve by the declarative
+    // Content root rather than assuming one working-directory layout.
+    for (int depth = 0; depth < 3 && !candidate.empty(); ++depth) {
+        if (std::filesystem::is_directory(candidate / "Content" / "ContentPacks", error) && !error) {
+            return candidate;
+        }
+        candidate = candidate.parent_path();
+    }
+    return std::filesystem::current_path();
+}
+
 bool RegisterLocalManifest(const std::filesystem::path& manifestPath,
                            const std::filesystem::path& applicationRoot,
                            ContentForgeModule& forge) {
@@ -264,7 +281,7 @@ ContentForgeModule::~ContentForgeModule() {}
 
 void ContentForgeModule::StartupModule() {
     NOVA_LOG("[ContentForge] StartupModule called", LogType::Log);
-    const auto applicationRoot = std::filesystem::current_path();
+    const auto applicationRoot = ResolveApplicationRoot();
     ApplicationRoot_ = applicationRoot.string();
     std::vector<std::filesystem::path> manifestPaths;
     const auto collectManifests = [&manifestPaths](const std::filesystem::path& root) {

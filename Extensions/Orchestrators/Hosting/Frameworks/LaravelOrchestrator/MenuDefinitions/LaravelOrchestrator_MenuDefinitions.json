@@ -92,9 +92,26 @@
               "type": "ActionButton",
               "defaultValue": "laravel.content.refresh",
               "valueStorage": "RuntimeOnly"
+            },
+            {
+              "id": "openRemoteAndLogin",
+              "label": "Nova ID & Remote VM",
+              "description": "Open the separate Nova ID and remote lifecycle page.",
+              "type": "ActionButton",
+              "defaultValue": "laravel_remote",
+              "valueStorage": "RuntimeOnly"
             }
           ]
-        },
+        }
+      ],
+      "cancelAction": "menu.back"
+    },
+    {
+      "id": "laravel_remote",
+      "title": "Laravel Remote Control",
+      "subtitle": "Nova ID authorization and remote VM lifecycle",
+      "icon": "NETWORK",
+      "sections": [
         {
           "id": "novaid_login",
           "title": "Nova ID Login",
@@ -182,7 +199,7 @@
           ]
         }
       ],
-      "cancelAction": "menu.back"
+      "cancelAction": "laravel_main"
     }
   ]
 }
