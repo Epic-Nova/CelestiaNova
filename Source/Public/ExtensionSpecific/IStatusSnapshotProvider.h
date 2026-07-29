@@ -8,7 +8,10 @@ namespace Core {
 
 // Extension-owned daemon status aggregation contract. Transport services use
 // this interface rather than rebuilding status data themselves.
-class NOVA_CORE_API IStatusSnapshotProvider {
+// This is a header-only cross-extension contract, not a NovaCore ABI type.
+// Decorating it with NOVA_CORE_API makes consuming plug-ins import its inline
+// special members from NovaCore on Windows, which breaks their link step.
+class IStatusSnapshotProvider {
 public:
     virtual ~IStatusSnapshotProvider() = default;
 

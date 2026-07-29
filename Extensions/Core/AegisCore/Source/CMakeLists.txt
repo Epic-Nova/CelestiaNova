@@ -153,6 +153,7 @@ _nova_json_get_string_array("${NOVA_PLUGIN_DESCRIPTOR_JSON}" "publicIncludePaths
 _nova_json_get_string_array("${NOVA_PLUGIN_DESCRIPTOR_JSON}" "privateIncludePaths" NOVA_PLUGIN_PRIVATE_INCLUDE_PATHS)
 _nova_json_get_string_array("${NOVA_PLUGIN_DESCRIPTOR_JSON}" "extraIncludePaths" NOVA_PLUGIN_EXTRA_INCLUDE_PATHS)
 _nova_json_get_string_array("${NOVA_PLUGIN_DESCRIPTOR_JSON}" "extraCompileDefinitions" NOVA_PLUGIN_EXTRA_COMPILE_DEFINITIONS)
+_nova_json_get_string_array("${NOVA_PLUGIN_DESCRIPTOR_JSON}" "windowsSystemLibraries" NOVA_PLUGIN_WINDOWS_SYSTEM_LIBRARIES)
 
 if(NOVA_PLUGIN_TARGET_NAME_JSON STREQUAL "")
   set(NOVA_PLUGIN_TARGET_NAME_RAW "${NOVA_PLUGIN_FOLDER_NAME}")
@@ -405,4 +406,10 @@ if(NOVA_PLUGIN_LINK_NOVACORE)
       message(WARNING "${NOVA_PLUGIN_TARGET_NAME}: NovaCore import library not found in expected host output paths.")
     endif()
   endif()
+endif()
+
+# Platform dependencies are declared by the extension descriptor, keeping
+# generated CMakeLists generic and avoiding hidden per-extension hardcoding.
+if(WIN32 AND NOT "${NOVA_PLUGIN_WINDOWS_SYSTEM_LIBRARIES}" STREQUAL "")
+  target_link_libraries(${NOVA_PLUGIN_TARGET_NAME} PRIVATE ${NOVA_PLUGIN_WINDOWS_SYSTEM_LIBRARIES})
 endif()

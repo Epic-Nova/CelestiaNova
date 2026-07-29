@@ -17,5 +17,9 @@
     "targetName":  "KeyForge",
     "projectName":  "KeyForge",
     "outputName":  "KeyForge",
-    "linkNovaCore":  true
+    "linkNovaCore":  true,
+    "windowsSystemLibraries": [
+        "Crypt32",
+        "Winhttp"
+    ]
 }

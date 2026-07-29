@@ -4,6 +4,7 @@
 #include "NovaCore.h"
 #include "NovaMinimal.h"
 #include <filesystem>
+#include <cstdlib>
 #include <cpptrace/cpptrace.hpp>
 #include <ftxui/component/event.hpp>
 
@@ -14,6 +15,34 @@ namespace Core {
 	std::mutex logMutex;
 	std::vector<std::string> logMessages;
 	bool NovaLog::verboseEnabled = false;
+
+	namespace {
+		// A daemon installation is normally owned by its service account.  The
+		// interactive `celest` command, however, runs as the invoking user and
+		// must never require write access to /opt just to open its UI.
+		std::filesystem::path ResolveLogDirectory()
+		{
+			if (const char* configured = std::getenv("CELESTIA_LOG_DIRECTORY"); configured && *configured)
+			{
+				return std::filesystem::path(configured);
+			}
+
+			std::filesystem::path base;
+#ifdef PROJECT_SOURCE_DIR
+			base = std::filesystem::path(PROJECT_SOURCE_DIR);
+#endif
+			if (base.empty()) {
+				std::filesystem::path current = std::filesystem::current_path();
+				for (int i = 0; i < 10; ++i) {
+					if (std::filesystem::exists(current / "Content")) return current / "Content" / "Logs";
+					if (current == current.root_path()) break;
+					current = current.parent_path();
+				}
+				base = std::filesystem::current_path();
+			}
+			return base / "Content" / "Logs";
+		}
+	}
 
 	void NovaLog::SetVerbose(bool verbose)
 	{
@@ -72,26 +101,8 @@ namespace Core {
 	void NovaLog::StartLogFile()
 	{
 		try {
-			// Ensure base Content/Logs directory exists (may be located at project root)
-			CreateRequiredDirectories();
-
-			std::filesystem::path base;
-#ifdef PROJECT_SOURCE_DIR
-			base = std::filesystem::path(PROJECT_SOURCE_DIR);
-#else
-			base = std::filesystem::path("");
-#endif
-			if (base.empty()) base = []() {
-				std::filesystem::path p = std::filesystem::current_path();
-				for (int i = 0; i < 10; ++i) {
-					if (std::filesystem::exists(p / "Content")) return p;
-					if (p == p.root_path()) break;
-					p = p.parent_path();
-				}
-				return std::filesystem::current_path();
-			}();
-
-			std::filesystem::path logsDirectory = base / "Content" / "Logs";
+			std::filesystem::path logsDirectory = ResolveLogDirectory();
+			std::filesystem::create_directories(logsDirectory);
 			std::filesystem::path logFilePath = logsDirectory / "Nova.log";
 
 			// Check if the log file already exists
@@ -130,7 +141,8 @@ namespace Core {
 			std::cout << "Log file started successfully at: " << logFilePath << std::endl;
 		} catch (const std::exception& e) {
 			std::cerr << "Error in StartLogFile: " << e.what() << std::endl;
-			throw;
+			// Logging is non-critical.  In particular, a shell UI must still be
+			// usable if a user chose an unwritable custom log location.
 		}
 	}
 
@@ -138,6 +150,10 @@ namespace Core {
 	void NovaLog::CreateRequiredDirectories()
 	{
 		try {
+			if (std::getenv("CELESTIA_LOG_DIRECTORY")) {
+				std::filesystem::create_directories(ResolveLogDirectory());
+				return;
+			}
 			// Resolve base path for Content/ using same logic as StartLogFile
 			std::filesystem::path base;
 #ifdef PROJECT_SOURCE_DIR
@@ -289,12 +305,7 @@ namespace Core {
 			char time_buffer[20];
 			std::strftime(time_buffer, sizeof(time_buffer), "%H:%M:%S", &local_tm);
 
-			std::string logFileName = std::string("Nova") + ".log";
-#ifdef PROJECT_SOURCE_DIR
-			std::string logFilePath = std::string(PROJECT_SOURCE_DIR) + "/Content/Logs/" + logFileName;
-#else
-			std::string logFilePath = "Content/Logs/" + logFileName;
-#endif
+			const std::filesystem::path logFilePath = ResolveLogDirectory() / "Nova.log";
 
 			std::string formattedMessage = "[" + std::string(date_buffer) + " " + std::string(time_buffer) + "] " + message + "\n";
 

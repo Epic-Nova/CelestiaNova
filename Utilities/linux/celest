@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Installed command surface for the Celestia Nova daemon.
 set -euo pipefail
+export CELESTIA_LOG_DIRECTORY="${CELESTIA_LOG_DIRECTORY:-${XDG_STATE_HOME:-$HOME/.local/state}/celestianova/logs}"
 cd /opt/celestianova
 exec /opt/celestianova/bin/CelestiaNova --celest "$@"
