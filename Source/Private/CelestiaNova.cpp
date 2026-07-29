@@ -222,12 +222,9 @@ int main(int argc, const char* argv[])
     for (const auto& argument : celestInvocation.translatedArguments) effectiveArgv.push_back(argument.c_str());
     const int effectiveArgc = static_cast<int>(effectiveArgv.size());
 
-    // If PROJECT_SOURCE_DIR is defined at compile time, run from the
-    // repository root so Content/ and Extensions/ are resolved relative
-    // to the project instead of the binary folder.
-#ifdef PROJECT_SOURCE_DIR
-    try { std::filesystem::current_path(PROJECT_SOURCE_DIR); } catch(...) {}
-#endif
+    // The launcher/service controls its working directory.  In particular a
+    // packaged Production binary must remain under /opt/celestianova instead
+    // of jumping back to the build machine's source checkout.
     // Keep the user's terminal dimensions intact. FTXUI needs the real viewport
     // dimensions to align mouse hitboxes with rendered components.
 
