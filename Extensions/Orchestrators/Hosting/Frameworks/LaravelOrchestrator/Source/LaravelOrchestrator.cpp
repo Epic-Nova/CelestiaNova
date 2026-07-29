@@ -911,6 +911,17 @@ LaravelDeploymentResult LaravelOrchestratorModule::DeployLocalContent(const std:
         fail(deployment.message);
         return deployment;
     }
+    const auto previousReleasePath = GetActiveReleasePath(content.id);
+    if (!previousReleasePath.empty() && previousReleasePath != release.releasePath &&
+        std::filesystem::is_directory(previousReleasePath)) {
+        Core::ProgressTracker::Publish({"deploy:" + contentId, "laravelorchestrator", "Stopping previous local release", 82, true});
+        const auto stopPrevious = docker->StopCompose(previousReleasePath, content.composeFile);
+        if (!stopPrevious.succeeded) {
+            deployment.message = "Could not stop the previous local release: " + stopPrevious.output;
+            fail(deployment.message);
+            return deployment;
+        }
+    }
     Core::ProgressTracker::Publish({"deploy:" + contentId, "laravelorchestrator", "Starting Docker Compose services", 85, true});
     // CLI/service deployments are one-shot transactions.  Waiting here is
     // essential: an async child would be terminated when the one-shot
