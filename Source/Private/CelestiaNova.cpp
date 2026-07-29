@@ -136,13 +136,24 @@ void RenderCelestProgress() {
     auto view = ftxui::Renderer([&] {
         const auto progress = Core::ProgressTracker::Read();
         const auto state = progress.active ? "running" : (progress.failed ? "failed" : "completed");
+        const std::array<std::string, 4> spinnerFrames{"⠋", "⠙", "⠹", "⠸"};
+        const auto tick = static_cast<std::size_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count() / 250);
+        const auto spinner = progress.active ? spinnerFrames[tick % spinnerFrames.size()] : "•";
+        ftxui::Elements activity;
+        for (const auto& entry : Core::ProgressTracker::ReadRecentActivity()) {
+            activity.push_back(ftxui::text("  " + entry) | ftxui::dim);
+        }
+        if (activity.empty()) activity.push_back(ftxui::text("  Waiting for the first reported operation.") | ftxui::dim);
         return ftxui::vbox({
             ftxui::text(" CELESTIA NOVA / LIVE PROGRESS ") | ftxui::bold | ftxui::color(ftxui::Color::Cyan),
             ftxui::separator(),
             ftxui::gauge(progress.percent / 100.0f) | ftxui::color(progress.failed ? ftxui::Color::Red : ftxui::Color::Green),
-            ftxui::text(std::to_string(progress.percent) + "%  " + state),
+            ftxui::text(spinner + "  " + std::to_string(progress.percent) + "%  " + state),
             ftxui::text(progress.owner + ": " + progress.phase),
             ftxui::separator(),
+            ftxui::text("Recent operation activity") | ftxui::bold,
+            ftxui::vbox(std::move(activity)) | ftxui::border,
             ftxui::text("Updates every 250 ms  •  Esc exits") | ftxui::dim,
         }) | ftxui::border;
     });

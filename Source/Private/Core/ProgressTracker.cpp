@@ -6,6 +6,7 @@
 #include <fstream>
 #include <json.hpp>
 #include <mutex>
+#include <vector>
 
 namespace Core {
 namespace {
@@ -18,6 +19,8 @@ std::filesystem::path StatusPath() {
     }
     return std::filesystem::current_path() / "Runtime" / "status" / "progress.json";
 }
+
+std::filesystem::path ActivityPath() { return StatusPath().parent_path() / "activity.log"; }
 }
 
 std::string ProgressTracker::DefaultStatusPath() { return StatusPath().string(); }
@@ -48,6 +51,17 @@ void ProgressTracker::Publish(NovaProgressSnapshot snapshot) {
             std::filesystem::perms::owner_read | std::filesystem::perms::owner_write |
             std::filesystem::perms::group_read | std::filesystem::perms::others_read,
             std::filesystem::perm_options::replace, permissionError);
+
+        // This is deliberately only the owner/phase text already exposed by
+        // the progress snapshot. It is not a raw process or Docker log.
+        const auto activityPath = ActivityPath();
+        std::ofstream activity(activityPath, std::ios::app);
+        activity << "[" << snapshot.owner << "] " << snapshot.phase << '\n';
+        activity.close();
+        std::filesystem::permissions(activityPath,
+            std::filesystem::perms::owner_read | std::filesystem::perms::owner_write |
+            std::filesystem::perms::group_read | std::filesystem::perms::others_read,
+            std::filesystem::perm_options::replace, permissionError);
     } catch (...) {
         // Progress reporting never makes a deployment fail.
     }
@@ -61,5 +75,21 @@ NovaProgressSnapshot ProgressTracker::Read() {
         return {value.value("operationId", ""), value.value("owner", ""), value.value("phase", ""),
             value.value("percent", 0), value.value("active", false), value.value("failed", false)};
     } catch (...) { return Current; }
+}
+
+std::vector<std::string> ProgressTracker::ReadRecentActivity(std::size_t maxLines) {
+    std::lock_guard<std::mutex> lock(ProgressMutex);
+    std::vector<std::string> lines;
+    try {
+        std::ifstream stream(ActivityPath());
+        std::string line;
+        while (std::getline(stream, line)) {
+            if (!line.empty()) lines.push_back(std::move(line));
+        }
+        if (lines.size() > maxLines) {
+            lines.erase(lines.begin(), lines.end() - static_cast<std::ptrdiff_t>(maxLines));
+        }
+    } catch (...) {}
+    return lines;
 }
 } // namespace Core
