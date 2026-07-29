@@ -158,14 +158,35 @@ bool ExtensionRegistry::RegisterDescriptor(const std::string& descriptorPath) {
 
     std::string dir = Core::FileOperations::NovaFileOperations::GetParentDirectory(normalizedDescriptor);
     
-    // Collect candidate directories: local to descriptor AND the central Binaries folder
+    // Collect candidate directories: local to the descriptor and the central
+    // runtime Binaries folder.  Do not rely solely on the process working
+    // directory here: a packaged daemon can be launched through a symlink,
+    // systemd, or a distribution launcher whose CWD is not the package root.
+    // The descriptor itself is authoritative, so walk upward from it until we
+    // locate its enclosing runtime Binaries directory.
     std::vector<std::string> searchDirs;
     searchDirs.push_back(dir);
+
+    std::error_code runtimeRootError;
+    auto runtimeCandidate = fs::path(dir);
+    while (!runtimeCandidate.empty() && runtimeCandidate != runtimeCandidate.root_path()) {
+        const auto binaries = runtimeCandidate / "Binaries";
+        runtimeRootError.clear();
+        if (fs::is_directory(binaries, runtimeRootError) && !runtimeRootError) {
+            searchDirs.push_back(binaries.string());
+            break;
+        }
+        const auto parent = runtimeCandidate.parent_path();
+        if (parent == runtimeCandidate) break;
+        runtimeCandidate = parent;
+    }
     
-    // Add the project root Binaries folder as a candidate
+    // Preserve the relative fallback for source-tree and legacy launches.
     std::string binDir = Core::FileOperations::NovaFileOperations::NormalizePath("Binaries");
     if (Core::FileOperations::NovaFileOperations::DirectoryExists(binDir)) {
-        searchDirs.push_back(binDir);
+        if (std::find(searchDirs.begin(), searchDirs.end(), binDir) == searchDirs.end()) {
+            searchDirs.push_back(binDir);
+        }
     }
 
     std::string libpath;
