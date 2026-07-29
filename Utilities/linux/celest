@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Installed command surface for the Celestia Nova daemon.
+set -euo pipefail
+exec /opt/celestianova/bin/CelestiaNova --celest "$@"

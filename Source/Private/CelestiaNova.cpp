@@ -6,6 +6,8 @@
 #include "Core/ExtensionRegistry.h"
 #include "Core/FTSTicker.h"
 #include "Core/StatusApiSurface.h"
+#include "Core/ProgressTracker.h"
+#include "ExtensionSpecific/IExtensionCliProvider.h"
 #include "ExtensionSpecific/ICanvasRuntimeSurfaceProvider.h"
 #include "Utils/CommandLineParsing.h"
 #include "Utils/TerminalUtils.h"
@@ -15,6 +17,10 @@
 #include <filesystem>
 #include <thread>
 #include <fstream>
+#include <iostream>
+#include <vector>
+#include <ftxui/dom/elements.hpp>
+#include <ftxui/screen/screen.hpp>
 #include "UnitTests/BaseUnitTest.h"
 #include "UnitTests/UnitTestManager.h"
 #include <cpptrace/cpptrace.hpp>
@@ -45,6 +51,69 @@ struct ServiceModeOptions {
     std::filesystem::path StatusFile = "Runtime/status/service-status.json";
     int StatusIntervalSeconds = 15;
 };
+
+enum class CelestCommand { None, Help, Status, Progress, Complete, Interactive };
+struct CelestInvocation {
+    CelestCommand command = CelestCommand::None;
+    std::string completionPrefix;
+    std::vector<std::string> translatedArguments;
+};
+
+CelestInvocation ParseCelestInvocation(int argc, const char* argv[]) {
+    CelestInvocation invocation;
+    for (int index = 1; index < argc; ++index) invocation.translatedArguments.emplace_back(argv[index] ? argv[index] : "");
+    if (invocation.translatedArguments.empty() || invocation.translatedArguments.front() != "--celest") return invocation;
+    invocation.translatedArguments.erase(invocation.translatedArguments.begin());
+    if (invocation.translatedArguments.empty()) { invocation.command = CelestCommand::Interactive; return invocation; }
+    const auto command = invocation.translatedArguments.front();
+    invocation.translatedArguments.erase(invocation.translatedArguments.begin());
+    if (command == "help") { invocation.command = CelestCommand::Help; return invocation; }
+    if (command == "status") { invocation.command = CelestCommand::Status; return invocation; }
+    if (command == "progress") { invocation.command = CelestCommand::Progress; return invocation; }
+    if (command == "complete") { invocation.command = CelestCommand::Complete; if (!invocation.translatedArguments.empty()) invocation.completionPrefix = invocation.translatedArguments.front(); return invocation; }
+    if (command == "deploy" || command == "start") {
+        if (!invocation.translatedArguments.empty()) {
+            const auto content = invocation.translatedArguments.front();
+            const auto depth = invocation.translatedArguments.size() > 1 ? invocation.translatedArguments[1] : "auto";
+            invocation.translatedArguments = {"--run-once", "--deploy-local-content", content, "--configuration-depth", depth};
+        }
+        return invocation;
+    }
+    if (command == "stop" || command == "logs") {
+        if (!invocation.translatedArguments.empty()) {
+            invocation.translatedArguments = {"--run-once", command == "stop" ? "--stop-local-content" : "--local-content-logs", invocation.translatedArguments.front()};
+        }
+        return invocation;
+    }
+    // "celest run --extension-flag value" is the universal escape hatch for
+    // every extension descriptor without a wrapper release.
+    if (command == "run") { invocation.translatedArguments.insert(invocation.translatedArguments.begin(), "--run-once"); return invocation; }
+    invocation.command = CelestCommand::Help;
+    return invocation;
+}
+
+void RenderCelestProgress() {
+    const auto progress = Core::ProgressTracker::Read();
+    const int filled = std::max(0, std::min(30, progress.percent * 30 / 100));
+    const std::string bar(static_cast<size_t>(filled), '#');
+    const std::string empty(static_cast<size_t>(30 - filled), '.');
+    auto document = ftxui::vbox({
+        ftxui::text("Celestia Nova progress") | ftxui::bold,
+        ftxui::text("[" + bar + empty + "] " + std::to_string(progress.percent) + "%"),
+        ftxui::text(progress.owner + ": " + progress.phase),
+        ftxui::text(progress.active ? "active" : "idle")
+    }) | ftxui::border;
+    auto screen = ftxui::Screen::Create(ftxui::Dimension::Fit(document));
+    ftxui::Render(screen, document);
+    std::cout << screen.ToString();
+}
+
+void PrintCelestHelp() {
+    std::cout << "celest help | status | progress | complete <prefix>\n"
+              << "celest deploy <content-id> [auto|minimal|normal|advanced]\n"
+              << "celest start|stop|logs <content-id>\n"
+              << "celest run --<extension-command> [value]\n";
+}
 
 ServiceModeOptions ParseServiceModeOptions(int argc, const char* argv[]) {
     ServiceModeOptions options;
@@ -146,6 +215,13 @@ int main(int argc, const char* argv[])
 {
     RegisterCrashHandler();
 
+    const CelestInvocation celestInvocation = ParseCelestInvocation(argc, argv);
+    std::vector<const char*> effectiveArgv;
+    effectiveArgv.reserve(celestInvocation.translatedArguments.size() + 1);
+    effectiveArgv.push_back(argv[0]);
+    for (const auto& argument : celestInvocation.translatedArguments) effectiveArgv.push_back(argument.c_str());
+    const int effectiveArgc = static_cast<int>(effectiveArgv.size());
+
     // If PROJECT_SOURCE_DIR is defined at compile time, run from the
     // repository root so Content/ and Extensions/ are resolved relative
     // to the project instead of the binary folder.
@@ -155,7 +231,7 @@ int main(int argc, const char* argv[])
     // Keep the user's terminal dimensions intact. FTXUI needs the real viewport
     // dimensions to align mouse hitboxes with rendered components.
 
-    const ServiceModeOptions serviceModeOptions = ParseServiceModeOptions(argc, argv);
+    const ServiceModeOptions serviceModeOptions = ParseServiceModeOptions(effectiveArgc, effectiveArgv.data());
 
     // Initialize Logging system & Default directories
     NovaLog::StartLogFile();
@@ -165,8 +241,8 @@ int main(int argc, const char* argv[])
     CommandLineOptionsStruct cmdOptions;
     {
         NOVA_LOG("Command line arguments received:", LogType::Log);
-        for (int i = 0; i < argc; ++i) {
-            NOVA_LOG(("Argument " + std::to_string(i) + ": " + argv[i]).c_str(), LogType::Log);
+        for (int i = 0; i < effectiveArgc; ++i) {
+            NOVA_LOG(("Argument " + std::to_string(i) + ": " + effectiveArgv[i]).c_str(), LogType::Log);
         }
 
         // Register Core command-line options dynamically
@@ -186,7 +262,7 @@ int main(int argc, const char* argv[])
         });
 
         // Parse command-line arguments for core options
-        CommandLineParsing::ParseArguments(argc, argv, manager->GetOptionMapping(), manager->GetBoolMapping());
+        CommandLineParsing::ParseArguments(effectiveArgc, effectiveArgv.data(), manager->GetOptionMapping(), manager->GetBoolMapping());
         
         // Execute behaviors for enabled core options
         manager->ExecuteEnabledOptions();
@@ -213,7 +289,38 @@ int main(int argc, const char* argv[])
     }
 
     // Dispatch CLI arguments to all loaded extensions
-    Core::ExtensionRegistry::Instance().ApplyCliArguments(argc, argv);
+    if (celestInvocation.command == CelestCommand::Help || celestInvocation.command == CelestCommand::Interactive) {
+        PrintCelestHelp();
+        if (celestInvocation.command == CelestCommand::Interactive) {
+            std::cout << "Type a prefix and use `celest complete <prefix>` for fish-style suggestions.\n";
+        }
+        return 0;
+    }
+    if (celestInvocation.command == CelestCommand::Status) {
+        std::cout << Core::StatusApiSurface::BuildExtensionsStatusJson() << '\n';
+        return 0;
+    }
+    if (celestInvocation.command == CelestCommand::Progress) {
+        RenderCelestProgress();
+        return 0;
+    }
+    if (celestInvocation.command == CelestCommand::Complete) {
+        const std::vector<std::string> builtins{"help", "status", "progress", "complete", "deploy", "start", "stop", "logs", "run"};
+        for (const auto& item : builtins) if (item.rfind(celestInvocation.completionPrefix, 0) == 0) std::cout << item << '\n';
+        for (const auto& descriptor : Core::ExtensionRegistry::Instance().ListExtensionDescriptors()) {
+            auto* provider = dynamic_cast<Core::IExtensionCliProvider*>(Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance(descriptor.id));
+            if (!provider) continue;
+            for (const auto& command : provider->GetCliArgDescriptors()) {
+                const auto name = "--" + command.Flag;
+                if (name.rfind(celestInvocation.completionPrefix, 0) == 0) std::cout << name << '\n';
+            }
+        }
+        return 0;
+    }
+
+    Core::ProgressTracker::Publish({"cli-dispatch", "celest", "Dispatching extension command", 10, true});
+    Core::ExtensionRegistry::Instance().ApplyCliArguments(effectiveArgc, effectiveArgv.data());
+    Core::ProgressTracker::Publish({"cli-dispatch", "celest", "Command dispatch complete", 100, false});
 
     // A deployment unit performs all of its work during CLI dispatch.  Unlike
     // the long-running status daemon it must return a truthful systemd result

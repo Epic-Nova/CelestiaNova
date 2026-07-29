@@ -420,6 +420,10 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/Utilities/linux/initialize_keyforge_credential.sh
 	install(PROGRAMS "${CMAKE_SOURCE_DIR}/Utilities/linux/initialize_keyforge_credential.sh"
 		DESTINATION "share/celestianova/bootstrap")
 endif()
+if(EXISTS "${CMAKE_SOURCE_DIR}/Utilities/linux/celest")
+	install(PROGRAMS "${CMAKE_SOURCE_DIR}/Utilities/linux/celest"
+		DESTINATION "share/celestianova/bin")
+endif()
 if(EXISTS "${CMAKE_SOURCE_DIR}/Docs/LINUX_SERVICE_MODE.md")
 	install(FILES "${CMAKE_SOURCE_DIR}/Docs/LINUX_SERVICE_MODE.md"
 		DESTINATION "share/doc/celestianova")

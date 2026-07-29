@@ -1,6 +1,7 @@
 ﻿#include "LaravelOrchestrator.h"
 
 #include "Core/NovaLog.h"
+#include "Core/ProgressTracker.h"
 #include "Core/ExtensionRegistry.h"
 #include "ExtensionSpecific/IContentForge.h"
 #include "ExtensionSpecific/ICanvasRuntimeSurfaceProvider.h"
@@ -480,6 +481,7 @@ void LaravelOrchestratorModule::ShutdownModule() {
 std::vector<Core::FExtensionCliArgDescriptor> LaravelOrchestratorModule::GetCliArgDescriptors() const {
     return {
         {"deploy-local-content", "Start a registered local Laravel content pack.", true},
+        {"stop-local-content", "Stop a registered local Laravel content pack.", true},
         {"local-content-status", "Report whether a registered Laravel content pack's primary Compose service is running.", true},
         {"local-content-dry-run", "Validate a registered Laravel content pack without starting Docker.", true},
         {"local-content-logs", "Report the log surface for a registered Laravel content pack (Docker log streaming is not exposed yet).", true},
@@ -511,6 +513,16 @@ void LaravelOrchestratorModule::ApplyCliArgs(const std::vector<Core::FExtensionC
             const auto deployment = DeployLocalContent(argument.Value, configurationDepth);
             const auto message = "[LaravelOrchestrator] " + deployment.message;
             NOVA_LOG(message.c_str(), deployment.succeeded ? LogType::Log : LogType::Error);
+            continue;
+        }
+
+        if (argument.Flag == "stop-local-content") {
+            auto* docker = dynamic_cast<IDockerOrchestrator*>(
+                Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("dockerorchestrator"));
+            const auto releasePath = GetActiveReleasePath(argument.Value);
+            const auto stopped = docker && !releasePath.empty() ? docker->StopCompose(releasePath) : DockerComposeResult{};
+            NOVA_LOG(("[LaravelOrchestrator] " + std::string(stopped.succeeded ? "Stopped " : "Stop failed for ") + argument.Value + (stopped.output.empty() ? "" : ": " + stopped.output)).c_str(),
+                     stopped.succeeded ? LogType::Log : LogType::Error);
             continue;
         }
 
@@ -785,6 +797,7 @@ Core::CanvasMenuActionResult LaravelOrchestratorModule::OnMenuAction(const Core:
 
 LaravelDeploymentResult LaravelOrchestratorModule::DeployLocalContent(const std::string& contentId, const std::string& profile) {
     LaravelDeploymentResult deployment;
+    Core::ProgressTracker::Publish({"deploy:" + contentId, "laravelorchestrator", "Resolving ContentForge pack", 20, true});
     auto* contentForge = dynamic_cast<Core::IContentForge*>(
         Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("contentforge"));
     if (!contentForge) {
@@ -811,9 +824,12 @@ LaravelDeploymentResult LaravelOrchestratorModule::DeployLocalContent(const std:
     Core::LocalContentRelease release;
     Core::LocalContentDescriptor releaseContent;
     if (!MaterializeLaravelRelease(contentForge, content, release, releaseContent, deployment.message)) {
+        Core::ProgressTracker::Publish({"deploy:" + contentId, "laravelorchestrator", "Materialization failed", 100, false});
         return deployment;
     }
+    Core::ProgressTracker::Publish({"deploy:" + contentId, "laravelorchestrator", "Injecting KeyForge runtime environment", 55, true});
     if (!InjectRuntimeEnvironment(content, release, deployment.message)) {
+        Core::ProgressTracker::Publish({"deploy:" + contentId, "laravelorchestrator", "Runtime environment injection failed", 100, false});
         return deployment;
     }
     // CLI/service deployments are one-shot transactions.  Waiting here is
@@ -827,6 +843,8 @@ LaravelDeploymentResult LaravelOrchestratorModule::DeployLocalContent(const std:
     if (deployment.succeeded) {
         RememberActiveRelease(content.id, release.releasePath);
     }
+    Core::ProgressTracker::Publish({"deploy:" + contentId, "laravelorchestrator",
+        deployment.succeeded ? "Docker Compose started" : "Docker Compose failed", 100, false});
     return deployment;
 }
 

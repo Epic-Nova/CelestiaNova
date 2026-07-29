@@ -53,3 +53,20 @@ cat /var/lib/celestianova/status/service-status.json
 The consumer reads `/var/lib/celestianova/status/service-status.json` through the already-authenticated Nova API/status surface. It must report the file modification time as the daemon heartbeat and mark it stale after at least twice `statusIntervalSeconds`. It must not use a missing file as proof that a managed application is healthy.
 
 Managed application health belongs in the owning orchestrator's extension health snapshot; the daemon aggregates it, rather than probing or starting arbitrary applications itself.
+# `celest` command surface
+
+The installer registers `/usr/local/bin/celest`. It uses the same extension
+commands as the graphical surface:
+
+```bash
+celest help
+celest status
+celest progress
+celest complete de
+celest deploy auth-api minimal
+celest stop auth-api
+celest run --docker-bootstrap
+```
+
+`celest progress` renders the latest atomic progress snapshot. Extensions
+publish this shared snapshot, which is also suitable for Canvas and MeshCore.

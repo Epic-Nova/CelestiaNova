@@ -27,6 +27,7 @@ fi
 UNIT_SOURCE="${PACKAGE_ROOT}/share/celestianova/systemd/celestianova.service"
 DEPLOY_UNIT_SOURCE="${PACKAGE_ROOT}/share/celestianova/systemd/celestianova-auth-api-deploy.service"
 DOCKER_BOOTSTRAP_SOURCE="${PACKAGE_ROOT}/share/celestianova/bootstrap/bootstrap-docker.sh"
+CELEST_CLI_SOURCE="${PACKAGE_ROOT}/share/celestianova/bin/celest"
 if [[ ! -f "${UNIT_SOURCE}" ]]; then
     printf 'Package does not contain the Celestia systemd unit: %s\n' "${UNIT_SOURCE}" >&2
     exit 1
@@ -55,6 +56,9 @@ if [[ -f "${DEPLOY_UNIT_SOURCE}" ]]; then
     install -D -m 0644 "${DEPLOY_UNIT_SOURCE}" /etc/systemd/system/celestianova-auth-api-deploy.service
 fi
 install -D -o root -g root -m 0755 "${DOCKER_BOOTSTRAP_SOURCE}" /usr/local/lib/celestianova/bootstrap-docker
+if [[ -f "${CELEST_CLI_SOURCE}" ]]; then
+    install -D -o root -g root -m 0755 "${CELEST_CLI_SOURCE}" /usr/local/bin/celest
+fi
 install -d -o root -g root -m 0700 /etc/celestianova/credentials
 printf 'celestianova ALL=(root) NOPASSWD: /usr/local/lib/celestianova/bootstrap-docker\n' \
     >/etc/sudoers.d/celestianova-docker-bootstrap
