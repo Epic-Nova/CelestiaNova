@@ -88,14 +88,19 @@ bool AegisCoreModule::BeginLogin(const std::string& contentId, std::string& outU
 }
 
 bool AegisCoreModule::ApproveLocalBypass(const Core::CanvasMenuActionRequest& request, std::string& outError) {
-    const auto read = [&request](const char* key) { const auto found = request.ContextValues.find(key); return found == request.ContextValues.end() ? std::string{} : found->second; };
+    const auto read = [&request](const char* key) {
+        const auto found = request.ContextValues.find(key);
+        std::string value = found == request.ContextValues.end() ? std::string{} : found->second;
+        const auto first = value.find_first_not_of(" \t\r\n");
+        const auto last = value.find_last_not_of(" \t\r\n");
+        return first == std::string::npos ? std::string{} : value.substr(first, last - first + 1);
+    };
     const auto baseUrl = read("authApiUrl");
     const auto identity = read("authenticatableIdentifier");
     const auto provider = read("providerIdentifier").empty() ? "com.epicnova.authentication_provider.local-bypass" : read("providerIdentifier");
-    if (!IsSafeHttpUrl(baseUrl) || identity.empty() || identity.find_first_not_of("0123456789abcdefABCDEF-") != std::string::npos ||
-        provider.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-") != std::string::npos) {
-        outError = "The local provider form contains an unsafe or incomplete value."; return false;
-    }
+    if (!IsSafeHttpUrl(baseUrl)) { outError = "Authentication API URL must be an http:// or https:// URL without spaces."; return false; }
+    if (identity.empty() || identity.find_first_not_of("0123456789abcdefABCDEF-") != std::string::npos) { outError = "Local Admin Identifier must be the UUID printed by nova:local-admin."; return false; }
+    if (provider.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-") != std::string::npos) { outError = "Authentication Provider contains unsupported characters."; return false; }
     SessionState session; { std::lock_guard<std::mutex> lock(SessionMutex_); session = Session_; }
     auto* http = dynamic_cast<Core::IHTTPAgent*>(Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("httpagent"));
     if (!http) { outError = "HTTPAgent is unavailable."; return false; }
