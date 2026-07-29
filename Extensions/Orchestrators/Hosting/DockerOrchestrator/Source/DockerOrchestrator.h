@@ -16,6 +16,10 @@ struct DockerComposeResult {
     std::string output;
 };
 
+// Deliberately structured and redacted progress surface.  The raw Docker
+// output can contain registry names and must stay internal to the orchestrator.
+using DockerComposeProgressCallback = std::function<void(int percent, const std::string& activity)>;
+
 enum class DockerComposeJobAction {
     Start,
     Stop,
@@ -50,6 +54,9 @@ class IDockerOrchestrator {
 public:
     virtual ~IDockerOrchestrator() = default;
     virtual DockerComposeResult StartCompose(const std::string& projectPath, const std::string& composeFile = "compose.yaml") const = 0;
+    virtual DockerComposeResult StartComposeWithProgress(const std::string& projectPath,
+                                                          DockerComposeProgressCallback onProgress,
+                                                          const std::string& composeFile = "compose.yaml") const = 0;
     virtual DockerComposeResult StopCompose(const std::string& projectPath, const std::string& composeFile = "compose.yaml") const = 0;
     virtual bool StartComposeAsync(const std::string& projectPath, std::function<void(DockerComposeResult)> onComplete, const std::string& composeFile = "compose.yaml") const = 0;
     virtual bool StopComposeAsync(const std::string& projectPath, std::function<void(DockerComposeResult)> onComplete, const std::string& composeFile = "compose.yaml") const = 0;
@@ -83,6 +90,9 @@ public:
     void ApplyCliArgs(const std::vector<Core::FExtensionCliArg>& args) override;
 
     DockerComposeResult StartCompose(const std::string& projectPath, const std::string& composeFile = "compose.yaml") const override;
+    DockerComposeResult StartComposeWithProgress(const std::string& projectPath,
+                                                  DockerComposeProgressCallback onProgress,
+                                                  const std::string& composeFile = "compose.yaml") const override;
     DockerComposeResult StopCompose(const std::string& projectPath, const std::string& composeFile = "compose.yaml") const override;
     bool StartComposeAsync(const std::string& projectPath, std::function<void(DockerComposeResult)> onComplete, const std::string& composeFile = "compose.yaml") const override;
     bool StopComposeAsync(const std::string& projectPath, std::function<void(DockerComposeResult)> onComplete, const std::string& composeFile = "compose.yaml") const override;

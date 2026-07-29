@@ -871,7 +871,10 @@ LaravelDeploymentResult LaravelOrchestratorModule::DeployLocalContent(const std:
     // CLI/service deployments are one-shot transactions.  Waiting here is
     // essential: an async child would be terminated when the one-shot
     // process exits, leaving no Compose project running.
-    const auto start = docker->StartCompose(release.releasePath, content.composeFile);
+    const auto start = docker->StartComposeWithProgress(release.releasePath,
+        [&contentId](int percent, const std::string& activity) {
+            Core::ProgressTracker::Publish({"deploy:" + contentId, "laravelorchestrator", activity, percent, true});
+        }, content.composeFile);
     deployment.succeeded = start.succeeded;
     deployment.message = deployment.succeeded
         ? "Local Laravel release '" + release.releaseId + "' started successfully (configuration depth: " + profile + ")."

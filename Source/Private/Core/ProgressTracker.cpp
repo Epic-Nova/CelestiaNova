@@ -56,7 +56,7 @@ void ProgressTracker::Publish(NovaProgressSnapshot snapshot) {
         // the progress snapshot. It is not a raw process or Docker log.
         const auto activityPath = ActivityPath();
         std::ofstream activity(activityPath, std::ios::app);
-        activity << "[" << snapshot.owner << "] " << snapshot.phase << '\n';
+        activity << "[" << snapshot.owner << "  " << snapshot.percent << "%] " << snapshot.phase << '\n';
         activity.close();
         std::filesystem::permissions(activityPath,
             std::filesystem::perms::owner_read | std::filesystem::perms::owner_write |

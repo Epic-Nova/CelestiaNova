@@ -210,8 +210,30 @@ CoreTerminal::TerminalCommandResult TerminalAgentModule::ExecuteCommandSync(cons
         return result;
     }
 
+    std::string pendingLine;
     while (fgets(buffer.data(), static_cast<int>(buffer.size()), pipe) != nullptr) {
-        output += buffer.data();
+        const std::string chunk(buffer.data());
+        output += chunk;
+        if (!request.onOutputLine) {
+            continue;
+        }
+
+        pendingLine += chunk;
+        size_t newline = 0;
+        while ((newline = pendingLine.find('\n')) != std::string::npos) {
+            auto line = pendingLine.substr(0, newline);
+            pendingLine.erase(0, newline + 1);
+            if (!line.empty() && line.back() == '\r') {
+                line.pop_back();
+            }
+            request.onOutputLine(line);
+        }
+    }
+    if (request.onOutputLine && !pendingLine.empty()) {
+        if (pendingLine.back() == '\r') {
+            pendingLine.pop_back();
+        }
+        request.onOutputLine(pendingLine);
     }
 
     int returnCode = PCLOSE(pipe);

@@ -3,9 +3,13 @@
 #include "Core/NovaLog.h"
 #include "Core/ExtensionRegistry.h"
 #include "TerminalAgent.h"
+#include "json.hpp"
 
+#include <algorithm>
+#include <cctype>
 #include <filesystem>
 #include <atomic>
+#include <map>
 #include <utility>
 
 namespace {
@@ -14,7 +18,8 @@ std::atomic<unsigned long long> NextComposeJobSequence{1};
 
 DockerComposeResult ExecuteComposeCommand(const std::string& projectPath,
                                           const std::string& composeFile,
-                                          const std::string& command) {
+                                          const std::string& command,
+                                          std::function<void(const std::string&)> onOutputLine = {}) {
     DockerComposeResult deployment;
     if (composeFile != "compose.yaml" && composeFile != "docker-compose.yml") {
         deployment.output = "Unsupported Compose filename.";
@@ -44,12 +49,94 @@ DockerComposeResult ExecuteComposeCommand(const std::string& projectPath,
     CoreTerminal::TerminalCommandRequest request;
     request.workingDirectory = pathString;
     request.command = "docker compose -f " + composeFile + " " + command;
+    request.onOutputLine = std::move(onOutputLine);
     const auto result = terminal->ExecuteCommandSync(request);
     deployment.exitCode = result.exitCode;
     deployment.output = result.stdOut;
     deployment.succeeded = result.exitCode == 0;
     return deployment;
 }
+
+class ComposeProgressReporter {
+public:
+    explicit ComposeProgressReporter(DockerComposeProgressCallback callback)
+        : callback_(std::move(callback)) {}
+
+    void BeginPull() { Emit(85, "Docker image download is starting"); }
+    void BeginServices() { Emit(97, "Docker images are ready; creating services"); }
+    void FinishServices() { Emit(99, "Docker services were created; checking startup"); }
+
+    void ConsumePullLine(const std::string& line) {
+        const auto event = nlohmann::json::parse(line, nullptr, false);
+        if (!event.is_discarded() && event.is_object()) {
+            const auto details = event.value("progressDetail", nlohmann::json::object());
+            const auto total = details.value("total", static_cast<unsigned long long>(0));
+            const auto current = details.value("current", static_cast<unsigned long long>(0));
+            const auto layer = event.value("id", std::string{});
+            if (!layer.empty() && total > 0) {
+                const auto boundedCurrent = std::min(current, total);
+                layers_[layer] = {boundedCurrent, total};
+                unsigned long long allCurrent = 0;
+                unsigned long long allTotal = 0;
+                for (const auto& [_, progress] : layers_) {
+                    allCurrent += progress.first;
+                    allTotal += progress.second;
+                }
+                if (allTotal > 0) {
+                    const int downloadPercent = 85 + static_cast<int>((allCurrent * 11) / allTotal);
+                    Emit(std::clamp(downloadPercent, 85, 96),
+                         "Docker image download: " + std::to_string((allCurrent * 100) / allTotal) + "% of known layer bytes");
+                    return;
+                }
+            }
+            const auto status = event.value("status", std::string{});
+            if (status == "Pull complete" || status == "Already exists") {
+                ++completedLayers_;
+                Emit(std::min(96, 86 + completedLayers_),
+                     "Docker image layer completed (" + std::to_string(completedLayers_) + ")");
+                return;
+            }
+        }
+        ConsumeTextLine(line, true);
+    }
+
+    void ConsumeServiceLine(const std::string& line) { ConsumeTextLine(line, false); }
+
+private:
+    void ConsumeTextLine(std::string line, bool pulling) {
+        std::transform(line.begin(), line.end(), line.begin(), [](unsigned char value) {
+            return static_cast<char>(std::tolower(value));
+        });
+        if (line.find("pulling") != std::string::npos || line.find("downloading") != std::string::npos) {
+            Emit(87, "Docker is downloading image layers");
+        } else if (line.find("extracting") != std::string::npos) {
+            Emit(92, "Docker is extracting image layers");
+        } else if (line.find("pull complete") != std::string::npos || line.find("already exists") != std::string::npos) {
+            ++completedLayers_;
+            Emit(std::min(96, 86 + completedLayers_),
+                 "Docker image layer completed (" + std::to_string(completedLayers_) + ")");
+        } else if (!pulling && (line.find("creating") != std::string::npos || line.find("created") != std::string::npos)) {
+            Emit(98, "Docker is creating application containers");
+        } else if (!pulling && (line.find("starting") != std::string::npos || line.find("started") != std::string::npos || line.find("running") != std::string::npos)) {
+            Emit(99, "Docker is starting application containers");
+        }
+    }
+
+    void Emit(int percent, const std::string& activity) {
+        if (!callback_) return;
+        percent = std::max(lastPercent_, percent);
+        if (percent == lastPercent_ && activity == lastActivity_) return;
+        lastPercent_ = percent;
+        lastActivity_ = activity;
+        callback_(percent, activity);
+    }
+
+    DockerComposeProgressCallback callback_;
+    std::map<std::string, std::pair<unsigned long long, unsigned long long>> layers_;
+    int completedLayers_ = 0;
+    int lastPercent_ = 0;
+    std::string lastActivity_;
+};
 
 std::string ComposeCommandFor(DockerComposeJobAction action) {
     switch (action) {
@@ -140,7 +227,31 @@ void DockerOrchestratorModule::ShutdownModule() {
 }
 
 DockerComposeResult DockerOrchestratorModule::StartCompose(const std::string& projectPath, const std::string& composeFile) const {
-    return ExecuteComposeCommand(projectPath, composeFile, "up -d");
+    return StartComposeWithProgress(projectPath, {}, composeFile);
+}
+
+DockerComposeResult DockerOrchestratorModule::StartComposeWithProgress(const std::string& projectPath,
+                                                                        DockerComposeProgressCallback onProgress,
+                                                                        const std::string& composeFile) const {
+    ComposeProgressReporter reporter(std::move(onProgress));
+    reporter.BeginPull();
+
+    // Compose JSON progress exposes the byte totals of every image layer.
+    // Pull first, then start with --no-build, so the reported percentages are
+    // determinate and the startup phase cannot trigger another hidden pull.
+    const auto pull = ExecuteComposeCommand(projectPath, composeFile, "--progress json pull",
+        [&reporter](const std::string& line) { reporter.ConsumePullLine(line); });
+    if (!pull.succeeded) {
+        return pull;
+    }
+
+    reporter.BeginServices();
+    const auto start = ExecuteComposeCommand(projectPath, composeFile, "up -d --no-build",
+        [&reporter](const std::string& line) { reporter.ConsumeServiceLine(line); });
+    if (start.succeeded) {
+        reporter.FinishServices();
+    }
+    return start;
 }
 
 std::vector<Core::FExtensionCliArgDescriptor> DockerOrchestratorModule::GetCliArgDescriptors() const {

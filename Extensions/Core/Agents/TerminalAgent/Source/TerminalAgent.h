@@ -30,6 +30,10 @@ struct TerminalCommandRequest {
     std::string command;
     std::string workingDirectory;
     std::map<std::string, std::string> environmentOverrides;
+    // The callback receives complete output lines as the child process emits
+    // them.  Consumers must treat this as untrusted process output and never
+    // forward it directly to user-visible surfaces.
+    std::function<void(const std::string&)> onOutputLine;
     bool bRequireEscalation = false;
 };
 
