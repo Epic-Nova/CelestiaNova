@@ -46,6 +46,24 @@ struct DeviceAuthorizationResponse {
     std::string receipt;
 };
 
+// The short-lived access token remains inside the Celestia process. It is
+// returned only to the session owner so it can authorize a typed remote action;
+// it must never be persisted, logged or forwarded to Canvas.
+struct DeviceTokenRequest {
+    std::string requestorExtensionId;
+    std::string applicationId;
+    std::string authorizationServerId;
+    std::string deviceCode;
+};
+
+struct DeviceTokenResponse {
+    bool accepted = false;
+    bool pending = false;
+    std::string accessToken;
+    std::uint32_t expiresInSeconds = 0;
+    std::string receipt;
+};
+
 // Runtime materialization is an explicit deployment boundary. Public values
 // may be rendered verbatim, while secret values are references owned by
 // KeyForge. The destination must be a release-local .runtime.env path.
@@ -94,6 +112,8 @@ public:
     // KeyForge. Callers receive only a short-lived device-flow response.
     virtual DeviceAuthorizationResponse BeginDeviceAuthorization(
         const DeviceAuthorizationRequest& request) = 0;
+    virtual DeviceTokenResponse PollDeviceAuthorization(
+        const DeviceTokenRequest& request) = 0;
 
     // Resolves secretReferences inside KeyForge and transfers a mode-0600
     // runtime environment directly to the authenticated target. Implementors

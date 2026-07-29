@@ -13,7 +13,7 @@ only operating and architecture contracts; completed work is recorded in Git.
 
 ## Immediate local-auth and two-node test
 
-- [ ] Complete KeyForge device-token polling and retain the resulting short-lived Nova ID session in memory only.
+- [x] Implement KeyForge device-token polling and retain the resulting short-lived Nova ID session in memory only.
 - [ ] Validate the browser device-login flow against the local Auth API from the Windows client.
 - [ ] Implement a Linux secure HTTP transport for OAuth-bearing HTTPAgent requests; local routing does not replace this requirement.
 - [ ] Run a two-node development MeshCore test: Windows client plus VM daemon, development CA, explicit allowlist and read-only commands.

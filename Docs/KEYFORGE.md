@@ -27,7 +27,9 @@ secrets never cross an extension ABI, reach Canvas, status data or logs.
 
 Interactive Nova ID uses the same broker: KeyForge starts device
 authorization and returns only the verification URI, user/device codes and
-expiry metadata. The local-test exception requires explicit
+expiry metadata. It later performs the secret-bearing device-token poll and
+returns the short-lived access token only to the in-memory owning session.
+The local-test exception requires explicit
 `CELESTIA_LOCAL_TEST_MODE=1` and an exact configured local `/api/v1/` base;
 production endpoints remain HTTPS-only.
 

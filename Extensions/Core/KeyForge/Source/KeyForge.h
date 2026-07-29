@@ -33,6 +33,8 @@ public:
         const KeyForge::OAuthApplicationRequest& request) override;
     KeyForge::DeviceAuthorizationResponse BeginDeviceAuthorization(
         const KeyForge::DeviceAuthorizationRequest& request) override;
+    KeyForge::DeviceTokenResponse PollDeviceAuthorization(
+        const KeyForge::DeviceTokenRequest& request) override;
     KeyForge::RuntimeEnvironmentReceipt MaterializeRemoteRuntimeEnvironment(
         const KeyForge::RuntimeEnvironmentRequest& request) override;
     bool DispatchOAuthAuthenticatedRequest(const KeyForge::OAuthAuthenticatedRequest& request,

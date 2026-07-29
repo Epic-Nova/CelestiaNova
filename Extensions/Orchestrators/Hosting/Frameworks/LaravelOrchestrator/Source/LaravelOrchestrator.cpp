@@ -418,9 +418,40 @@ bool LaravelOrchestratorModule::PollNovaIdLogin(const Core::LocalContentDescript
     if (!LoadNovaIdLoginContract(content, contract, required, outError)) {
         return false;
     }
-    (void)outStatus;
-    outError = "Nova ID device-token exchange is not available: KeyForge must perform the secret-bearing /oauth/device-token request and return only an in-memory token receipt.";
-    return false;
+    auto* keyForge = dynamic_cast<KeyForge::IDeploymentSecretBroker*>(
+        Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("keyforge"));
+    if (!keyForge) {
+        outError = "Nova ID device-token exchange requires KeyForge.";
+        return false;
+    }
+    std::string deviceCode;
+    {
+        std::lock_guard<std::mutex> lock(NovaIdSessionMutex_);
+        const auto session = NovaIdSessions_.find(content.id);
+        if (session == NovaIdSessions_.end() || session->second.sessionId.empty()) {
+            outError = "Begin Nova ID login before polling its device authorization.";
+            return false;
+        }
+        deviceCode = session->second.sessionId;
+    }
+    const auto response = keyForge->PollDeviceAuthorization({"laravelorchestrator", contract.applicationId,
+                                                              contract.authorizationServerId, deviceCode});
+    if (response.pending) {
+        outStatus = "Waiting for approval";
+        return true;
+    }
+    if (!response.accepted || response.accessToken.empty()) {
+        outError = "Nova ID device-token exchange failed: " + response.receipt;
+        return false;
+    }
+    {
+        std::lock_guard<std::mutex> lock(NovaIdSessionMutex_);
+        auto& session = NovaIdSessions_[content.id];
+        session.accessToken = response.accessToken;
+        session.status = "Authenticated";
+    }
+    outStatus = "Authenticated";
+    return true;
 }
 
 void LaravelOrchestratorModule::LogoutNovaId(const std::string& contentId) {

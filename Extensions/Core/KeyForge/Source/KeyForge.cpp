@@ -138,6 +138,21 @@ std::optional<unsigned short> JsonPort(const std::string& json) {
     return value>0 && value<=65535 ? std::optional<unsigned short>(static_cast<unsigned short>(value)) : std::nullopt;
 }
 
+std::string EncodeFormValue(const std::string& value) {
+    static constexpr char Hex[] = "0123456789ABCDEF";
+    std::string encoded;
+    for (const unsigned char character : value) {
+        if (std::isalnum(character) || character == '-' || character == '_' || character == '.') {
+            encoded += static_cast<char>(character);
+        } else {
+            encoded += '%';
+            encoded += Hex[character >> 4];
+            encoded += Hex[character & 15];
+        }
+    }
+    return encoded;
+}
+
 std::optional<std::string> HttpPostForm(const std::string& url, const std::string& form, const std::string& additionalHeaders) {
     const bool isHttps = url.rfind("https://", 0) == 0;
     // The only plaintext exception is the exact endpoint explicitly selected
@@ -431,6 +446,55 @@ KeyForge::DeviceAuthorizationResponse KeyForgeModule::BeginDeviceAuthorization(
 #endif
     response.receipt = "rejected: missing protected OAuth lease or secure device authorization endpoint";
     NOVA_LOG("[KeyForge] Device authorization rejected without exposing credential material.", LogType::Warning);
+    return response;
+}
+
+KeyForge::DeviceTokenResponse KeyForgeModule::PollDeviceAuthorization(
+    const KeyForge::DeviceTokenRequest& request) {
+    KeyForge::DeviceTokenResponse response;
+    if (!IsSafeIdentifier(request.requestorExtensionId) || !IsSafeIdentifier(request.applicationId) ||
+        !IsSafeIdentifier(request.authorizationServerId) || request.deviceCode.empty() || request.deviceCode.size() > 256) {
+        response.receipt = "rejected: invalid device token request";
+        return response;
+    }
+
+    const auto root = "keyforge://oauth/" + request.authorizationServerId + "/" + request.applicationId;
+    const auto clientId = ReadSecret(root + "/client-id");
+    const auto clientSecret = ReadSecret(root + "/client-secret");
+#ifdef _WIN32
+    std::string endpoint;
+    if (const auto* localTestMode = std::getenv("CELESTIA_LOCAL_TEST_MODE"); localTestMode && std::string(localTestMode) == "1") {
+        if (const auto* localBase = std::getenv("CELESTIA_AUTH_API_BASE_URL"); localBase && *localBase) {
+            endpoint = std::string(localBase) + "/api/v1/oauth/device-token";
+        }
+    }
+    if (clientId && clientSecret && !endpoint.empty()) {
+        const auto body = "device_code=" + EncodeFormValue(request.deviceCode) +
+            "&client_id=" + EncodeFormValue(*clientId) +
+            "&client_secret=" + EncodeFormValue(*clientSecret);
+        const auto payload = HttpPostForm(endpoint, body, "");
+        if (payload) {
+            try {
+                const auto parsed = nlohmann::json::parse(*payload);
+                const auto error = parsed.value("error", "");
+                if (error == "authorization_pending") {
+                    response.pending = true;
+                    response.receipt = "pending: device authorization has not been approved";
+                    return response;
+                }
+                const auto token = parsed.value("access_token", "");
+                if (!token.empty()) {
+                    response.accepted = true;
+                    response.accessToken = token;
+                    response.expiresInSeconds = parsed.value("expires_in", 0U);
+                    response.receipt = "accepted: device authorization completed";
+                    return response;
+                }
+            } catch (...) {}
+        }
+    }
+#endif
+    response.receipt = "rejected: device-token exchange is unavailable or failed";
     return response;
 }
 
