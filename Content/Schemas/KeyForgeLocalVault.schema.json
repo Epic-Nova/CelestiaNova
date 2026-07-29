@@ -11,6 +11,6 @@
     "authApiProvisionEndpoint": { "type": "string", "format": "uri", "pattern": "^https://" },
     "bootstrapSecretReference": { "type": "string", "pattern": "^keyforge://[A-Za-z0-9._/-]+$" },
     "authApiRegisterCommand": { "type": "string" },
-    "deviceAuthorizationEndpoint": { "type": "string", "format": "uri", "pattern": "^https://" }
+    "deviceAuthorizationEndpoint": { "type": "string", "format": "uri", "pattern": "^https?://" }
   }
 }

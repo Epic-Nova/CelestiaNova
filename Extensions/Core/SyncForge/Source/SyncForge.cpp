@@ -24,6 +24,19 @@ bool IsHttpsUrl(const std::string& value) {
     return value.rfind("https://", 0) == 0 && value.find_first_of("\r\n") == std::string::npos;
 }
 
+bool IsExplicitLocalTestAuthApiUrl(const std::string& value) {
+    const auto* localTestMode = std::getenv("CELESTIA_LOCAL_TEST_MODE");
+    const auto* configuredBase = std::getenv("CELESTIA_AUTH_API_BASE_URL");
+    if (!localTestMode || std::string(localTestMode) != "1" || !configuredBase || !*configuredBase) return false;
+    const std::string base(configuredBase);
+    return base.rfind("http://", 0) == 0 && value.rfind(base + "/api/v1/", 0) == 0 &&
+        value.find_first_of("\r\n") == std::string::npos;
+}
+
+bool IsAllowedAuthApiUrl(const std::string& value) {
+    return IsHttpsUrl(value) || IsExplicitLocalTestAuthApiUrl(value);
+}
+
 bool IsSha256(const std::string& value) {
     return value.size() == 64 && std::all_of(value.begin(), value.end(), [](unsigned char c) { return std::isxdigit(c) != 0; });
 }
@@ -79,10 +92,10 @@ bool SyncForgeModule::PerformSecureUpdateCheck(const std::string& targetVersion)
     request.tokenEndpoint = authBase + "/api/v1/oauth/token";
     request.resourceUrl = authBase + "/api/v1/celestia-instances/update-manifest";
     request.headers.emplace("Accept", "application/json");
-    if (!IsHttpsUrl(request.tokenEndpoint) || !IsHttpsUrl(request.resourceUrl)) {
+    if (!IsAllowedAuthApiUrl(request.tokenEndpoint) || !IsAllowedAuthApiUrl(request.resourceUrl)) {
         std::lock_guard<std::mutex> lock(UpdateMutex_);
         LastUpdateState_ = "blocked";
-        LastUpdateSummary_ = "Only HTTPS Auth API update endpoints are accepted.";
+        LastUpdateSummary_ = "Auth API endpoint is not HTTPS or the explicitly enabled local-test endpoint.";
         return false;
     }
 

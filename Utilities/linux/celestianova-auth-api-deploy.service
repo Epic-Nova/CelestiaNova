@@ -9,6 +9,7 @@ User=celestianova
 Group=celestianova
 WorkingDirectory=/opt/celestianova
 Environment=CELESTIA_RUNTIME_ROOT=/var/lib/celestianova/content
+EnvironmentFile=-/etc/celestianova/runtime.env
 LoadCredentialEncrypted=keyforge:/etc/celestianova/credentials
 ExecStart=/opt/celestianova/bin/CelestiaNova --run-once --status-file /var/lib/celestianova/status/deploy-status.json --deploy-local-content auth-api --configuration-depth minimal
 TimeoutStartSec=15min

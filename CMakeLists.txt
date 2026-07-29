@@ -424,6 +424,10 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/Utilities/linux/initialize_keyforge_credential.sh
 	install(PROGRAMS "${CMAKE_SOURCE_DIR}/Utilities/linux/initialize_keyforge_credential.sh"
 		DESTINATION "share/celestianova/bootstrap")
 endif()
+if(EXISTS "${CMAKE_SOURCE_DIR}/Utilities/linux/configure_local_auth_api_test.sh")
+	install(PROGRAMS "${CMAKE_SOURCE_DIR}/Utilities/linux/configure_local_auth_api_test.sh"
+		DESTINATION "share/celestianova/bootstrap")
+endif()
 if(EXISTS "${CMAKE_SOURCE_DIR}/Utilities/linux/apply_syncforge_update.sh")
 	install(PROGRAMS "${CMAKE_SOURCE_DIR}/Utilities/linux/apply_syncforge_update.sh"
 		DESTINATION "share/celestianova/bootstrap")

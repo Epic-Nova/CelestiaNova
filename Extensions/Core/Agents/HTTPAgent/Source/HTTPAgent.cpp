@@ -9,6 +9,7 @@
 #include <thread>
 #include <atomic>
 #include <algorithm>
+#include <cstdlib>
 
 #if defined(_WIN32)
 #  include <windows.h>
@@ -17,6 +18,17 @@
 #endif
 
 namespace Core {
+
+namespace {
+bool IsExplicitLocalTestAuthApiUrl(const std::string& url) {
+    const auto* localTestMode = std::getenv("CELESTIA_LOCAL_TEST_MODE");
+    const auto* configuredBase = std::getenv("CELESTIA_AUTH_API_BASE_URL");
+    if (!localTestMode || std::string(localTestMode) != "1" || !configuredBase || !*configuredBase) return false;
+    const std::string base(configuredBase);
+    return base.rfind("http://", 0) == 0 && url.rfind(base + "/api/v1/", 0) == 0 &&
+        url.find_first_of("\r\n") == std::string::npos;
+}
+}
 
 HTTPAgentModule::HTTPAgentModule() {}
 HTTPAgentModule::~HTTPAgentModule() {}
@@ -190,7 +202,9 @@ std::string HTTPAgentModule::DispatchSecureHttpsAsync(const SecureHttpsRequest& 
     std::thread([request, callback = std::move(callback)]() mutable {
         SecureHttpsResponse response;
 #if defined(_WIN32)
-        if (request.url.rfind("https://", 0) != 0 || request.url.size() > 2048 ||
+        const bool isHttps = request.url.rfind("https://", 0) == 0;
+        const bool isExplicitLocalTest = IsExplicitLocalTestAuthApiUrl(request.url);
+        if ((!isHttps && !isExplicitLocalTest) || request.url.size() > 2048 ||
             (request.method != "GET" && request.method != "POST") || request.timeoutMs == 0 ||
             request.timeoutMs > 30000 || request.maxResponseBytes == 0 || request.maxResponseBytes > 1048576) {
             response.error = "Rejected insecure or invalid HTTPS request.";
@@ -204,7 +218,8 @@ std::string HTTPAgentModule::DispatchSecureHttpsAsync(const SecureHttpsRequest& 
             parts.dwUserNameLength = static_cast<DWORD>(-1);
             parts.dwPasswordLength = static_cast<DWORD>(-1);
             std::wstring wideUrl(request.url.begin(), request.url.end());
-            if (!WinHttpCrackUrl(wideUrl.c_str(), 0, 0, &parts) || parts.nScheme != INTERNET_SCHEME_HTTPS ||
+            if (!WinHttpCrackUrl(wideUrl.c_str(), 0, 0, &parts) ||
+                (parts.nScheme != INTERNET_SCHEME_HTTPS && !(isExplicitLocalTest && parts.nScheme == INTERNET_SCHEME_HTTP)) ||
                 parts.dwHostNameLength == 0 || parts.dwUserNameLength != 0 || parts.dwPasswordLength != 0) {
                 response.error = "Rejected malformed HTTPS URL.";
             } else {
@@ -222,7 +237,7 @@ std::string HTTPAgentModule::DispatchSecureHttpsAsync(const SecureHttpsRequest& 
                     HINTERNET connection = WinHttpConnect(session, host.c_str(), parts.nPort, 0);
                     HINTERNET httpRequest = connection ? WinHttpOpenRequest(connection, method.c_str(), path.c_str(), nullptr,
                                                                               WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES,
-                                                                              WINHTTP_FLAG_SECURE) : nullptr;
+                                                                              isHttps ? WINHTTP_FLAG_SECURE : 0) : nullptr;
                     if (!httpRequest) {
                         response.error = "HTTPS connection setup failed.";
                     } else {

@@ -66,6 +66,9 @@ fi
 if [[ -f "${PACKAGE_ROOT}/share/celestianova/bootstrap/queue_syncforge_update.sh" ]]; then
     install -D -o root -g root -m 0755 "${PACKAGE_ROOT}/share/celestianova/bootstrap/queue_syncforge_update.sh" /usr/local/lib/celestianova/queue-syncforge-update
 fi
+if [[ -f "${PACKAGE_ROOT}/share/celestianova/bootstrap/configure_local_auth_api_test.sh" ]]; then
+    install -D -o root -g root -m 0755 "${PACKAGE_ROOT}/share/celestianova/bootstrap/configure_local_auth_api_test.sh" /usr/local/lib/celestianova/configure-local-auth-api-test
+fi
 if [[ -f "${CELEST_CLI_SOURCE}" ]]; then
     install -D -o root -g root -m 0755 "${CELEST_CLI_SOURCE}" /usr/local/bin/celest
 fi

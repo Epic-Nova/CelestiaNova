@@ -60,6 +60,19 @@ bool IsSafeReleasePath(const std::string& value) {
         value.find_first_of("\r\n\0") == std::string::npos;
 }
 
+bool IsExplicitLocalTestAuthApiUrl(const std::string& value) {
+    const auto* localTestMode = std::getenv("CELESTIA_LOCAL_TEST_MODE");
+    const auto* configuredBase = std::getenv("CELESTIA_AUTH_API_BASE_URL");
+    if (!localTestMode || std::string(localTestMode) != "1" || !configuredBase || !*configuredBase) return false;
+    const std::string base(configuredBase);
+    return base.rfind("http://", 0) == 0 && value.rfind(base + "/api/v1/", 0) == 0 &&
+        value.find_first_of("\r\n") == std::string::npos;
+}
+
+bool IsAllowedOAuthEndpoint(const std::string& value) {
+    return value.rfind("https://", 0) == 0 || IsExplicitLocalTestAuthApiUrl(value);
+}
+
 std::string ReferenceKey(const std::string& reference) {
     return reference.substr(std::string("keyforge://").size());
 }
@@ -126,9 +139,10 @@ std::optional<unsigned short> JsonPort(const std::string& json) {
 }
 
 std::optional<std::string> HttpPostForm(const std::string& url, const std::string& form, const std::string& additionalHeaders) {
-    // Configuring plaintext HTTP is rejected: bearer and client credentials
-    // must never leave the machine unencrypted.
-    if (url.rfind("https://", 0) != 0) return std::nullopt;
+    const bool isHttps = url.rfind("https://", 0) == 0;
+    // The only plaintext exception is the exact endpoint explicitly selected
+    // by a local test operator. Production never enables this switch.
+    if (!isHttps && !IsExplicitLocalTestAuthApiUrl(url)) return std::nullopt;
     URL_COMPONENTSW parts{}; parts.dwStructSize = sizeof(parts); parts.dwSchemeLength = parts.dwHostNameLength = parts.dwUrlPathLength = static_cast<DWORD>(-1);
     const std::wstring wideUrl(url.begin(), url.end());
     if (!WinHttpCrackUrl(wideUrl.c_str(), 0, 0, &parts)) return std::nullopt;
@@ -137,7 +151,7 @@ std::optional<std::string> HttpPostForm(const std::string& url, const std::strin
     HINTERNET session = WinHttpOpen(L"CelestiaNova-KeyForge/1", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, nullptr, nullptr, 0);
     if (!session) return std::nullopt;
     HINTERNET connection = WinHttpConnect(session, host.c_str(), parts.nPort, 0);
-    HINTERNET request = connection ? WinHttpOpenRequest(connection, L"POST", path.c_str(), nullptr, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE) : nullptr;
+    HINTERNET request = connection ? WinHttpOpenRequest(connection, L"POST", path.c_str(), nullptr, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, isHttps ? WINHTTP_FLAG_SECURE : 0) : nullptr;
     std::wstring headers = L"Content-Type: application/x-www-form-urlencoded\r\n";
     if (!additionalHeaders.empty()) headers += std::wstring(additionalHeaders.begin(), additionalHeaders.end());
     BOOL sent = request && WinHttpSendRequest(request, headers.c_str(), static_cast<DWORD>(headers.size()), const_cast<char*>(form.data()), static_cast<DWORD>(form.size()), static_cast<DWORD>(form.size()), 0) && WinHttpReceiveResponse(request, nullptr);
@@ -271,7 +285,7 @@ bool KeyForgeModule::DispatchOAuthAuthenticatedRequest(const KeyForge::OAuthAuth
     const auto complete = [callback = std::move(onComplete)](KeyForge::OAuthAuthenticatedResponse response) {
         if (callback) callback(std::move(response));
     };
-    if (request.tokenEndpoint.rfind("https://", 0) != 0 || request.resourceUrl.rfind("https://", 0) != 0 || request.application.applicationId.empty()) {
+    if (!IsAllowedOAuthEndpoint(request.tokenEndpoint) || !IsAllowedOAuthEndpoint(request.resourceUrl) || request.application.applicationId.empty()) {
         complete({false, 0, {}, "rejected: invalid OAuth endpoints or application"}); return false;
     }
     const auto lease = EnsureOAuthApplication(request.application);

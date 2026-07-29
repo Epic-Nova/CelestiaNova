@@ -11,6 +11,7 @@ Group=celestianova
 WorkingDirectory=/opt/celestianova
 Environment=CELESTIA_RUNTIME_ROOT=/var/lib/celestianova/content
 Environment=CELESTIA_STATUS_API_ENABLED=1
+EnvironmentFile=-/etc/celestianova/runtime.env
 # Encrypted credential files placed in /etc/celestianova/credentials are
 # decrypted by systemd into a private, tmpfs-backed directory for KeyForge.
 LoadCredentialEncrypted=keyforge:/etc/celestianova/credentials
