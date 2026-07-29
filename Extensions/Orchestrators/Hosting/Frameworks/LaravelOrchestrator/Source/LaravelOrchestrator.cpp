@@ -317,6 +317,45 @@ CoreTerminal::ITerminalAgent* ResolveTerminalAgent() {
         Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("terminalagent"));
 }
 
+bool IsSafeLocalComposePath(const std::string& value) {
+    if (value.empty() || value.find("..") != std::string::npos) {
+        return false;
+    }
+    return value.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789/_-.\\:") == std::string::npos;
+}
+
+bool RepairSailWritablePaths(const Core::LocalContentRelease& release,
+                             const Core::LocalContentDescriptor& content,
+                             std::string& outError) {
+    // Auth API's current local hosting profile is Sail. Its bind mount may
+    // contain root-owned files created during release materialization, while
+    // the PHP server runs as `sail`. Keep this repair fixed and narrow; it is
+    // not a general-purpose post-deploy command channel.
+    if (content.primaryService != "laravel.test") {
+        return true;
+    }
+    const auto composePath = (std::filesystem::path(release.releasePath) / content.composeFile).string();
+    if (!IsSafeLocalComposePath(composePath)) {
+        outError = "Laravel post-deploy repair rejected an unsafe Compose path.";
+        return false;
+    }
+    auto* terminal = ResolveTerminalAgent();
+    if (!terminal) {
+        outError = "Laravel post-deploy repair requires TerminalAgent.";
+        return false;
+    }
+    CoreTerminal::TerminalCommandRequest request;
+    request.workingDirectory = release.releasePath;
+    request.command = "docker compose -f \"" + composePath +
+        "\" exec -T --user root laravel.test sh -c \"mkdir -p storage/logs bootstrap/cache && chown -R sail:sail storage bootstrap/cache && chmod -R ug+rwX storage bootstrap/cache\"";
+    const auto result = terminal->ExecuteCommandSync(request);
+    if (result.exitCode != 0) {
+        outError = "Laravel post-deploy writable-path repair failed.";
+        return false;
+    }
+    return true;
+}
+
 std::string DescribeContent(const Core::LocalContentDescriptor& content) {
     std::ostringstream message;
     message << "Content '" << content.id << "' is valid for Laravel local hosting"
@@ -931,6 +970,12 @@ LaravelDeploymentResult LaravelOrchestratorModule::DeployLocalContent(const std:
             Core::ProgressTracker::Publish({"deploy:" + contentId, "laravelorchestrator", activity, percent, true});
         }, content.composeFile);
     deployment.succeeded = start.succeeded;
+    if (deployment.succeeded) {
+        Core::ProgressTracker::Publish({"deploy:" + contentId, "laravelorchestrator", "Repairing Laravel writable paths", 99, true});
+        if (!RepairSailWritablePaths(release, content, deployment.message)) {
+            deployment.succeeded = false;
+        }
+    }
     deployment.message = deployment.succeeded
         ? "Local Laravel release '" + release.releaseId + "' started successfully (configuration depth: " + profile + ")."
         : start.output;
