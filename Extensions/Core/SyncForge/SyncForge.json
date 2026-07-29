@@ -9,7 +9,9 @@
     "longDescription":  "SyncForge coordinates trusted update checks and rollout workflows for Celestia Nova, handling source synchronization, gated update stages, and update-state propagation to dependent components.",
     "dependencies":  [
                          "aegiscore",
-                         "signalcore"
+                         "signalcore",
+                         "keyforge",
+                         "httpagent"
                      ],
     "publicIncludePaths":  [
                                "Source"
@@ -17,5 +19,10 @@
     "targetName":  "SyncForge",
     "projectName":  "SyncForge",
     "outputName":  "SyncForge",
-    "linkNovaCore":  true
+    "linkNovaCore":  true,
+    "optional": {
+        "healthEndpoints": ["/api/v1/health/syncforge"],
+        "telemetryStreams": ["syncforge.update.check", "syncforge.update.state"],
+        "serviceCapabilities": ["updates.check", "updates.manifest.verify", "updates.apply.staged"]
+    }
 }

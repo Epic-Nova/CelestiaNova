@@ -1,10 +1,38 @@
 #include "NexusCore.h"
 
 #include "Core/NovaLog.h"
+#include "Core/ProgressTracker.h"
+#include "Core/StatusApiSurface.h"
+#include "Core/ExtensionRegistry.h"
+#include "ExtensionSpecific/ISignalCoreSurfaces.h"
+
+#include <chrono>
+#include <ctime>
+#include <iomanip>
+#include <json.hpp>
+#include <sstream>
+
+namespace {
+
+std::string NowUtcIso8601() {
+    const auto now = std::chrono::system_clock::now();
+    const std::time_t timestamp = std::chrono::system_clock::to_time_t(now);
+    std::tm utc{};
+#if defined(_WIN32)
+    gmtime_s(&utc, &timestamp);
+#else
+    utc = *std::gmtime(&timestamp);
+#endif
+    std::ostringstream stream;
+    stream << std::put_time(&utc, "%Y-%m-%dT%H:%M:%SZ");
+    return stream.str();
+}
+
+} // namespace
 
 NexusCoreModule::NexusCoreModule() {
-    // [Scaffolding] Default authoritative management endpoints for the cluster
-    AuthoritativeEndpoints_ = { "https://mgmt.epicnova.net/api/v1/instances/report" };
+    // Mesh membership endpoints are deployment configuration, never a
+    // hard-coded management host in the binary.
 }
 
 NexusCoreModule::~NexusCoreModule() {}
@@ -21,12 +49,7 @@ void NexusCoreModule::ShutdownModule() {
 }
 
 void NexusCoreModule::ReportToAuthoritativeInstances() {
-    NOVA_LOG("[NexusCore] Gathering instance status snapshot for authoritative reporting...", LogType::Log);
-    
-    for (const auto& endpoint : AuthoritativeEndpoints_) {
-        NOVA_LOG(("[NexusCore] Reporting status to management hub: " + endpoint).c_str(), LogType::Log);
-        // Implement secure HTTP POST with aggregated status JSON
-    }
+    NOVA_LOG("[NexusCore] Status aggregation is available for MeshCore's authenticated membership reporter.", LogType::Log);
 }
 
 int NexusCoreModule::GetStatusRoutingPolicyPriority() const {
@@ -87,22 +110,72 @@ Core::NovaHealthSnapshot NexusCoreModule::GetHealthSnapshot() const {
 }
 
 Core::NovaInstanceConnectivitySnapshot NexusCoreModule::GetInstanceConnectivitySnapshot() const {
+    auto* mesh = dynamic_cast<Core::IInstanceConnectivityProvider*>(
+        Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("meshcore"));
+    if (mesh) return mesh->GetInstanceConnectivitySnapshot();
+
     Core::NovaInstanceConnectivitySnapshot snapshot;
     snapshot.ProviderId = "nexuscore";
-    snapshot.Role = Core::NovaInstanceConnectivityRole::Host;
-    snapshot.ConnectedInstanceCount = 5; // [Scaffolding]
-    snapshot.Summary = "NexusCore: Discovered 5 peer instances via MeshCore.";
+    snapshot.Role = Core::NovaInstanceConnectivityRole::Standalone;
+    snapshot.ConnectedInstanceCount = 0;
+    snapshot.Summary = "No MeshCore connectivity provider is currently available.";
     return snapshot;
 }
 
+std::string NexusCoreModule::BuildDaemonStatusJson() const {
+    nlohmann::json payload;
+    payload["schema"] = "celestianova.daemon-status.v1";
+    payload["generatedAtUtc"] = NowUtcIso8601();
+    payload["extensions"] = nlohmann::json::parse(Core::StatusApiSurface::BuildExtensionsStatusJson(), nullptr, false);
+    if (payload["extensions"].is_discarded()) payload["extensions"] = nlohmann::json::array();
+
+    const auto progress = Core::ProgressTracker::Read();
+    payload["progress"] = {
+        {"operationId", progress.operationId}, {"owner", progress.owner},
+        {"phase", progress.phase}, {"percent", progress.percent}, {"active", progress.active}
+    };
+
+    const auto connectivity = GetInstanceConnectivitySnapshot();
+    payload["connectivity"] = {
+        {"providerId", connectivity.ProviderId},
+        {"connectedInstanceCount", connectivity.ConnectedInstanceCount},
+        {"summary", connectivity.Summary}
+    };
+
+    payload["capabilities"] = {
+        {"healthEndpoints", Core::StatusApiSurface::ListDeclaredHealthEndpoints()},
+        {"contentEndpoints", Core::StatusApiSurface::ListDeclaredContentEndpoints()},
+        {"serviceCapabilities", Core::StatusApiSurface::ListDeclaredServiceCapabilities()},
+        {"telemetryStreams", Core::StatusApiSurface::ListDeclaredTelemetryStreams()}
+    };
+
+    payload["signals"] = nlohmann::json::array();
+    auto* signalBus = dynamic_cast<Core::ISignalNotificationBus*>(
+        Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("signalcore"));
+    if (signalBus) {
+        std::uint64_t latest = 0;
+        for (const auto& envelope : signalBus->ConsumeSignalNotifications(0, 32, latest)) {
+            payload["signals"].push_back({
+                {"sequence", envelope.Sequence},
+                {"channel", envelope.Notification.Channel},
+                {"sourceExtensionId", envelope.Notification.SourceExtensionId},
+                {"title", envelope.Notification.Title},
+                {"message", envelope.Notification.Message},
+                {"createdAtUtc", envelope.Notification.CreatedAtUtc}
+            });
+        }
+        payload["signalsLatestSequence"] = latest;
+    }
+    return payload.dump();
+}
+
 std::vector<std::string> NexusCoreModule::GetRemoteInstances() const {
-    // [Scaffolding] Mock remote instance list
-    return { "remote-host-01", "remote-host-02", "remote-host-03" };
+    return {};
 }
 
 bool NexusCoreModule::DispatchRemoteCommand(const std::string& instanceId, const std::string& command) {
-    NOVA_LOG(("[NexusCore] Dispatching remote command '" + command + "' to instance " + instanceId).c_str(), LogType::Log);
-    return true;
+    NOVA_LOG(("[NexusCore] Remote command dispatch is owned by MeshCore; rejected request for " + instanceId + ".").c_str(), LogType::Warning);
+    return false;
 }
 
 NOVA_DECLARE_MODULE_FACTORY(NOVA_EXPORT, NexusCoreModule)

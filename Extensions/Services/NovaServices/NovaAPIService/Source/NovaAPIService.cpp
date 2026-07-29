@@ -4,6 +4,7 @@
 #include "Core/ExtensionRegistry.h"
 #include "Core/ProgressTracker.h"
 #include "Core/StatusApiSurface.h"
+#include "ExtensionSpecific/IStatusSnapshotProvider.h"
 #include "ExtensionSpecific/IContentForge.h"
 #include "../../../Orchestrators/CoreFrameworkOrchestrator/Source/CoreFrameworkOrchestrator.h"
 #include <cstdlib>
@@ -36,6 +37,9 @@ std::string LocalStatusResponse(const std::string& request, int& status) {
     }
     if (path == "/api/v1/status") {
         status = 200;
+        auto* statusProvider = dynamic_cast<Core::IStatusSnapshotProvider*>(
+            Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("nexuscore"));
+        if (statusProvider) return statusProvider->BuildDaemonStatusJson();
         return Core::StatusApiSurface::BuildExtensionsStatusJson();
     }
     if (path == "/api/v1/progress") {

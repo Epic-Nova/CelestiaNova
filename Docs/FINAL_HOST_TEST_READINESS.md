@@ -63,6 +63,8 @@ has accepted the Auth API project.
 
 ## Required for remote control after the local host test
 
+- Configure Auth API OAuth applications and KeyForge credentials for
+  `celestianova-mesh-daemon` and `celestianova-syncforge`.
 - Implement the MeshCore receiver on NovaAPIService (the outgoing MeshCore
   client already exists).
 - Bind it only through a configured TLS listener and a KeyForge certificate
@@ -73,6 +75,13 @@ has accepted the Auth API project.
   `orchestrator.status`), durable non-secret receipts, status integration and
   audit metadata. Lifecycle/deployment mutations require a separate explicit
   policy/confirmation contract.
+
+## Required before daemon auto-update can be enabled
+
+- Configure the Auth API update manifest and package/signature URLs over HTTPS.
+- Install the root-owned SyncForge package applier. It must verify the manifest
+  SHA-256 and signature, stage the package under a fixed directory, atomically
+  replace the package, and restart the service only after verification.
 
 ## Deliberate non-goals for this test
 

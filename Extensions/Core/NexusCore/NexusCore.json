@@ -46,6 +46,7 @@
       "extensions.list",
       "services.list",
       "status.snapshot",
+      "status.aggregate.daemon",
       "contentpacks.list",
       "status.routing.policy"
     ]

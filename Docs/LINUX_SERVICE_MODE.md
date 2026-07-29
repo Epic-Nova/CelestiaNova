@@ -50,8 +50,12 @@ cat /var/lib/celestianova/status/service-status.json
 
 ## Status API/dashboard integration
 
-NovaAPIService exposes the daemon's read-only local status surface on the
-loopback interface only (default port `9080`; configure
+NexusCore owns normalized daemon-status aggregation: extension lifecycle and
+health, progress, declared capabilities, Mesh connectivity, and a bounded
+SignalCore event feed. PulseCore remains the telemetry owner and SignalCore
+the notification/event owner. NovaAPIService only hosts this data through the
+daemon's read-only local HTTP surface on the loopback interface (default port
+`9080`; configure
 `CELESTIA_STATUS_PORT` through a systemd drop-in):
 
 ```bash
@@ -63,6 +67,12 @@ curl http://127.0.0.1:9080/api/v1/progress
 This is intentionally separate from an application health endpoint such as
 Auth API. It must remain loopback-only until an authenticated gateway proxies
 it for a remote dashboard.
+
+SyncForge is the sole owner of Celestia Nova update checks. It requests the
+Auth API update manifest through KeyForge's protected OAuth broker and exposes
+the redacted check state through the same status surface. Package application
+remains fail-closed until the root-owned, signature-verifying SyncForge updater
+is installed.
 
 The consumer reads `/var/lib/celestianova/status/service-status.json` through the already-authenticated Nova API/status surface. It must report the file modification time as the daemon heartbeat and mark it stale after at least twice `statusIntervalSeconds`. It must not use a missing file as proof that a managed application is healthy.
 

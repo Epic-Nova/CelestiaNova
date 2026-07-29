@@ -5,6 +5,7 @@
 #include "ExtensionSpecific/INovaCapabilityProvider.h"
 #include "ExtensionSpecific/IStatusRoutingPolicyProvider.h"
 #include "ExtensionSpecific/IInstanceConnectivityProvider.h"
+#include "ExtensionSpecific/IStatusSnapshotProvider.h"
 
 #ifdef NexusCore_EXPORTS
 #  define NEXUSCORE_API NOVA_EXPORT
@@ -15,7 +16,8 @@
 class NEXUSCORE_API NexusCoreModule : public IExtensionInterface,
                                       public Core::INovaCapabilityProvider,
                                       public Core::IStatusRoutingPolicyProvider,
-                                      public Core::IInstanceConnectivityProvider {
+                                      public Core::IInstanceConnectivityProvider,
+                                      public Core::IStatusSnapshotProvider {
 public:
     NexusCoreModule();
     ~NexusCoreModule() override;
@@ -31,6 +33,7 @@ public:
                                   const std::string& providerId) const override;
 
     Core::NovaInstanceConnectivitySnapshot GetInstanceConnectivitySnapshot() const override;
+    std::string BuildDaemonStatusJson() const override;
 
     /**
      * [Scaffolding] Reports the gathered instance state (capabilities, content)

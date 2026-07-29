@@ -1,8 +1,16 @@
-# MeshCore control receiver: remaining work
+# MeshCore remote-control receiver: remaining work
 
-MeshCore can already submit allowlisted, Nova-ID-authorized HTTPS control
-commands to another Celestia Nova instance. The remaining counterpart is the
-authenticated receiver hosted by the target instance.
+MeshCore already provides the client-side architecture: ContentForge-owned
+target allowlists, Nova-ID authorization, asynchronous HTTPS dispatch, local
+delegation queue, durable-in-process receipts, CLI/menu controls, progress,
+and connectivity status. The remaining counterpart is the authenticated
+receiver hosted by the target instance.
+
+Cluster membership also remains intentionally blocked until Auth API is
+configured: nodes need registered OAuth applications and protected KeyForge
+credentials before they can heartbeat, discover peers, and elect a primary.
+This is the expected trust bootstrap dependency, not a fallback to anonymous
+mesh traffic.
 
 ## Required receiver slice
 

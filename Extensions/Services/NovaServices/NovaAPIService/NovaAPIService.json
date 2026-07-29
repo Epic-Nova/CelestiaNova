@@ -5,8 +5,8 @@
   "version": "0.1.0",
   "autostart": true,
   "startupDelayMs": 0,
-  "description": "Primary API service exposing platform endpoints and integration surfaces.",
-  "longDescription": "NovaAPIService serves as the main platform API runtime, exposing operational endpoints, content-pack routes, and service-to-service integration flows backed by security and orchestration dependencies.",
+  "description": "Local HTTP transport service exposing platform and daemon status endpoints.",
+  "longDescription": "NovaAPIService hosts the loopback HTTP transport for operational endpoints. NexusCore owns normalized daemon-status aggregation, PulseCore telemetry and SignalCore event data.",
   "dependencies": [
     "coreservice",
     "keyforge",
