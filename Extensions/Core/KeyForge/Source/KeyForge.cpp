@@ -364,7 +364,13 @@ KeyForge::OAuthApplicationLease KeyForgeModule::EnsureOAuthApplication(
     // The bootstrap-protected Auth API endpoint is the primary provisioning
     // bridge. Its one-time secret response stays in memory, is DPAPI-protected
     // immediately, and never reaches a log or UI surface.
-    const auto configPath = std::filesystem::current_path() / "Configs" / "KeyForge" / "LocalVault.json";
+    auto configPath = std::filesystem::current_path() / "Configs" / "KeyForge" / "LocalVault.json";
+    // The desktop binary is commonly launched from Binaries/, whereas the
+    // declarative vault config lives at the application root.
+    if (!std::filesystem::is_regular_file(configPath)) {
+        const auto parentCandidate = std::filesystem::current_path().parent_path() / "Configs" / "KeyForge" / "LocalVault.json";
+        if (std::filesystem::is_regular_file(parentCandidate)) configPath = parentCandidate;
+    }
     std::ifstream configFile(configPath); std::string config((std::istreambuf_iterator<char>(configFile)), {});
     std::string provisioningEndpoint = JsonString(config, "authApiProvisionEndpoint").value_or("");
     if (provisioningEndpoint.empty()) {
@@ -374,9 +380,9 @@ KeyForge::OAuthApplicationLease KeyForgeModule::EnsureOAuthApplication(
             provisioningEndpoint = std::string(localBase) + "/api/v1/oauth/provision-application";
         }
     }
-    const auto bootstrapReference = JsonString(config, "bootstrapSecretReference");
-    if (!provisioningEndpoint.empty() && bootstrapReference && IsKeyForgeReference(*bootstrapReference)) {
-        auto bootstrapSecret = ReadSecret(*bootstrapReference);
+    const auto bootstrapReference = JsonString(config, "bootstrapSecretReference").value_or("keyforge://bootstrap/auth-api/provisioning");
+    if (!provisioningEndpoint.empty() && IsKeyForgeReference(bootstrapReference)) {
+        auto bootstrapSecret = ReadSecret(bootstrapReference);
         // Explicit local-test escape hatch: the provisioning key is supplied
         // only by the developer's process environment, used once, then moved
         // into the current-user DPAPI vault. Production never consults this.
@@ -384,7 +390,7 @@ KeyForge::OAuthApplicationLease KeyForgeModule::EnsureOAuthApplication(
             const auto* localTestMode = std::getenv("CELESTIA_LOCAL_TEST_MODE");
             const auto* localBootstrap = std::getenv("CELESTIA_LOCAL_AUTH_API_PROVISIONING_KEY");
             if (localTestMode && std::string(localTestMode) == "1" && localBootstrap && *localBootstrap) {
-                if (StoreSecret(*bootstrapReference, localBootstrap)) bootstrapSecret = localBootstrap;
+                if (StoreSecret(bootstrapReference, localBootstrap)) bootstrapSecret = localBootstrap;
             }
         }
         if (bootstrapSecret) {
