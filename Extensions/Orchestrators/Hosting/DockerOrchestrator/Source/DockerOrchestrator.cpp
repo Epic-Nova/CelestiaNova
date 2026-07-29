@@ -115,6 +115,8 @@ private:
             ++completedLayers_;
             Emit(std::min(96, 86 + completedLayers_),
                  "Docker image layer completed (" + std::to_string(completedLayers_) + ")");
+        } else if (!pulling && (line.find("building") != std::string::npos || line.find("build") != std::string::npos)) {
+            Emit(98, "Docker is building the local application image");
         } else if (!pulling && (line.find("creating") != std::string::npos || line.find("created") != std::string::npos)) {
             Emit(98, "Docker is creating application containers");
         } else if (!pulling && (line.find("starting") != std::string::npos || line.find("started") != std::string::npos || line.find("running") != std::string::npos)) {
@@ -236,17 +238,18 @@ DockerComposeResult DockerOrchestratorModule::StartComposeWithProgress(const std
     ComposeProgressReporter reporter(std::move(onProgress));
     reporter.BeginPull();
 
-    // Compose JSON progress exposes the byte totals of every image layer.
-    // Pull first, then start with --no-build, so the reported percentages are
-    // determinate and the startup phase cannot trigger another hidden pull.
-    const auto pull = ExecuteComposeCommand(projectPath, composeFile, "--progress json pull",
+    // Compose JSON progress exposes the byte totals of every registry image
+    // layer. Buildable services (such as Laravel Sail's local app image) must
+    // be skipped here: they have no registry reference and are built in the
+    // next phase.
+    const auto pull = ExecuteComposeCommand(projectPath, composeFile, "--progress json pull --ignore-buildable",
         [&reporter](const std::string& line) { reporter.ConsumePullLine(line); });
     if (!pull.succeeded) {
         return pull;
     }
 
     reporter.BeginServices();
-    const auto start = ExecuteComposeCommand(projectPath, composeFile, "up -d --no-build",
+    const auto start = ExecuteComposeCommand(projectPath, composeFile, "up -d --build",
         [&reporter](const std::string& line) { reporter.ConsumeServiceLine(line); });
     if (start.succeeded) {
         reporter.FinishServices();
