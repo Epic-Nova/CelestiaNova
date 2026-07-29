@@ -1,6 +1,5 @@
 [Unit]
-Description=Celestia Nova Docker runtime bootstrap
-ConditionPathExists=!/usr/bin/docker
+Description=Celestia Nova runtime prerequisites bootstrap
 After=network-online.target
 Wants=network-online.target
 
