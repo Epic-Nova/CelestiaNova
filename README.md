@@ -12,6 +12,7 @@ builds, and creates the relocatable production package:
 ```bash
 cd ~/CelestiaNova
 git pull --ff-only
+sudo bash Utilities/linux/install_build_requirements.sh
 bash Utilities/linux/build_and_package_linux.sh
 ```
 
@@ -69,6 +70,12 @@ so stopping the old daemon cannot interrupt its own upgrade.
 
 Windows has two architecture profiles: `Development` and `Shipping`
 (`Shipping` maps to CMake `Release`).
+
+On a clean elevated Windows host, install prerequisites first:
+
+```powershell
+.\Utilities\windows\install_build_requirements.ps1
+```
 
 Generate only:
 
@@ -134,20 +141,8 @@ After a project generation, rebuild one extension directly:
 - Never remove broad project directories for a rebuild; target only the
   relevant `Intermediate` build directory.
 
-## Further documentation
+## Documentation and backlog
 
-The `Docs` directory now contains only active design and operational contracts:
-
-- [Linux service mode](Docs/LINUX_SERVICE_MODE.md): daemon hardening,
-  Docker-bootstrap boundary, and loopback status API.
-- [Hosting test readiness](Docs/FINAL_HOST_TEST_READINESS.md): remaining gates
-  before the clean-VM Auth API test.
-- [KeyForge local vault](Docs/KEYFORGE_LOCAL_VAULT.md) and
-  [remote deployment contract](Docs/KEYFORGE_REMOTE_DEPLOYMENT_CONTRACT.md):
-  credential ownership and secret-materialization boundaries.
-- [MeshCore receiver work](Docs/MESHCORE_CONTROL_RECEIVER_TODO.md): the
-  intentionally pending authenticated remote-control receiver.
-- [SyncForge signed updates](Docs/SYNCFORGE_SIGNED_UPDATES.md): release,
-  signing, Auth API publication, and daemon update runbook.
-- [Script/content migration](Docs/SCRIPT_CONTENT_MIGRATION.md): migration map
-  for legacy scripts into extension-owned content and typed actions.
+- [TODO.md](TODO.md) is the single source of unfinished work.
+- `Docs/` contains only stable operating and architecture contracts: Linux
+  service mode, KeyForge, SyncForge updates, and declarative infrastructure.

@@ -35,13 +35,6 @@ The exported configuration must be declarative, versioned, signed, idempotent, a
 
 Initial plans may assume control of a domain through CoreDNS and a small set of servers. They must still support staged execution: validate, preview graph, bootstrap one node, deploy a service group, verify health, then continue. A failed stage must be resumable without recreating already healthy resources.
 
-## Implementation milestones
-
-1. Define the signed infrastructure-plan schema and versioning policy.
-2. Make CanvasCore render plan topology and individual node state from JSON, with no topology hardcoded in C++.
-3. Extend Unattended Mode from individual actions to a dependency-aware, persisted execution graph.
-4. Complete authenticated Mesh membership, remote command receiving, election, and audit trails.
-5. Add CoreDNS/domain, CDN, frontend, and server-role orchestrator contracts.
-6. Establish plan preview, approval, rollback, resume, and infrastructure receipt semantics.
-
 The current Auth API Linux hosting slice is a foundation for this: it proves package installation, daemon execution, ContentForge acquisition, KeyForge injection, Docker bootstrap, deployment progress, and status reporting. The full declarative company-infrastructure composer remains a substantial next phase.
+
+The implementation backlog is tracked exclusively in [TODO.md](../TODO.md).

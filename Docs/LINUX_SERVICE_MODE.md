@@ -48,6 +48,22 @@ cat /var/lib/celestianova/status/service-status.json
 
 `systemd` sends `SIGTERM` on stop; Celestia Nova emits one final status snapshot and exits cleanly. The unit uses a dedicated non-login account and only permits writes to `/var/lib/celestianova`.
 
+## Explicit local Auth API test routing
+
+Production Auth API calls remain HTTPS-only. A VM test node can explicitly
+route its own daemon and `celest` commands to the co-located Auth API:
+
+```bash
+sudo /usr/local/lib/celestianova/configure-local-auth-api-test
+```
+
+The command writes a root-owned, credential-free `/etc/celestianova/runtime.env`
+with `CELESTIA_AUTH_API_BASE_URL=http://127.0.0.1:8081` and
+`CELESTIA_LOCAL_TEST_MODE=1`. Plain HTTP is accepted only for that exact base
+and only below `/api/v1/`; it is never a production fallback. A Windows client
+must configure its own host-only VM URL with
+`Utilities/windows/configure_local_auth_api_test.ps1`.
+
 ## Status API/dashboard integration
 
 NexusCore owns normalized daemon-status aggregation: extension lifecycle and
