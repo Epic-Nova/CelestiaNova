@@ -2,6 +2,10 @@
 
 Celestia Nova's long-term purpose is to turn a deliberate infrastructure design into a managed, observable company platform. This is an architectural target, not a claim that the current hosting slice is complete.
 
+## Product position
+
+The experience should be as approachable as Laravel Cloud: compose an application environment, approve it, and receive a working managed deployment. Celestia Nova goes materially further: it is not limited to Laravel applications or one managed cloud. It composes and operates a whole company infrastructure across operator-provided servers, domains, CoreDNS, application runtimes, databases, gateways, CDN, observability, downloads, and a long-lived management frontend. Laravel hosting remains one important workload profile inside that larger platform.
+
 ## Desired operator journey
 
 1. In the official Epic Nova site, an operator composes the desired estate: domain, environments, servers, applications, data stores, gateways, CDN, monitoring, and access policy.

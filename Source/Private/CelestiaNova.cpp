@@ -321,6 +321,16 @@ bool WriteServiceStatusSnapshot(const std::filesystem::path& statusFile) {
         output << '\n';
         output.close();
         std::filesystem::rename(temporaryFile, statusFile);
+        std::error_code permissionError;
+        std::filesystem::permissions(statusFile.parent_path(),
+            std::filesystem::perms::owner_all |
+            std::filesystem::perms::group_read | std::filesystem::perms::group_exec |
+            std::filesystem::perms::others_read | std::filesystem::perms::others_exec,
+            std::filesystem::perm_options::replace, permissionError);
+        std::filesystem::permissions(statusFile,
+            std::filesystem::perms::owner_read | std::filesystem::perms::owner_write |
+            std::filesystem::perms::group_read | std::filesystem::perms::others_read,
+            std::filesystem::perm_options::replace, permissionError);
         return true;
     } catch (const std::exception& ex) {
         NOVA_LOG((std::string("Service-mode status write failed: ") + ex.what()).c_str(), LogType::Warning);

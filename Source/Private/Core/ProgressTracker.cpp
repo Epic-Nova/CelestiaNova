@@ -29,12 +29,25 @@ void ProgressTracker::Publish(NovaProgressSnapshot snapshot) {
     try {
         const auto path = StatusPath();
         std::filesystem::create_directories(path.parent_path());
+        // Progress is intentionally redacted and is the cross-surface status
+        // contract. Keep only this status directory/file readable for a local
+        // operator; releases and KeyForge credentials remain private.
+        std::error_code permissionError;
+        std::filesystem::permissions(path.parent_path(),
+            std::filesystem::perms::owner_all |
+            std::filesystem::perms::group_read | std::filesystem::perms::group_exec |
+            std::filesystem::perms::others_read | std::filesystem::perms::others_exec,
+            std::filesystem::perm_options::replace, permissionError);
         const auto temporary = path.string() + ".tmp";
         std::ofstream stream(temporary, std::ios::trunc);
         stream << nlohmann::json{{"operationId", snapshot.operationId}, {"owner", snapshot.owner},
             {"phase", snapshot.phase}, {"percent", snapshot.percent}, {"active", snapshot.active}, {"failed", snapshot.failed}}.dump() << '\n';
         stream.close();
         std::filesystem::rename(temporary, path);
+        std::filesystem::permissions(path,
+            std::filesystem::perms::owner_read | std::filesystem::perms::owner_write |
+            std::filesystem::perms::group_read | std::filesystem::perms::others_read,
+            std::filesystem::perm_options::replace, permissionError);
     } catch (...) {
         // Progress reporting never makes a deployment fail.
     }
