@@ -318,7 +318,12 @@ bool BootstrapAuthApiLocalDatabase(const Core::LocalContentRelease& release,
         outError = "Auth API post-deploy bootstrap requires TerminalAgent.";
         return false;
     }
-    const std::string composePrefix = "docker compose -f \"" + composePath + "\" exec -T laravel.test php artisan ";
+    // `docker compose exec` defaults to root even though Sail's long-running
+    // PHP process is `sail`. Running artisan as root recreates laravel.log as
+    // root:root after the writable-path repair, so the next HTTP request fails
+    // while trying to write its first log entry. Keep all Artisan operations
+    // that touch the bind-mounted application state under Sail's runtime user.
+    const std::string composePrefix = "docker compose -f \"" + composePath + "\" exec -T --user sail laravel.test php artisan ";
     // `up -d` returns once containers have been started, not once MariaDB has
     // accepted connections. A bounded retry makes first-boot deployments
     // reliable while keeping all commands fixed and content-specific.
