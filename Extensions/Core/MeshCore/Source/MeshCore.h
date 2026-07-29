@@ -6,6 +6,8 @@
 #include "ExtensionSpecific/ICanvasRuntimeSurfaceProvider.h"
 #include "ExtensionSpecific/IMenuActionProvider.h"
 #include "ExtensionSpecific/INovaCapabilityProvider.h"
+#include "ExtensionSpecific/IInstanceConnectivityProvider.h"
+#include "ExtensionSpecific/IExtensionCliProvider.h"
 #include "MeshCoreClientDelegate.h"
 
 #include <map>
@@ -25,7 +27,9 @@ class MeshClientDelegateImpl;
 
 class MESHCORE_API MeshCoreModule : public IExtensionInterface,
                                     public Core::IMenuActionProvider,
-                                    public Core::INovaCapabilityProvider {
+                                    public Core::INovaCapabilityProvider,
+                                    public Core::IInstanceConnectivityProvider,
+                                    public Core::IExtensionCliProvider {
 public:
     MeshCoreModule();
     ~MeshCoreModule() override;
@@ -37,6 +41,10 @@ public:
 
     Core::NovaCapabilityDescriptor GetCapabilityDescriptor() const override;
     Core::NovaHealthSnapshot GetHealthSnapshot() const override;
+    Core::NovaInstanceConnectivitySnapshot GetInstanceConnectivitySnapshot() const override;
+    int GetInstanceConnectivityPriority() const override { return 100; }
+    std::vector<Core::FExtensionCliArgDescriptor> GetCliArgDescriptors() const override;
+    void ApplyCliArgs(const std::vector<Core::FExtensionCliArg>& args) override;
 
 private:
     MeshCore::FRemoteCommandReceipt SubmitRemoteCommand(const std::string& targetId, const std::string& commandId);

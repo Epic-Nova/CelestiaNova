@@ -35,6 +35,8 @@ public:
         const KeyForge::DeviceAuthorizationRequest& request) override;
     KeyForge::RuntimeEnvironmentReceipt MaterializeRemoteRuntimeEnvironment(
         const KeyForge::RuntimeEnvironmentRequest& request) override;
+    bool DispatchOAuthAuthenticatedRequest(const KeyForge::OAuthAuthenticatedRequest& request,
+        std::function<void(KeyForge::OAuthAuthenticatedResponse)> onComplete) override;
 
 private:
     bool StoreSecret(const std::string& reference, const std::string& value);

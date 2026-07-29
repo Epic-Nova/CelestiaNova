@@ -4,6 +4,7 @@
 #include "Core/ExtensionRegistry.h"
 #include "Core/FTSTicker.h"
 #include "Core/NovaLog.h"
+#include "Core/ProgressTracker.h"
 #include "ExtensionSpecific/ICanvasRuntimeSurfaceProvider.h"
 #include "ExtensionSpecific/IRemoteControl.h"
 #include "IHTTPAgent.h"
@@ -301,6 +302,38 @@ Core::NovaHealthSnapshot MeshCoreModule::GetHealthSnapshot() const {
     health.status = ClientDelegate_ && ClientDelegate_->IsConnectedToAuthoritativeInstance() ? "healthy" : "degraded";
     health.summary = ClientDelegate_ ? "MeshCore delegation queue is ready; connect a trusted node to submit commands." : "MeshCore delegation queue is not initialized.";
     return health;
+}
+
+Core::NovaInstanceConnectivitySnapshot MeshCoreModule::GetInstanceConnectivitySnapshot() const {
+    Core::NovaInstanceConnectivitySnapshot snapshot;
+    snapshot.ProviderId = "meshcore";
+    snapshot.ConnectedInstanceCount = ClientDelegate_ && ClientDelegate_->IsConnectedToAuthoritativeInstance() ? 1 : 0;
+    snapshot.Role = snapshot.ConnectedInstanceCount > 0 ? Core::NovaInstanceConnectivityRole::Client : Core::NovaInstanceConnectivityRole::Standalone;
+    snapshot.Summary = snapshot.ConnectedInstanceCount > 0 ? "Connected to elected Mesh peer " + ClientDelegate_->GetConnectedAuthoritativeInstanceId() : "No authenticated Mesh membership is currently connected.";
+    return snapshot;
+}
+
+std::vector<Core::FExtensionCliArgDescriptor> MeshCoreModule::GetCliArgDescriptors() const {
+    return {
+        {"mesh-status", "Report MeshCore connectivity and elected peer state.", false},
+        {"mesh-command", "Submit an allowlisted remote command as target-id:command-id.", true},
+    };
+}
+
+void MeshCoreModule::ApplyCliArgs(const std::vector<Core::FExtensionCliArg>& args) {
+    for (const auto& arg : args) {
+        if (arg.Flag == "mesh-status") {
+            const auto status = GetInstanceConnectivitySnapshot();
+            NOVA_LOG(("[MeshCore] " + status.Summary).c_str(), LogType::Log);
+        } else if (arg.Flag == "mesh-command") {
+            const auto separator = arg.Value.find(':');
+            if (separator == std::string::npos) { NOVA_LOG("[MeshCore] --mesh-command requires target-id:command-id.", LogType::Error); continue; }
+            Core::ProgressTracker::Publish({"mesh-command", "meshcore", "Submitting authenticated Mesh command", 30, true});
+            const auto receipt = SubmitRemoteCommand(arg.Value.substr(0, separator), arg.Value.substr(separator + 1));
+            Core::ProgressTracker::Publish({"mesh-command", "meshcore", receipt.message, 100, false});
+            NOVA_LOG(("[MeshCore] " + receipt.message).c_str(), receipt.accepted ? LogType::Log : LogType::Error);
+        }
+    }
 }
 
 NOVA_DECLARE_MODULE_FACTORY(NOVA_EXPORT, MeshCoreModule)

@@ -1,6 +1,8 @@
 ﻿#include "KeyForge.h"
 
 #include "Core/NovaLog.h"
+#include "Core/ExtensionRegistry.h"
+#include "IHTTPAgent.h"
 
 #include <algorithm>
 #include <cctype>
@@ -9,6 +11,7 @@
 #include <optional>
 #include <sstream>
 #include <cstdlib>
+#include <json.hpp>
 
 #ifndef _WIN32
 #include <sys/stat.h>
@@ -261,6 +264,35 @@ std::optional<std::string> KeyForgeModule::ReadSecret(const std::string& referen
     for (std::uint32_t i=0;i<count;++i) { std::uint32_t ks=0,vs=0; if(!ReadU32(input,ks)||ks>65536) return std::nullopt; std::vector<unsigned char> key(ks); if(!input.read(reinterpret_cast<char*>(key.data()),ks)||!ReadU32(input,vs)||vs>1048576) return std::nullopt; std::vector<unsigned char> value(vs); if(!input.read(reinterpret_cast<char*>(value.data()),vs)) return std::nullopt; std::string k,v; if(!Unprotect(key,k)||!Unprotect(value,v)) return std::nullopt; if(k==ReferenceKey(reference)) return v; }
     return std::nullopt;
 #endif
+}
+
+bool KeyForgeModule::DispatchOAuthAuthenticatedRequest(const KeyForge::OAuthAuthenticatedRequest& request,
+    std::function<void(KeyForge::OAuthAuthenticatedResponse)> onComplete) {
+    const auto complete = [callback = std::move(onComplete)](KeyForge::OAuthAuthenticatedResponse response) {
+        if (callback) callback(std::move(response));
+    };
+    if (request.tokenEndpoint.rfind("https://", 0) != 0 || request.resourceUrl.rfind("https://", 0) != 0 || request.application.applicationId.empty()) {
+        complete({false, 0, {}, "rejected: invalid OAuth endpoints or application"}); return false;
+    }
+    const auto lease = EnsureOAuthApplication(request.application);
+    const auto clientId = lease.accepted ? ReadSecret(lease.clientIdReference) : std::nullopt;
+    const auto clientSecret = lease.accepted ? ReadSecret(lease.clientSecretReference) : std::nullopt;
+    auto* http = dynamic_cast<Core::IHTTPAgent*>(Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("httpagent"));
+    if (!clientId || !clientSecret || !http) { complete({false, 0, {}, "rejected: protected OAuth lease or HTTPAgent unavailable"}); return false; }
+    const auto encode = [](const std::string& value) { static constexpr char hex[] = "0123456789ABCDEF"; std::string out; for (const unsigned char c : value) { if (std::isalnum(c) || c == '-' || c == '_' || c == '.') out += static_cast<char>(c); else { out += '%'; out += hex[c >> 4]; out += hex[c & 15]; } } return out; };
+    std::string scopes; for (const auto& scope : request.application.scopes) { if (!scopes.empty()) scopes += ' '; scopes += scope; }
+    Core::SecureHttpsRequest token; token.url = request.tokenEndpoint; token.method = "POST";
+    token.body = "grant_type=client_credentials&client_id=" + encode(*clientId) + "&client_secret=" + encode(*clientSecret) + "&scope=" + encode(scopes);
+    token.headers.emplace("Content-Type", "application/x-www-form-urlencoded"); token.headers.emplace("Accept", "application/json");
+    const auto dispatchId = http->DispatchSecureHttpsAsync(token, [http, request, complete = std::move(complete)](Core::SecureHttpsResponse tokenResponse) mutable {
+        try {
+            const auto accessToken = nlohmann::json::parse(tokenResponse.body).value("access_token", "");
+            if (!tokenResponse.transportSucceeded || tokenResponse.statusCode < 200 || tokenResponse.statusCode >= 300 || accessToken.empty()) { complete({false, tokenResponse.statusCode, {}, "rejected: OAuth token request failed"}); return; }
+            Core::SecureHttpsRequest resource; resource.url = request.resourceUrl; resource.method = request.method; resource.body = request.body; resource.headers = request.headers; resource.headers["Authorization"] = "Bearer " + accessToken; resource.headers.emplace("Accept", "application/json");
+            http->DispatchSecureHttpsAsync(resource, [complete = std::move(complete)](Core::SecureHttpsResponse response) mutable { complete({response.transportSucceeded && response.statusCode >= 200 && response.statusCode < 300, response.statusCode, std::move(response.body), response.transportSucceeded ? "completed" : "transport failed"}); });
+        } catch (...) { complete({false, tokenResponse.statusCode, {}, "rejected: invalid OAuth token response"}); }
+    });
+    return !dispatchId.empty();
 }
 
 KeyForge::OAuthApplicationLease KeyForgeModule::EnsureOAuthApplication(

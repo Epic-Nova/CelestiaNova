@@ -4,6 +4,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <functional>
 
 namespace KeyForge {
 
@@ -65,6 +66,22 @@ struct RuntimeEnvironmentReceipt {
     std::string receipt;
 };
 
+struct OAuthAuthenticatedRequest {
+    OAuthApplicationRequest application;
+    std::string tokenEndpoint;
+    std::string resourceUrl;
+    std::string method = "GET";
+    std::string body;
+    std::map<std::string, std::string> headers;
+};
+
+struct OAuthAuthenticatedResponse {
+    bool accepted = false;
+    unsigned long statusCode = 0;
+    std::string body;
+    std::string receipt;
+};
+
 class IDeploymentSecretBroker {
 public:
     virtual ~IDeploymentSecretBroker() = default;
@@ -83,6 +100,8 @@ public:
     // must not log content or return it in this receipt.
     virtual RuntimeEnvironmentReceipt MaterializeRemoteRuntimeEnvironment(
         const RuntimeEnvironmentRequest& request) = 0;
+    virtual bool DispatchOAuthAuthenticatedRequest(const OAuthAuthenticatedRequest& request,
+        std::function<void(OAuthAuthenticatedResponse)> onComplete) = 0;
 };
 
 } // namespace KeyForge
