@@ -1,0 +1,22 @@
+[Unit]
+Description=Celestia Nova one-shot Auth API deployment
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=celestianova
+Group=celestianova
+WorkingDirectory=/opt/celestianova
+Environment=CELESTIA_RUNTIME_ROOT=/var/lib/celestianova/content
+LoadCredentialEncrypted=keyforge:/etc/celestianova/credentials
+ExecStart=/opt/celestianova/bin/CelestiaNova --run-once --status-file /var/lib/celestianova/status/deploy-status.json --deploy-local-content auth-api --configuration-depth minimal
+TimeoutStartSec=15min
+TimeoutStopSec=30s
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/celestianova /opt/celestianova/Content/Logs
+

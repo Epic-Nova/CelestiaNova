@@ -59,6 +59,11 @@
    - verify `/api/health`, Compose status, and the Celestia status snapshot;
    - stop and restart the release to confirm persistence and status recovery.
 
+The packaged installer also installs `celestianova-auth-api-deploy.service`.
+Start it with `sudo systemctl start celestianova-auth-api-deploy`; it is a
+15-minute, synchronous one-shot transaction and succeeds only after Compose
+has accepted the Auth API project.
+
 ## Required for remote control after the local host test
 
 - Implement the MeshCore receiver on NovaAPIService (the outgoing MeshCore

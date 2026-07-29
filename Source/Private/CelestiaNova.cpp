@@ -41,6 +41,7 @@ void ServiceStopSignalHandler(int) {
 
 struct ServiceModeOptions {
     bool Enabled = false;
+    bool RunOnce = false;
     std::filesystem::path StatusFile = "Runtime/status/service-status.json";
     int StatusIntervalSeconds = 15;
 };
@@ -51,6 +52,8 @@ ServiceModeOptions ParseServiceModeOptions(int argc, const char* argv[]) {
         const std::string argument = argv[index] ? argv[index] : "";
         if (argument == "--service-mode" || argument == "--daemon") {
             options.Enabled = true;
+        } else if (argument == "--run-once") {
+            options.RunOnce = true;
         } else if (argument == "--status-file" && index + 1 < argc) {
             options.StatusFile = argv[++index];
         } else if (argument == "--status-interval-seconds" && index + 1 < argc) {
@@ -211,6 +214,14 @@ int main(int argc, const char* argv[])
 
     // Dispatch CLI arguments to all loaded extensions
     Core::ExtensionRegistry::Instance().ApplyCliArguments(argc, argv);
+
+    // A deployment unit performs all of its work during CLI dispatch.  Unlike
+    // the long-running status daemon it must return a truthful systemd result
+    // once those synchronous orchestration actions have completed.
+    if (serviceModeOptions.RunOnce) {
+        WriteServiceStatusSnapshot(serviceModeOptions.StatusFile);
+        return 0;
+    }
 
     const std::string buildConfiguration = BUILD_CONFIGURATION;
 
