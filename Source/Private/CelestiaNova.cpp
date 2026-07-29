@@ -18,6 +18,7 @@
 #include <thread>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <vector>
 #include <ftxui/dom/elements.hpp>
 #include <ftxui/component/component.hpp>
