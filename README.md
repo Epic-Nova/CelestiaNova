@@ -43,6 +43,11 @@ curl http://127.0.0.1:9080/api/v1/status
 remains available through commands such as `celest deploy auth-api minimal`,
 `celest run --mesh-status`, and `celest complete de`.
 
+For the local Nova ID login/bootstrap sequence after an Auth API deployment,
+see [Docs/KEYFORGE.md](Docs/KEYFORGE.md#local-nova-id-bootstrap-flow). It
+creates the explicit local-only `Admin` identity and shows the Postman device
+approval request; no password is used by that test-only bypass flow.
+
 ## Signed daemon updates
 
 Build the normal Linux package first, then create a signed update artifact:

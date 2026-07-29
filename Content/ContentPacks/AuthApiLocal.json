@@ -30,6 +30,7 @@
     "publicValues": {
       "APP_ENV": "production",
       "APP_DEBUG": "false",
+      "NOVA_LOCAL_LOGIN_BYPASS": "true",
       "APP_PORT": "8081",
       "APP_URL": "http://127.0.0.1:8081",
       "DB_CONNECTION": "mysql",
