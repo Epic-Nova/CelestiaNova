@@ -69,26 +69,30 @@ struct CelestInvocation {
 // executable location before any registry or logging work begins.
 void EnsureRuntimeWorkingDirectory(const char* executablePath) {
     std::error_code error;
-    const auto current = std::filesystem::current_path(error);
-    if (!error && std::filesystem::is_directory(current / "Extensions", error)) return;
-
-    error.clear();
     const auto executable = std::filesystem::absolute(
         executablePath ? std::filesystem::path(executablePath) : std::filesystem::path{}, error);
-    if (error || executable.empty()) return;
-
-    const auto binaryDirectory = executable.parent_path();
-    const std::array<std::filesystem::path, 2> candidates{
-        binaryDirectory,
-        binaryDirectory.parent_path()
-    };
-    for (const auto& candidate : candidates) {
-        error.clear();
-        if (std::filesystem::is_directory(candidate / "Extensions", error)) {
-            std::filesystem::current_path(candidate, error);
-            return;
+    if (!error && !executable.empty()) {
+        const auto binaryDirectory = executable.parent_path();
+        const std::array<std::filesystem::path, 2> candidates{
+            binaryDirectory,
+            binaryDirectory.parent_path()
+        };
+        for (const auto& candidate : candidates) {
+            error.clear();
+            if (std::filesystem::is_directory(candidate / "Extensions", error)) {
+                std::filesystem::current_path(candidate, error);
+                return;
+            }
         }
     }
+
+    // Only use the caller's working directory when the executable path could
+    // not identify a package root. This fallback keeps embedded/test launches
+    // functional without letting a source checkout hijack a direct run of a
+    // packaged GUI binary.
+    error.clear();
+    const auto current = std::filesystem::current_path(error);
+    if (!error && std::filesystem::is_directory(current / "Extensions", error)) return;
 }
 
 CelestInvocation ParseCelestInvocation(int argc, const char* argv[]) {
