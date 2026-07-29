@@ -1,6 +1,7 @@
 {
   "$schema": "../../../CanvasCore/MenuDefinitions/CanvasMenuDefinitions.schema.json",
   "schema": "canvas.menu.definitions.v1",
+  "ownerExtensionId": "aegiscore",
   "menus": [
     {
       "id": "aegis_login",
