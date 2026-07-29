@@ -373,20 +373,20 @@ bool BootstrapAuthApiLocalDatabase(const Core::LocalContentRelease& release,
         return false;
     }
     const std::string composePrefix = "docker compose -f \"" + composePath + "\" exec -T laravel.test php artisan ";
-    const std::vector<std::string> commands = {
-        composePrefix + "migrate --force --database=AuthConnection --path=database/migrations/AuthConnection",
-        composePrefix + "migrate --force --database=RestrictionsConnection --path=database/migrations/RestrictionsConnection",
-        composePrefix + "nova:local-admin --name=Admin"
-    };
-    for (const auto& command : commands) {
-        CoreTerminal::TerminalCommandRequest request;
-        request.workingDirectory = release.releasePath;
-        request.command = command;
-        const auto result = terminal->ExecuteCommandSync(request);
-        if (result.exitCode != 0) {
-            outError = "Auth API post-deploy database bootstrap failed.";
-            return false;
-        }
+    // `up -d` returns once containers have been started, not once MariaDB has
+    // accepted connections. A bounded retry makes first-boot deployments
+    // reliable while keeping all commands fixed and content-specific.
+    CoreTerminal::TerminalCommandRequest request;
+    request.workingDirectory = release.releasePath;
+    request.command = "attempt=1; while [ $attempt -le 30 ]; do " +
+        composePrefix + "migrate --force --database=AuthConnection --path=database/migrations/AuthConnection && " +
+        composePrefix + "migrate --force --database=RestrictionsConnection --path=database/migrations/RestrictionsConnection && " +
+        composePrefix + "nova:local-admin --name=Admin && exit 0; " +
+        "attempt=$((attempt + 1)); sleep 2; done; exit 1";
+    const auto result = terminal->ExecuteCommandSync(request);
+    if (result.exitCode != 0) {
+        outError = "Auth API post-deploy database bootstrap did not become ready in time.";
+        return false;
     }
     return true;
 }
