@@ -356,6 +356,41 @@ bool RepairSailWritablePaths(const Core::LocalContentRelease& release,
     return true;
 }
 
+bool BootstrapAuthApiLocalDatabase(const Core::LocalContentRelease& release,
+                                   const Core::LocalContentDescriptor& content,
+                                   std::string& outError) {
+    if (content.id != "auth-api" || content.primaryService != "laravel.test") {
+        return true;
+    }
+    const auto composePath = (std::filesystem::path(release.releasePath) / content.composeFile).string();
+    if (!IsSafeLocalComposePath(composePath)) {
+        outError = "Auth API post-deploy bootstrap rejected an unsafe Compose path.";
+        return false;
+    }
+    auto* terminal = ResolveTerminalAgent();
+    if (!terminal) {
+        outError = "Auth API post-deploy bootstrap requires TerminalAgent.";
+        return false;
+    }
+    const std::string composePrefix = "docker compose -f \"" + composePath + "\" exec -T laravel.test php artisan ";
+    const std::vector<std::string> commands = {
+        composePrefix + "migrate --force --database=AuthConnection --path=database/migrations/AuthConnection",
+        composePrefix + "migrate --force --database=RestrictionsConnection --path=database/migrations/RestrictionsConnection",
+        composePrefix + "nova:local-admin --name=Admin"
+    };
+    for (const auto& command : commands) {
+        CoreTerminal::TerminalCommandRequest request;
+        request.workingDirectory = release.releasePath;
+        request.command = command;
+        const auto result = terminal->ExecuteCommandSync(request);
+        if (result.exitCode != 0) {
+            outError = "Auth API post-deploy database bootstrap failed.";
+            return false;
+        }
+    }
+    return true;
+}
+
 std::string DescribeContent(const Core::LocalContentDescriptor& content) {
     std::ostringstream message;
     message << "Content '" << content.id << "' is valid for Laravel local hosting"
@@ -974,6 +1009,12 @@ LaravelDeploymentResult LaravelOrchestratorModule::DeployLocalContent(const std:
         Core::ProgressTracker::Publish({"deploy:" + contentId, "laravelorchestrator", "Repairing Laravel writable paths", 99, true});
         if (!RepairSailWritablePaths(release, content, deployment.message)) {
             deployment.succeeded = false;
+        }
+        if (deployment.succeeded) {
+            Core::ProgressTracker::Publish({"deploy:" + contentId, "laravelorchestrator", "Migrating and bootstrapping local Auth API", 99, true});
+            if (!BootstrapAuthApiLocalDatabase(release, content, deployment.message)) {
+                deployment.succeeded = false;
+            }
         }
     }
     deployment.message = deployment.succeeded

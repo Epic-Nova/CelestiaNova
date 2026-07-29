@@ -54,9 +54,10 @@ integration slice only and must not be copied to a public deployment profile.
 It avoids needing an external credential-provider service while preserving the
 normal Nova ID device-authorization sequence.
 
-After ContentForge has deployed the Auth API, create the idempotent local
-administrator once. `celest status` lists the active release path; replace
-`<release>` below with that path:
+The local Auth API pack runs its two database migration groups and creates the
+idempotent local administrator automatically after Compose starts. If an
+operator needs to repair an existing legacy release manually, `celest status`
+lists the active release path; replace `<release>` below with that path:
 
 ```bash
 sudo docker compose -f <release>/compose.yaml exec -T laravel.test \
