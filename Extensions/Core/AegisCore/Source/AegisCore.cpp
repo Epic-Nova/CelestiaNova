@@ -4,6 +4,7 @@
 #include "Core/NovaLog.h"
 #include "ExtensionSpecific/IContentForge.h"
 #include "../../KeyForge/Source/KeyForgeDeploymentContracts.h"
+#include "../../Agents/HTTPAgent/Source/IHTTPAgent.h"
 #include <fstream>
 #include <json.hpp>
 
@@ -80,10 +81,33 @@ bool AegisCoreModule::BeginLogin(const std::string& contentId, std::string& outU
         return false;
     }
     std::lock_guard<std::mutex> lock(SessionMutex_);
-    Session_ = {contentId, response.deviceCode, contract.applicationId, contract.authorizationServerId,
+    Session_ = {contentId, response.deviceCode, response.userCode, contract.applicationId, contract.authorizationServerId,
                 response.verificationUri, "Waiting for approval", ""};
     outUrl = response.verificationUri;
     return true;
+}
+
+bool AegisCoreModule::ApproveLocalBypass(const Core::CanvasMenuActionRequest& request, std::string& outError) {
+    const auto read = [&request](const char* key) { const auto found = request.ContextValues.find(key); return found == request.ContextValues.end() ? std::string{} : found->second; };
+    const auto baseUrl = read("authApiUrl");
+    const auto identity = read("authenticatableIdentifier");
+    const auto provider = read("providerIdentifier").empty() ? "com.epicnova.authentication_provider.local-bypass" : read("providerIdentifier");
+    if (!IsSafeHttpUrl(baseUrl) || identity.empty() || identity.find_first_not_of("0123456789abcdefABCDEF-") != std::string::npos ||
+        provider.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-") != std::string::npos) {
+        outError = "The local provider form contains an unsafe or incomplete value."; return false;
+    }
+    SessionState session; { std::lock_guard<std::mutex> lock(SessionMutex_); session = Session_; }
+    if (session.deviceCode.empty() || session.userCode.empty()) { outError = "Start an Aegis device login before approving it."; return false; }
+    auto* http = dynamic_cast<Core::IHTTPAgent*>(Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("httpagent"));
+    if (!http) { outError = "HTTPAgent is unavailable."; return false; }
+    try {
+        const auto login = http->Post(baseUrl + "/api/v1/authentication/login", nlohmann::json{{"authenticatable_identifier", identity}, {"provider_identifier", provider}, {"input", "local"}, {"login_bypass", true}}.dump(), {{"Content-Type", "application/json"}, {"Accept", "application/json"}});
+        const auto token = nlohmann::json::parse(login).value("access_token", "");
+        if (token.empty() || token.find_first_of(" \t\r\n\"'`|&;<>") != std::string::npos) { outError = "The local provider did not return a valid access token."; return false; }
+        const auto approval = http->Post(baseUrl + "/api/v1/oauth/device-approve", nlohmann::json{{"user_code", session.userCode}}.dump(), {{"Content-Type", "application/json"}, {"Accept", "application/json"}, {"Authorization", "Bearer " + token}});
+        if (nlohmann::json::parse(approval).value("status", "") != "approved") { outError = "The authentication provider did not approve the device session."; return false; }
+        return true;
+    } catch (...) { outError = "The local authentication provider returned invalid data."; return false; }
 }
 
 bool AegisCoreModule::PollLogin(const std::string& contentId, std::string& outStatus, std::string& outError) {
@@ -133,6 +157,9 @@ Core::CanvasMenuActionResult AegisCoreModule::OnMenuAction(const Core::CanvasMen
     } else if (request.ActionId == "aegis.login.poll") {
         std::string status; result.Success = PollLogin(contentId, status, result.ErrorMessage);
         if (result.Success) result.ConfigUpdates["aegisStatus"] = "Aegis: " + status;
+    } else if (request.ActionId == "aegis.login.approve-local") {
+        result.Success = ApproveLocalBypass(request, result.ErrorMessage);
+        if (result.Success) result.ConfigUpdates["aegisStatus"] = "Aegis: Device approved — refresh login";
     } else if (request.ActionId == "aegis.login.logout") {
         Logout(contentId); result.ConfigUpdates["aegisStatus"] = "Aegis: Login Required"; result.ConfigUpdates["aegisLoginUrl"] = "Approval URL: Not generated";
     }

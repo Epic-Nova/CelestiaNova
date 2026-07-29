@@ -33,6 +33,7 @@ private:
     struct SessionState {
         std::string contentId;
         std::string deviceCode;
+        std::string userCode;
         std::string applicationId;
         std::string authorizationServerId;
         std::string verificationUri;
@@ -42,6 +43,7 @@ private:
 
     bool BeginLogin(const std::string& contentId, std::string& outUrl, std::string& outError);
     bool PollLogin(const std::string& contentId, std::string& outStatus, std::string& outError);
+    bool ApproveLocalBypass(const Core::CanvasMenuActionRequest& request, std::string& outError);
     void Logout(const std::string& contentId);
     mutable std::mutex SessionMutex_;
     SessionState Session_;

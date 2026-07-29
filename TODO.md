@@ -13,8 +13,9 @@ only operating and architecture contracts; completed work is recorded in Git.
 
 ## Immediate local-auth and two-node test
 
-- [x] Implement KeyForge device-token polling and retain the resulting short-lived Nova ID session in memory only.
-- [ ] Validate the browser device-login flow against the local Auth API from the Windows client.
+- [x] Implement KeyForge device-token polling and retain the resulting short-lived AegisCore session in memory only.
+- [x] Provide the explicit local-bypass device-login/approve/poll flow in the AegisCore Canvas menu.
+- [ ] Validate a non-bypass provider with dynamically declared provider parameters against the local Auth API from the Windows client.
 - [ ] Implement a Linux secure HTTP transport for OAuth-bearing HTTPAgent requests; local routing does not replace this requirement.
 - [ ] Run a two-node development MeshCore test: Windows client plus VM daemon, development CA, explicit allowlist and read-only commands.
 - [ ] Persist bounded, redacted Mesh command receipts and expose them in the daemon status surface.
@@ -22,7 +23,7 @@ only operating and architecture contracts; completed work is recorded in Git.
 ## MeshCore remote-control receiver
 
 - [ ] Host an authenticated TLS receiver on NovaAPIService or the selected gateway; never publish an unauthenticated daemon control port.
-- [ ] Verify Nova ID bearer signature, expiry, audience and `mesh.remote.execute` capability.
+- [ ] Verify Aegis bearer signature, expiry, audience and `mesh.remote.execute` capability.
 - [ ] Enforce target-local allowlisted typed actions; never dispatch arbitrary paths or shell commands.
 - [ ] Return durable receipt IDs, publish state transitions, and add audit records without tokens or secrets.
 - [ ] Start only with `node.status` and `orchestrator.status`; add a separate confirmation/policy contract before remote mutations.

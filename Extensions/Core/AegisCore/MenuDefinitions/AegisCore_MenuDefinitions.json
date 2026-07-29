@@ -14,9 +14,13 @@
           "description": "AegisCore owns the temporary OAuth device session. Tokens stay in memory and are never rendered.",
           "fields": [
             { "id": "contentId", "label": "Content Pack", "description": "Content pack whose declared authentication provider should be used.", "type": "TextInput", "defaultValue": "auth-api", "valueStorage": "RuntimeOnly" },
+            { "id": "authApiUrl", "label": "Authentication API URL", "description": "Local test endpoint used only for the explicit bypass test flow.", "type": "TextInput", "defaultValue": "http://127.0.0.1:8081", "valueStorage": "RuntimeOnly" },
+            { "id": "authenticatableIdentifier", "label": "Local Admin Identifier", "description": "UUID emitted by nova:local-admin during deployment.", "type": "TextInput", "defaultValue": "", "valueStorage": "RuntimeOnly" },
+            { "id": "providerIdentifier", "label": "Authentication Provider", "description": "Provider identifier. The local test flow defaults to local-bypass.", "type": "TextInput", "defaultValue": "com.epicnova.authentication_provider.local-bypass", "valueStorage": "RuntimeOnly" },
             { "id": "aegisStatus", "label": "Session Status", "description": "Refresh after approving the device code through the authentication provider.", "type": "TextLabel", "defaultValue": "Aegis: Login Required", "valueStorage": "RuntimeOnly" },
             { "id": "aegisLoginUrl", "label": "Approval URL", "description": "Open this link to complete the provider login and approve the current device session.", "type": "TextLabel", "defaultValue": "Approval URL: Not generated", "valueStorage": "RuntimeOnly" },
             { "id": "begin", "label": "Start Login", "description": "Creates a short-lived device authorization request.", "type": "ActionButton", "defaultValue": "aegis.login.begin", "valueStorage": "RuntimeOnly" },
+            { "id": "approveLocal", "label": "Approve Local Bypass", "description": "Logs in to the local test provider and approves the pending device code. It never stores or renders the bearer token.", "type": "ActionButton", "defaultValue": "aegis.login.approve-local", "valueStorage": "RuntimeOnly" },
             { "id": "poll", "label": "Refresh Login", "description": "Checks whether the provider approved the device request.", "type": "ActionButton", "defaultValue": "aegis.login.poll", "valueStorage": "RuntimeOnly" },
             { "id": "logout", "label": "Forget Local Session", "description": "Removes the memory-only Aegis session from this process.", "type": "ActionButton", "defaultValue": "aegis.login.logout", "valueStorage": "RuntimeOnly" }
           ]
