@@ -440,6 +440,13 @@ int main(int argc, const char* argv[])
 
     NOVA_LOG("Starting Celestia Nova", LogType::Log);
 
+    // Progress is a persisted daemon snapshot and needs neither plug-in
+    // discovery nor startup.  Enter its live FTXUI monitor immediately.
+    if (celestInvocation.command == CelestCommand::Progress) {
+        RenderCelestProgress();
+        return 0;
+    }
+
     // CanvasCore is expected to autostart and provide app menu definitions.
     Core::InitializeExtensions("Extensions");
     {
@@ -469,10 +476,6 @@ int main(int argc, const char* argv[])
     }
     if (celestInvocation.command == CelestCommand::Status) {
         std::cout << Core::StatusApiSurface::BuildExtensionsStatusJson() << '\n';
-        return 0;
-    }
-    if (celestInvocation.command == CelestCommand::Progress) {
-        RenderCelestProgress();
         return 0;
     }
     if (celestInvocation.command == CelestCommand::Complete) {

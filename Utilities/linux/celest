@@ -2,6 +2,9 @@
 # Installed command surface for the Celestia Nova daemon.
 set -euo pipefail
 export CELESTIA_LOG_DIRECTORY="${CELESTIA_LOG_DIRECTORY:-${XDG_STATE_HOME:-$HOME/.local/state}/celestianova/logs}"
+# Read the daemon-owned progress/state snapshots by default.  This is only a
+# location hint; credentials remain private to the systemd service.
+export CELESTIA_RUNTIME_ROOT="${CELESTIA_RUNTIME_ROOT:-/var/lib/celestianova/content}"
 
 # Auth API deployment needs systemd's private KeyForge credentials. Queue the
 # dedicated unit instead of running a synchronous child from the shell.
