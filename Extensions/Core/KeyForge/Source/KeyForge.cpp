@@ -413,12 +413,19 @@ KeyForge::DeviceAuthorizationResponse KeyForgeModule::BeginDeviceAuthorization(
 #ifdef _WIN32
     const auto configPath = std::filesystem::current_path() / "Configs" / "KeyForge" / "LocalVault.json";
     std::ifstream configFile(configPath); std::string config((std::istreambuf_iterator<char>(configFile)), {});
-    const auto endpoint = JsonString(config, "deviceAuthorizationEndpoint");
-    if (clientId && clientSecret && endpoint) {
+    std::string endpoint = JsonString(config, "deviceAuthorizationEndpoint").value_or("");
+    if (endpoint.empty()) {
+        const auto* localTestMode = std::getenv("CELESTIA_LOCAL_TEST_MODE");
+        const auto* localBase = std::getenv("CELESTIA_AUTH_API_BASE_URL");
+        if (localTestMode && std::string(localTestMode) == "1" && localBase && *localBase) {
+            endpoint = std::string(localBase) + "/api/v1/oauth/device-authorize";
+        }
+    }
+    if (clientId && clientSecret && !endpoint.empty()) {
         std::string scope; for (const auto& value : request.scopes) { if (!scope.empty()) scope += "%20"; scope += value; }
         // Auth API credentials are sent exclusively in the TLS request body.
         const auto body = "client_id=" + *clientId + "&client_secret=" + *clientSecret + "&scope=" + scope;
-        const auto payload = HttpPostForm(*endpoint, body, "");
+        const auto payload = HttpPostForm(endpoint, body, "");
         if (payload) { const auto uri=JsonString(*payload,"verification_uri"); const auto code=JsonString(*payload,"user_code"); const auto device=JsonString(*payload,"device_code"); if (uri&&code&&device) { response.accepted=true; response.verificationUri=*uri; response.userCode=*code; response.deviceCode=*device; response.expiresInSeconds=600; response.pollingIntervalSeconds=5; response.receipt="accepted: device authorization started"; return response; } }
     }
 #endif
