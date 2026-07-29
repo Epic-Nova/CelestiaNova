@@ -3,7 +3,7 @@
 #include "Core/ExtensionRegistry.h"
 #include "Core/NovaLog.h"
 #include "ExtensionSpecific/IContentForge.h"
-#include "KeyForgeDeploymentContracts.h"
+#include "../../KeyForge/Source/KeyForgeDeploymentContracts.h"
 #include <fstream>
 #include <json.hpp>
 
