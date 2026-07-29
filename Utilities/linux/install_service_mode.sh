@@ -73,6 +73,29 @@ if [[ -f "${CELEST_CLI_SOURCE}" ]]; then
     install -D -o root -g root -m 0755 "${CELEST_CLI_SOURCE}" /usr/local/bin/celest
 fi
 install -d -o root -g root -m 0700 /etc/celestianova/credentials
+
+# The bundled local Auth API content pack is intended to start on a completely
+# fresh host. Its two bootstrap secrets are daemon-local and must exist before
+# KeyForge materializes the release environment. Generate them once as
+# encrypted systemd credentials; existing operator-provisioned credentials are
+# never replaced.
+ensure_keyforge_credential() {
+    local source_name="$1"
+    local value="$2"
+    local destination="/etc/celestianova/credentials/${source_name}"
+    if [[ -f "${destination}" ]]; then
+        return 0
+    fi
+    printf %s "${value}" | systemd-creds encrypt --name="keyforge_${source_name}" - "${destination}"
+    chmod 0600 "${destination}"
+}
+
+app_key="base64:$(head -c 32 /dev/urandom | base64 -w 0)"
+database_password="$(od -An -N32 -tx1 /dev/urandom | tr -d ' \n')"
+ensure_keyforge_credential "content-auth-api-app-key" "${app_key}"
+ensure_keyforge_credential "content-auth-api-db-password" "${database_password}"
+unset app_key database_password
+
 printf 'celestianova ALL=(root) NOPASSWD: /usr/local/lib/celestianova/bootstrap-docker\n' \
     >/etc/sudoers.d/celestianova-docker-bootstrap
 chmod 0440 /etc/sudoers.d/celestianova-docker-bootstrap
