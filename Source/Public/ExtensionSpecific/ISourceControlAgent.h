@@ -44,6 +44,11 @@ public:
     virtual std::string GetCurrentBranch(const std::string& repoPath) = 0;
 
     /**
+     * Returns the checked-out immutable commit revision when available.
+     */
+    virtual std::string GetCurrentRevision(const std::string& repoPath) = 0;
+
+    /**
      * Checks if a directory is a valid repository for this source control provider.
      */
     virtual bool IsRepo(const std::string& path) = 0;

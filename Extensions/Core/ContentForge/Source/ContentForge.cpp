@@ -57,6 +57,15 @@ bool IsSafeGitRef(const std::string& value) {
     return true;
 }
 
+bool IsImmutableGitRevision(const std::string& value) {
+    if (value.size() != 40) {
+        return false;
+    }
+    return std::all_of(value.begin(), value.end(), [](const unsigned char character) {
+        return std::isxdigit(character) != 0;
+    });
+}
+
 std::string GetHttpsHost(const std::string& url) {
     if (!IsSafeHttpsUrl(url)) {
         return {};
@@ -358,6 +367,10 @@ std::string ContentForgeModule::GetCurrentBranch(const std::string& repoPath) {
     return "main";
 }
 
+std::string ContentForgeModule::GetCurrentRevision(const std::string& repoPath) {
+    return {};
+}
+
 bool ContentForgeModule::IsRepo(const std::string& path) {
     return true;
 }
@@ -442,6 +455,23 @@ bool ContentForgeModule::AcquireGitContent(Core::LocalContentDescriptor& descrip
         return false;
     }
     if (std::filesystem::is_directory(cacheRoot / ".git", error)) {
+        // A branch (for example `master`) is a moving declaration, whereas a
+        // full commit SHA is already immutable.  Refresh only the former so a
+        // new ContentForge release observes the declared branch head without
+        // silently changing a pinned content source.
+        if (!IsImmutableGitRevision(descriptor.sourceRef)) {
+            auto& registry = Core::ExtensionRegistry::Instance();
+            if (!registry.LoadExtensionById("gitagent")) {
+                NOVA_LOG("[ContentForge] GitAgent could not be loaded to refresh a Git content cache.", LogType::Warning);
+                return false;
+            }
+            auto* git = dynamic_cast<Core::ISourceControlAgent*>(
+                registry.GetLoadedExtensionInstance("gitagent"));
+            if (!git || !git->Pull(cacheRoot.string())) {
+                NOVA_LOG(("[ContentForge] Git content cache refresh failed for '" + descriptor.id + "'.").c_str(), LogType::Warning);
+                return false;
+            }
+        }
         descriptor.path = cacheRoot.string();
         return true;
     }
@@ -601,6 +631,15 @@ bool ContentForgeModule::MaterializeLocalContent(const std::string& contentId,
         return false;
     }
 
+    std::string sourceCommit;
+    if (content.sourceType == "git") {
+        auto* git = dynamic_cast<Core::ISourceControlAgent*>(
+            Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("gitagent"));
+        if (git) {
+            sourceCommit = git->GetCurrentRevision(sourcePath.string());
+        }
+    }
+
     const auto metadataPath = releasePath / ".contentforge-release.json";
     std::ofstream metadataFile(metadataPath, std::ios::trunc);
     if (!metadataFile) {
@@ -615,6 +654,7 @@ bool ContentForgeModule::MaterializeLocalContent(const std::string& contentId,
         { "sourceType", content.sourceType },
         { "sourceRepository", content.sourceRepository },
         { "sourceRef", content.sourceRef },
+        { "sourceCommit", sourceCommit },
         { "sourcePath", sourcePath.string() },
         { "manifestPath", content.manifestPath },
         { "materialization", "copy-only" },

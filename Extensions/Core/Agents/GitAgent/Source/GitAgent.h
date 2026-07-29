@@ -41,6 +41,7 @@ public:
     bool Pull(const std::string& repoPath) override;
     bool Push(const std::string& repoPath, const std::string& message) override;
     std::string GetCurrentBranch(const std::string& repoPath) override;
+    std::string GetCurrentRevision(const std::string& repoPath) override;
     bool IsRepo(const std::string& path) override;
 
     // IMenuActionProvider Implementation

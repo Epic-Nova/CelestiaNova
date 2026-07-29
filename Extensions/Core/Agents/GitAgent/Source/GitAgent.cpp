@@ -256,6 +256,16 @@ std::string GitAgentModule::GetCurrentBranch(const std::string& repoPath) {
     return "";
 }
 
+std::string GitAgentModule::GetCurrentRevision(const std::string& repoPath) {
+    std::string output;
+    if (RunCommand("-C " + repoPath + " rev-parse HEAD", output)) {
+        output.erase(std::remove(output.begin(), output.end(), '\n'), output.end());
+        output.erase(std::remove(output.begin(), output.end(), '\r'), output.end());
+        return output;
+    }
+    return "";
+}
+
 bool GitAgentModule::IsRepo(const std::string& path) {
     std::string output;
     return RunCommand("-C " + path + " rev-parse --is-inside-work-tree", output);
