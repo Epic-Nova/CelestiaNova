@@ -361,23 +361,30 @@ KeyForge::OAuthApplicationLease KeyForgeModule::EnsureOAuthApplication(
     }
 
 #ifdef _WIN32
-    // Auth API deliberately exposes registration as an operator command, not
-    // a public HTTP endpoint.  The configurable local command is therefore
-    // the only provisioning bridge. It contains no secret and its one-time
-    // secret output is captured in memory, parsed, DPAPI-protected, then
-    // discarded without reaching a log or UI surface.
+    // The bootstrap-protected Auth API endpoint is the primary provisioning
+    // bridge. Its one-time secret response stays in memory, is DPAPI-protected
+    // immediately, and never reaches a log or UI surface.
     const auto configPath = std::filesystem::current_path() / "Configs" / "KeyForge" / "LocalVault.json";
     std::ifstream configFile(configPath); std::string config((std::istreambuf_iterator<char>(configFile)), {});
-    const auto provisioningEndpoint = JsonString(config, "authApiProvisionEndpoint");
+    std::string provisioningEndpoint = JsonString(config, "authApiProvisionEndpoint").value_or("");
+    if (provisioningEndpoint.empty()) {
+        const auto* localTestMode = std::getenv("CELESTIA_LOCAL_TEST_MODE");
+        const auto* localBase = std::getenv("CELESTIA_AUTH_API_BASE_URL");
+        if (localTestMode && std::string(localTestMode) == "1" && localBase && *localBase) {
+            provisioningEndpoint = std::string(localBase) + "/api/v1/oauth/provision-application";
+        }
+    }
     const auto bootstrapReference = JsonString(config, "bootstrapSecretReference");
-    if (provisioningEndpoint && bootstrapReference && IsKeyForgeReference(*bootstrapReference)) {
+    if (!provisioningEndpoint.empty() && bootstrapReference && IsKeyForgeReference(*bootstrapReference)) {
         const auto bootstrapSecret = ReadSecret(*bootstrapReference);
         if (bootstrapSecret) {
-            std::string scopes; for (const auto& scope : request.scopes) { if (!scopes.empty()) scopes += "%20"; scopes += scope; }
-            std::string audiences; for (const auto& audience : request.audiences) { if (!audiences.empty()) audiences += "%20"; audiences += audience; }
-            const auto body = "application_id=" + request.applicationId + "&scopes=" + scopes + "&audiences=" + audiences +
+            const auto encode = [](const std::string& value) { return EncodeFormValue(value); };
+            std::string body = "application_identity=" + encode(request.applicationId) +
+                "&display_name=" + encode(request.applicationId) +
                 "&access_token_ttl_seconds=" + std::to_string(request.accessTokenTtlSeconds);
-            const auto payload = HttpPostForm(*provisioningEndpoint, body, "X-KeyForge-Bootstrap: " + *bootstrapSecret + "\r\n");
+            for (const auto& scope : request.scopes) body += "&scopes[]=" + encode(scope);
+            for (const auto& audience : request.audiences) body += "&audiences[]=" + encode(audience);
+            const auto payload = HttpPostForm(provisioningEndpoint, body, "X-KeyForge-Bootstrap: " + *bootstrapSecret + "\r\n");
             if (payload) {
                 const auto clientId = OutputValue(*payload, "client_id");
                 const auto clientSecret = OutputValue(*payload, "client_secret");
@@ -415,13 +422,20 @@ KeyForge::DeviceAuthorizationResponse KeyForgeModule::BeginDeviceAuthorization(
     const KeyForge::DeviceAuthorizationRequest& request) {
     KeyForge::DeviceAuthorizationResponse response;
     if (!IsSafeIdentifier(request.requestorExtensionId) || !IsSafeIdentifier(request.applicationId) ||
-        !IsSafeIdentifier(request.authorizationServerId) || request.scopes.empty() ||
-        !std::all_of(request.scopes.begin(), request.scopes.end(), IsSafeOAuthMetadata)) {
+        !IsSafeIdentifier(request.authorizationServerId) || request.scopes.empty() || request.audiences.empty() ||
+        !std::all_of(request.scopes.begin(), request.scopes.end(), IsSafeOAuthMetadata) ||
+        !std::all_of(request.audiences.begin(), request.audiences.end(), IsSafeOAuthMetadata)) {
         response.receipt = "rejected: invalid device authorization request";
         NOVA_LOG("[KeyForge] Rejected invalid device authorization request.", LogType::Warning);
         return response;
     }
 
+    const auto lease = EnsureOAuthApplication({request.requestorExtensionId, request.applicationId,
+                                               request.authorizationServerId, request.scopes, request.audiences, 600});
+    if (!lease.accepted) {
+        response.receipt = "rejected: OAuth application lease unavailable";
+        return response;
+    }
     const auto root = "keyforge://oauth/" + request.authorizationServerId + "/" + request.applicationId;
     const auto clientId = ReadSecret(root + "/client-id");
     const auto clientSecret = ReadSecret(root + "/client-secret");

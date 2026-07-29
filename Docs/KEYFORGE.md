@@ -13,6 +13,12 @@ contains only non-secret endpoint wiring. Seed a bootstrap secret through
 `Utilities/Initialize-KeyForgeBootstrap.ps1`; it is never printed or written
 to JSON.
 
+When `CELESTIA_LOCAL_TEST_MODE=1` is configured, KeyForge derives the local
+`/api/v1/oauth/provision-application`, `device-authorize` and `device-token`
+endpoints from `CELESTIA_AUTH_API_BASE_URL`. The operator still supplies the
+Auth API provisioning bootstrap secret interactively; endpoint convenience
+does not weaken secret ownership.
+
 On Linux service mode, administrators place encrypted systemd credentials in
 `/etc/celestianova/credentials`. systemd exposes decrypted values only in the
 daemon's private credential directory. KeyForge reads references from there

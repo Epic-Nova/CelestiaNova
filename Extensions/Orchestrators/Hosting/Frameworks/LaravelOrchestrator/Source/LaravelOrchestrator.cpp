@@ -206,6 +206,7 @@ struct NovaIdLoginContract {
     std::string authorizationServerId;
     std::string applicationId;
     std::vector<std::string> scopes;
+    std::vector<std::string> audiences;
 };
 
 bool IsSafeHttpUrl(const std::string& value) {
@@ -243,6 +244,7 @@ bool LoadNovaIdLoginContract(const Core::LocalContentDescriptor& content,
         outContract.authorizationServerId = application.value("authorizationServerId", "");
         outContract.applicationId = application.value("applicationId", "");
         outContract.scopes = application.value("scopes", std::vector<std::string>{});
+        outContract.audiences = application.value("audiences", std::vector<std::string>{});
         if (outContract.authorizationServerId.empty() || outContract.applicationId.empty() || outContract.scopes.empty()) {
             outError = "The OAuth device-flow application declaration is incomplete.";
             return false;
@@ -393,6 +395,7 @@ bool LaravelOrchestratorModule::BeginNovaIdLogin(const Core::LocalContentDescrip
     request.applicationId = contract.applicationId;
     request.authorizationServerId = contract.authorizationServerId;
     request.scopes = contract.scopes;
+    request.audiences = contract.audiences;
     const auto response = keyForge->BeginDeviceAuthorization(request);
     if (!response.accepted) {
         outError = "Nova ID device login unavailable: " + response.receipt;

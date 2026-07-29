@@ -34,6 +34,7 @@ struct DeviceAuthorizationRequest {
     std::string applicationId;
     std::string authorizationServerId;
     std::vector<std::string> scopes;
+    std::vector<std::string> audiences;
 };
 
 struct DeviceAuthorizationResponse {
