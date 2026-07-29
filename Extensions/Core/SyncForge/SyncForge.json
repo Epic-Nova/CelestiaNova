@@ -11,7 +11,8 @@
                          "aegiscore",
                          "signalcore",
                          "keyforge",
-                         "httpagent"
+                         "httpagent",
+                         "terminalagent"
                      ],
     "publicIncludePaths":  [
                                "Source"
@@ -23,6 +24,6 @@
     "optional": {
         "healthEndpoints": ["/api/v1/health/syncforge"],
         "telemetryStreams": ["syncforge.update.check", "syncforge.update.state"],
-        "serviceCapabilities": ["updates.check", "updates.manifest.verify", "updates.apply.staged"]
+        "serviceCapabilities": ["updates.check", "updates.manifest.verify", "updates.apply.signed"]
     }
 }

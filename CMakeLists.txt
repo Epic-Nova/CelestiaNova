@@ -420,6 +420,18 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/Utilities/linux/initialize_keyforge_credential.sh
 	install(PROGRAMS "${CMAKE_SOURCE_DIR}/Utilities/linux/initialize_keyforge_credential.sh"
 		DESTINATION "share/celestianova/bootstrap")
 endif()
+if(EXISTS "${CMAKE_SOURCE_DIR}/Utilities/linux/apply_syncforge_update.sh")
+	install(PROGRAMS "${CMAKE_SOURCE_DIR}/Utilities/linux/apply_syncforge_update.sh"
+		DESTINATION "share/celestianova/bootstrap")
+endif()
+if(EXISTS "${CMAKE_SOURCE_DIR}/Utilities/linux/queue_syncforge_update.sh")
+	install(PROGRAMS "${CMAKE_SOURCE_DIR}/Utilities/linux/queue_syncforge_update.sh"
+		DESTINATION "share/celestianova/bootstrap")
+endif()
+if(EXISTS "${CMAKE_SOURCE_DIR}/Utilities/linux/install_service_mode.sh")
+	install(PROGRAMS "${CMAKE_SOURCE_DIR}/Utilities/linux/install_service_mode.sh"
+		DESTINATION "share/celestianova/bootstrap")
+endif()
 if(EXISTS "${CMAKE_SOURCE_DIR}/Utilities/linux/celest")
 	install(PROGRAMS "${CMAKE_SOURCE_DIR}/Utilities/linux/celest"
 		DESTINATION "share/celestianova/bin")

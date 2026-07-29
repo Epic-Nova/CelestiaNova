@@ -56,6 +56,12 @@ if [[ -f "${DEPLOY_UNIT_SOURCE}" ]]; then
     install -D -m 0644 "${DEPLOY_UNIT_SOURCE}" /etc/systemd/system/celestianova-auth-api-deploy.service
 fi
 install -D -o root -g root -m 0755 "${DOCKER_BOOTSTRAP_SOURCE}" /usr/local/lib/celestianova/bootstrap-docker
+if [[ -f "${PACKAGE_ROOT}/share/celestianova/bootstrap/apply_syncforge_update.sh" ]]; then
+    install -D -o root -g root -m 0755 "${PACKAGE_ROOT}/share/celestianova/bootstrap/apply_syncforge_update.sh" /usr/local/lib/celestianova/apply-syncforge-update
+fi
+if [[ -f "${PACKAGE_ROOT}/share/celestianova/bootstrap/queue_syncforge_update.sh" ]]; then
+    install -D -o root -g root -m 0755 "${PACKAGE_ROOT}/share/celestianova/bootstrap/queue_syncforge_update.sh" /usr/local/lib/celestianova/queue-syncforge-update
+fi
 if [[ -f "${CELEST_CLI_SOURCE}" ]]; then
     install -D -o root -g root -m 0755 "${CELEST_CLI_SOURCE}" /usr/local/bin/celest
 fi
@@ -64,6 +70,10 @@ printf 'celestianova ALL=(root) NOPASSWD: /usr/local/lib/celestianova/bootstrap-
     >/etc/sudoers.d/celestianova-docker-bootstrap
 chmod 0440 /etc/sudoers.d/celestianova-docker-bootstrap
 visudo -cf /etc/sudoers.d/celestianova-docker-bootstrap >/dev/null
+printf 'celestianova ALL=(root) NOPASSWD: /usr/local/lib/celestianova/queue-syncforge-update *\n' \
+    >/etc/sudoers.d/celestianova-syncforge-update
+chmod 0440 /etc/sudoers.d/celestianova-syncforge-update
+visudo -cf /etc/sudoers.d/celestianova-syncforge-update >/dev/null
 
 systemctl daemon-reload
 systemctl enable --now celestianova

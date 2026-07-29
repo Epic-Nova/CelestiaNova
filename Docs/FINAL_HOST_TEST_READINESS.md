@@ -82,6 +82,9 @@ has accepted the Auth API project.
 - Install the root-owned SyncForge package applier. It must verify the manifest
   SHA-256 and signature, stage the package under a fixed directory, atomically
   replace the package, and restart the service only after verification.
+  The packaged `apply-syncforge-update` and `queue-syncforge-update` helpers
+  now provide this flow; production only needs the generated public update key
+  at `/etc/celestianova/update-trust.pem` plus HTTPS artifact URLs in Auth API.
 
 ## Deliberate non-goals for this test
 

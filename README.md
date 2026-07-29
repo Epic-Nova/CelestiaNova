@@ -42,6 +42,29 @@ curl http://127.0.0.1:9080/api/v1/status
 remains available through commands such as `celest deploy auth-api minimal`,
 `celest run --mesh-status`, and `celest complete de`.
 
+## Signed daemon updates
+
+Build the normal Linux package first, then create a signed update artifact:
+
+```bash
+bash Utilities/linux/package_update_artifact.sh \
+  Artifacts/CelestiaNova-Linux-Production 1.0.0 /secure/path/update-signing-key.pem
+```
+
+It produces a ZIP, detached signature, SHA-256 manifest template, and public
+key in `Artifacts/Updates`. Host the ZIP and `.sig` over HTTPS, put their URLs
+and the SHA-256 into Auth API's update manifest, and install the generated
+public key once on each daemon:
+
+```bash
+sudo install -D -m 0644 Artifacts/Updates/celestianova-1.0.0-linux.public.pem \
+  /etc/celestianova/update-trust.pem
+```
+
+`celest run --check-updates` then asks SyncForge to fetch the protected
+manifest. A verified package is applied in a separate root-owned systemd unit,
+so stopping the old daemon cannot interrupt its own upgrade.
+
 ## Windows
 
 Windows has two architecture profiles: `Development` and `Shipping`

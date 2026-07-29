@@ -6,6 +6,7 @@
 #include "ExtensionSpecific/ISignalCoreSurfaces.h"
 #include "KeyForgeDeploymentContracts.h"
 #include "KeyForge.h"
+#include "TerminalAgent.h"
 
 #include <algorithm>
 #include <cctype>
@@ -25,6 +26,15 @@ bool IsHttpsUrl(const std::string& value) {
 
 bool IsSha256(const std::string& value) {
     return value.size() == 64 && std::all_of(value.begin(), value.end(), [](unsigned char c) { return std::isxdigit(c) != 0; });
+}
+
+std::string ShellQuote(const std::string& value) {
+    std::string quoted{"'"};
+    for (const char character : value) {
+        if (character == '\'') quoted += "'\\''";
+        else quoted += character;
+    }
+    return quoted + "'";
 }
 
 void PublishUpdateSignal(const std::string& title, const std::string& message, Core::SignalNotificationSeverity severity) {
@@ -89,8 +99,34 @@ bool SyncForgeModule::PerformSecureUpdateCheck(const std::string& targetVersion)
             const std::string signatureUrl = manifest.value("signature_url", "");
             if (response.accepted && !version.empty() && IsHttpsUrl(packageUrl) && IsHttpsUrl(signatureUrl) && IsSha256(sha256)) {
                 state = "manifest_verified";
-                summary = "Verified update manifest for version " + version + "; staged installation requires the root-owned SyncForge updater.";
+                summary = "Verified update manifest for version " + version + "; queueing root-owned installer.";
                 severity = Core::SignalNotificationSeverity::Info;
+                auto* terminal = dynamic_cast<CoreTerminal::ITerminalAgent*>(
+                    Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("terminalagent"));
+                if (terminal) {
+                    CoreTerminal::TerminalCommandRequest apply;
+                    apply.command = "sudo -n /usr/local/lib/celestianova/queue-syncforge-update --package-url " + ShellQuote(packageUrl) +
+                        " --signature-url " + ShellQuote(signatureUrl) + " --sha256 " + ShellQuote(sha256);
+                    const auto jobId = terminal->ExecuteCommandAsync(apply, [](CoreTerminal::TerminalCommandResult result) {
+                        const bool succeeded = result.exitCode == 0;
+                        const std::string message = succeeded ? "Signed SyncForge update installed; daemon restart requested." : "SyncForge update applier failed; previous service installation remains active.";
+                        Core::ProgressTracker::Publish({"update-apply", "syncforge", message, 100, false});
+                        PublishUpdateSignal(succeeded ? "SYNCFORGE_UPDATE_APPLIED" : "SYNCFORGE_UPDATE_FAILED", message,
+                            succeeded ? Core::SignalNotificationSeverity::Success : Core::SignalNotificationSeverity::Error);
+                    });
+                    if (!jobId.empty()) {
+                        state = "apply_queued";
+                        summary = "Verified update manifest for version " + version + "; root-owned applier job " + jobId + " is running.";
+                    } else {
+                        state = "blocked";
+                        summary = "Verified manifest but could not queue the root-owned update applier.";
+                        severity = Core::SignalNotificationSeverity::Error;
+                    }
+                } else {
+                    state = "blocked";
+                    summary = "Verified manifest but TerminalAgent is unavailable for the root-owned update applier.";
+                    severity = Core::SignalNotificationSeverity::Error;
+                }
             } else {
                 summary = "Rejected invalid or unsigned update manifest.";
             }
@@ -103,7 +139,7 @@ bool SyncForgeModule::PerformSecureUpdateCheck(const std::string& targetVersion)
             LastUpdateSummary_ = summary;
         }
         Core::ProgressTracker::Publish({"update-check", "syncforge", summary, 100, false});
-        PublishUpdateSignal(state == "manifest_verified" ? "SYNCFORGE_MANIFEST_VERIFIED" : "SYNCFORGE_UPDATE_REJECTED", summary, severity);
+        PublishUpdateSignal(state == "apply_queued" ? "SYNCFORGE_UPDATE_QUEUED" : "SYNCFORGE_UPDATE_REJECTED", summary, severity);
     });
     if (!queued) {
         std::lock_guard<std::mutex> lock(UpdateMutex_);
@@ -129,7 +165,7 @@ Core::NovaCapabilityDescriptor SyncForgeModule::GetCapabilityDescriptor() const 
     descriptor.providerId = "syncforge";
     descriptor.displayName = "SyncForge";
     descriptor.description = "Authenticated update manifest verification and staged rollout coordination.";
-    descriptor.serviceCapabilities = {"updates.check", "updates.manifest.verify", "updates.apply.staged"};
+    descriptor.serviceCapabilities = {"updates.check", "updates.manifest.verify", "updates.apply.signed"};
     descriptor.healthEndpoints = {"/api/v1/health/syncforge"};
     descriptor.telemetryStreams = {"syncforge.update.check", "syncforge.update.state"};
     return descriptor;
