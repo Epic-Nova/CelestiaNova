@@ -112,7 +112,15 @@ bool MaterializeLaravelRelease(Core::IContentForge* contentForge,
     const bool needsSailRuntime = std::filesystem::is_regular_file(
         std::filesystem::path(outRelease.releasePath) / "compose.yaml");
     if (!composer || !composer->IsComposerInstalled() ||
-        !composer->InstallDependenciesSync(outRelease.releasePath, !needsSailRuntime)) {
+        // Sail's build context lives in require-dev, but the host Composer is
+        // only a bootstrap resolver. The app itself executes inside Sail's
+        // declared PHP image (8.5 for Auth API), so do not execute Laravel
+        // scripts or reject the release solely because the bare host has an
+        // older PHP CLI than the container runtime.
+        !composer->InstallDependenciesSync(outRelease.releasePath,
+                                           !needsSailRuntime,
+                                           needsSailRuntime,
+                                           needsSailRuntime)) {
         outError = "ComposerAgent could not materialize production dependencies for the release.";
         return false;
     }

@@ -162,14 +162,27 @@ bool ComposerAgentModule::InstallDependencies(const std::string& workingDir, boo
     return true;
 }
 
-bool ComposerAgentModule::InstallDependenciesSync(const std::string& workingDir, bool noDev) const {
+bool ComposerAgentModule::InstallDependenciesSync(const std::string& workingDir,
+                                                  bool noDev,
+                                                  bool ignorePhpPlatformRequirement,
+                                                  bool noScripts) const {
     auto terminalAgent = dynamic_cast<CoreTerminal::ITerminalAgent*>(Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("terminalagent"));
     if (!terminalAgent || !std::filesystem::is_regular_file(std::filesystem::path(workingDir) / "composer.lock")) return false;
     CoreTerminal::TerminalCommandRequest req;
     req.workingDirectory = workingDir;
-    req.command = GetComposerCommand(workingDir) + " install --no-interaction --prefer-dist --optimize-autoloader" + (noDev ? " --no-dev" : "");
+    req.command = GetComposerCommand(workingDir) + " install --no-interaction --prefer-dist --optimize-autoloader" +
+        (noDev ? " --no-dev" : "") +
+        (ignorePhpPlatformRequirement ? " --ignore-platform-req=php" : "") +
+        (noScripts ? " --no-scripts" : "");
     const auto result = terminalAgent->ExecuteCommandSync(req);
     const_cast<ComposerAgentModule*>(this)->AddLog("Composer synchronous install finished with code " + std::to_string(result.exitCode));
+    if (result.exitCode != 0) {
+        const auto output = result.stdErr.empty() ? result.stdOut : result.stdErr;
+        if (!output.empty()) {
+            const_cast<ComposerAgentModule*>(this)->AddLog("Composer synchronous install error: " + output);
+            NOVA_LOG(("[ComposerAgent] Composer install failed: " + output).c_str(), LogType::Error);
+        }
+    }
     return result.exitCode == 0;
 }
 
