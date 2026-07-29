@@ -19,6 +19,13 @@ endpoints from `CELESTIA_AUTH_API_BASE_URL`. The operator still supplies the
 Auth API provisioning bootstrap secret interactively; endpoint convenience
 does not weaken secret ownership.
 
+For the local Auth API hosting pack, initialize
+`keyforge://content/auth-api/oauth-provisioning-key` on the daemon with the
+same value that is seeded as the Windows DPAPI bootstrap reference
+`keyforge://bootstrap/auth-api/provisioning`. This value is required only for
+KeyForge's idempotent OAuth application provisioning endpoint and is never
+placed in Content or an `.env` default.
+
 On Linux service mode, administrators place encrypted systemd credentials in
 `/etc/celestianova/credentials`. systemd exposes decrypted values only in the
 daemon's private credential directory. KeyForge reads references from there
