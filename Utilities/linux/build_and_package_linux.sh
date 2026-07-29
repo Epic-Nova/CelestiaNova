@@ -52,4 +52,38 @@ cmake --build "${BUILD_DIR}" --parallel "${BUILD_JOBS}"
 rm -rf "${PACKAGE_ROOT}"
 cmake --install "${BUILD_DIR}" --prefix "${PACKAGE_ROOT}"
 
+# Extension descriptors deliberately use stable library names such as
+# `libCanvasCore.so`. Production builds add a configuration suffix so both
+# Development and Production artifacts can live next to each other. Create a
+# stable alias in the packaged runtime for every declared Linux extension
+# library. This keeps descriptor resolution deterministic and avoids relying
+# on fuzzy filename matching at daemon startup.
+missing_descriptor_libraries=0
+while IFS= read -r descriptor; do
+    declared_library="$(sed -nE 's/^[[:space:]]*"file"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' "${descriptor}" | head -n 1)"
+    case "${declared_library}" in
+        *.so) ;;
+        *) continue ;;
+    esac
+
+    if find "${PACKAGE_ROOT}/Binaries" -type f -name "${declared_library}" -print -quit | grep -q .; then
+        continue
+    fi
+
+    library_stem="${declared_library%.so}"
+    built_library="$(find "${PACKAGE_ROOT}/Binaries" -type f -name "${library_stem}-${BUILD_CONFIGURATION}.so" -print -quit)"
+    if [[ -z "${built_library}" ]]; then
+        printf 'Missing packaged extension library %s declared by %s\n' "${declared_library}" "${descriptor}" >&2
+        missing_descriptor_libraries=1
+        continue
+    fi
+
+    ln -sfn "$(basename "${built_library}")" "$(dirname "${built_library}")/${declared_library}"
+done < <(find "${PACKAGE_ROOT}/Extensions" -type f -name '*.json' -print)
+
+if [[ "${missing_descriptor_libraries}" -ne 0 ]]; then
+    printf 'Celestia Nova package validation failed: one or more extension libraries are missing.\n' >&2
+    exit 1
+fi
+
 printf 'Celestia Nova Linux package created at: %s\n' "${PACKAGE_ROOT}"
