@@ -32,8 +32,6 @@
       "APP_DEBUG": "false",
       "APP_PORT": "8081",
       "APP_URL": "http://127.0.0.1:8081",
-      "WWWUSER": "1000",
-      "WWWGROUP": "1000",
       "DB_CONNECTION": "mysql",
       "DB_HOST": "mariadb",
       "DB_PORT": "3306",
@@ -49,7 +47,14 @@
       "RABBITMQ_USER": "guest",
       "RABBITMQ_PASSWORD": "guest",
       "RABBITMQ_VHOST": "/",
-      "RABBITMQ_QUEUE": "default"
+      "RABBITMQ_QUEUE": "default",
+      "VITE_PORT": "15173",
+      "FORWARD_REDIS_PORT": "16379",
+      "FORWARD_RABBITMQ_PORT": "15672",
+      "FORWARD_RABBITMQ_DASHBOARD_PORT": "25672",
+      "FORWARD_DB_PORT": "13306",
+      "PUSHER_PORT": "16001",
+      "PUSHER_METRICS_PORT": "19601"
     },
     "secretReferences": {
       "APP_KEY": "keyforge://content/auth-api/app-key",

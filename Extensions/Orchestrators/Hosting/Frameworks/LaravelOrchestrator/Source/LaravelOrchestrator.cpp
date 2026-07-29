@@ -15,6 +15,10 @@
 #include <sstream>
 #include <cstdlib>
 
+#if defined(__linux__)
+#include <unistd.h>
+#endif
+
 namespace {
 
 void PublishDeploymentToast(const std::string& title,
@@ -159,6 +163,13 @@ bool InjectRuntimeEnvironment(const Core::LocalContentDescriptor& content,
         request.remoteReleasePath = release.releasePath;
         request.publicValues = environment.value("publicValues", std::map<std::string, std::string>{});
         request.secretReferences = environment.value("secretReferences", std::map<std::string, std::string>{});
+#if defined(__linux__)
+        // Sail's bind-mounted PHP worker must use the same host identity as
+        // the systemd service that owns the materialized release.  Do not
+        // persist a machine-specific UID/GID in the declarative content pack.
+        request.publicValues["WWWUSER"] = std::to_string(getuid());
+        request.publicValues["WWWGROUP"] = std::to_string(getgid());
+#endif
         const auto receipt = keyForge->MaterializeRemoteRuntimeEnvironment(request);
         if (!receipt.accepted || !std::filesystem::is_regular_file(std::filesystem::path(release.releasePath) / ".env")) {
             outError = "KeyForge runtime environment materialization failed: " + receipt.receipt; return false;
