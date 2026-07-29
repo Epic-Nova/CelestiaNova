@@ -13,6 +13,7 @@
 #include <fstream>
 #include <json.hpp>
 #include <sstream>
+#include <cstdlib>
 
 namespace {
 
@@ -100,7 +101,13 @@ bool MaterializeLaravelRelease(Core::IContentForge* contentForge,
     outReleaseContent.path = outRelease.releasePath;
     auto* composer = dynamic_cast<Core::IComposerAgent*>(
         Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("composeragent"));
-    if (!composer || !composer->IsComposerInstalled() || !composer->InstallDependenciesSync(outRelease.releasePath, true)) {
+    // Sail Compose projects build from vendor/laravel/sail/runtimes.  Sail is
+    // conventionally declared in require-dev, so excluding dev packages would
+    // make the declared Compose build context disappear.
+    const bool needsSailRuntime = std::filesystem::is_regular_file(
+        std::filesystem::path(outRelease.releasePath) / "compose.yaml");
+    if (!composer || !composer->IsComposerInstalled() ||
+        !composer->InstallDependenciesSync(outRelease.releasePath, !needsSailRuntime)) {
         outError = "ComposerAgent could not materialize production dependencies for the release.";
         return false;
     }
@@ -162,6 +169,15 @@ bool InjectRuntimeEnvironment(const Core::LocalContentDescriptor& content,
 
 bool IsConfigurationDepth(const std::string& value) {
     return value == "auto" || value == "minimal" || value == "normal" || value == "advanced";
+}
+
+std::filesystem::path RuntimeStateRoot() {
+    // The installed package tree is read-only.  Service-mode state must live
+    // beside the ContentForge runtime releases, not below /opt/celestianova.
+    if (const auto* runtimeRoot = std::getenv("CELESTIA_RUNTIME_ROOT"); runtimeRoot && *runtimeRoot) {
+        return std::filesystem::path(runtimeRoot) / ".runtime";
+    }
+    return std::filesystem::current_path() / "Content" / ".runtime";
 }
 
 struct RemoteTarget {
@@ -304,7 +320,7 @@ std::string LaravelOrchestratorModule::GetActiveReleasePath(const std::string& c
         }
     }
 
-    const auto statePath = std::filesystem::current_path() / "Content" / ".runtime" / contentId / "active-release.json";
+    const auto statePath = RuntimeStateRoot() / contentId / "active-release.json";
     std::ifstream stateFile(statePath);
     if (!stateFile) {
         return "";
@@ -327,7 +343,7 @@ void LaravelOrchestratorModule::RememberActiveRelease(const std::string& content
         std::lock_guard<std::mutex> lock(ActiveReleaseMutex_);
         ActiveReleasePaths_[contentId] = releasePath;
     }
-    const auto stateDirectory = std::filesystem::current_path() / "Content" / ".runtime" / contentId;
+    const auto stateDirectory = RuntimeStateRoot() / contentId;
     std::error_code error;
     std::filesystem::create_directories(stateDirectory, error);
     if (error) {
@@ -789,11 +805,14 @@ LaravelDeploymentResult LaravelOrchestratorModule::DeployLocalContent(const std:
     if (!InjectRuntimeEnvironment(content, release, deployment.message)) {
         return deployment;
     }
-    const auto job = docker->SubmitComposeJob(DockerComposeJobAction::Start, release.releasePath, content.composeFile);
-    deployment.succeeded = job.state == DockerComposeJobState::Accepted || job.state == DockerComposeJobState::Running;
+    // CLI/service deployments are one-shot transactions.  Waiting here is
+    // essential: an async child would be terminated when the one-shot
+    // process exits, leaving no Compose project running.
+    const auto start = docker->StartCompose(release.releasePath, content.composeFile);
+    deployment.succeeded = start.succeeded;
     deployment.message = deployment.succeeded
-        ? "Local Laravel release '" + release.releaseId + "' validated and queued as " + job.id + " (configuration depth: " + profile + ")."
-        : job.output;
+        ? "Local Laravel release '" + release.releaseId + "' started successfully (configuration depth: " + profile + ")."
+        : start.output;
     if (deployment.succeeded) {
         RememberActiveRelease(content.id, release.releasePath);
     }

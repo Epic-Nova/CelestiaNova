@@ -17,7 +17,7 @@
 
 ## Required before the final local Auth API hosting test
 
-1. Push and install commit `b42e4e6` on the VM.
+1. Install the current package on the VM.
 2. Create systemd-encrypted KeyForge credentials for the Auth API values
    declared in `Content/ContentPacks/AuthApiLocal.json`:
 
@@ -32,7 +32,9 @@
    ```
 
    Repeat for the database password, then restart `celestianova.service`.
-   Credential values are encrypted at rest by `systemd-creds` and exposed only
+   The helper deliberately writes files without a `.cred` suffix: systemd's
+   `keyforge:` destination prefix then maps them to the credential names that
+   KeyForge reads. Credential values are encrypted at rest and exposed only
    in the service's private credential directory at runtime.
 
 3. Complete LaravelOrchestrator's local production path:
