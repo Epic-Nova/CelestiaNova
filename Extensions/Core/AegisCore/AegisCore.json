@@ -2,13 +2,14 @@
     "id":  "aegiscore",
     "name":  "AegisCore",
     "file":  "libAegisCore.so",
-    "version":  "0.1.0",
+    "version":  "0.2.0",
     "autostart":  true,
     "startupDelayMs":  0,
     "description":  "Identity and trust core for login, 2FA, and extension trust bootstrap.",
     "longDescription":  "AegisCore provides the trusted identity backbone for Celestia Nova, including account authentication flows, second-factor guardrails, secure token handling, and extension trust bootstrap for protected actions.",
     "dependencies":  [
-
+                         "contentforge",
+                         "keyforge"
                      ],
     "publicIncludePaths":  [
                                "Source"
@@ -16,5 +17,9 @@
     "targetName":  "AegisCore",
     "projectName":  "AegisCore",
     "outputName":  "AegisCore",
-    "linkNovaCore":  true
+    "linkNovaCore":  true,
+    "canvas": {
+        "supportsDirectInvocation": true,
+        "menuDefinitions": { "schema": "canvas.menu.definitions.v1", "file": "MenuDefinitions/AegisCore_MenuDefinitions.json", "ownerExtensionId": "aegiscore" }
+    }
 }

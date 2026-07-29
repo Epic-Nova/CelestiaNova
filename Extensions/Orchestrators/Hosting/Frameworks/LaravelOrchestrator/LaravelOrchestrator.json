@@ -15,6 +15,7 @@
                          "nodeagent",
                          "contentforge",
                          "keyforge",
+                         "aegiscore",
                          "coreorchestrator"
                      ],
     "publicIncludePaths":  [

@@ -26,8 +26,7 @@ struct LaravelDeploymentResult {
 
 class LARAVELORCHESTRATOR_API LaravelOrchestratorModule : public IExtensionInterface,
                                                            public Core::IExtensionCliProvider,
-                                                           public Core::IMenuActionProvider,
-                                                           public Core::INovaIdSessionCapabilityProvider {
+                                                           public Core::IMenuActionProvider {
 public:
     LaravelOrchestratorModule();
     ~LaravelOrchestratorModule() override;
@@ -39,34 +38,13 @@ public:
     Core::CanvasMenuActionResult OnMenuAction(const Core::CanvasMenuActionRequest& request) override;
     LaravelDeploymentResult DeployLocalContent(const std::string& contentId, const std::string& profile = "auto");
     LaravelDeploymentResult DeployRemoteContent(const std::string& contentId, const std::string& profile = "auto");
-    bool HasAuthenticatedNovaIdSession() const override;
-    bool AuthorizeRemoteControlDispatch(const std::string& targetId,
-                                        const std::string& requiredCapability,
-                                        Core::RemoteControlDispatchAuthorization& outAuthorization,
-                                        std::string& outError) const override;
-
 private:
-    struct NovaIdSessionState {
-        std::string sessionId;
-        std::string loginUrl;
-        std::string status = "Login Required";
-        // Access tokens are deliberately memory-only. They must never enter
-        // Canvas config updates, menu values, content manifests, or logs.
-        std::string accessToken;
-    };
-
     std::string GetActiveReleasePath(const std::string& contentId) const;
     void RememberActiveRelease(const std::string& contentId, const std::string& releasePath);
-    bool BeginNovaIdLogin(const Core::LocalContentDescriptor& content, std::string& outLoginUrl, std::string& outError);
-    bool PollNovaIdLogin(const Core::LocalContentDescriptor& content, std::string& outStatus, std::string& outError);
-    void LogoutNovaId(const std::string& contentId);
-    bool HasNovaIdToken(const std::string& contentId) const;
     bool QueueLocalDeployment(const std::string& contentId, const std::string& profile, std::string& outJobId);
 
     mutable std::mutex ActiveReleaseMutex_;
     std::map<std::string, std::string> ActiveReleasePaths_;
-    mutable std::mutex NovaIdSessionMutex_;
-    std::map<std::string, NovaIdSessionState> NovaIdSessions_;
     std::mutex DeploymentMutex_;
     std::set<std::string> QueuedDeployments_;
     std::vector<std::thread> DeploymentWorkers_;

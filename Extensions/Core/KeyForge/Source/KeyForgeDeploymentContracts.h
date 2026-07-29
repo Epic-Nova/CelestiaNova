@@ -28,7 +28,7 @@ struct OAuthApplicationLease {
 };
 
 // The device code is an opaque, short-lived correlation value. It may be kept
-// in the active NovaID session only; it must never be persisted or logged.
+// in the active AegisCore session only; it must never be persisted or logged.
 struct DeviceAuthorizationRequest {
     std::string requestorExtensionId;
     std::string applicationId;

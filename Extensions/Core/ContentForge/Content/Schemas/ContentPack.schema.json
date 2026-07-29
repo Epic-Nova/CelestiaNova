@@ -97,11 +97,11 @@
       "properties": {
         "targetManifest": { "type": "string", "minLength": 1 },
         "releaseRoot": { "type": "string", "pattern": "^/[A-Za-z0-9._/-]+$" },
-        "requiresNovaId": { "type": "boolean", "default": false }
+        "requiresAegisSession": { "type": "boolean", "default": false }
       },
       "additionalProperties": false
     },
-    "novaIdDeviceFlow": {
+    "aegisLogin": {
       "description": "Non-secret OAuth device flow declaration. KeyForge must provision and materialize the client credentials; Celestia retains an issued access token in memory only.",
       "type": "object",
       "required": ["deviceAuthorizeUrl", "deviceApproveUrl", "deviceTokenUrl", "oauthApplication"],

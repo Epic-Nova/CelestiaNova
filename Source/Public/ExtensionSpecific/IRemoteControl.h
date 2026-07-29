@@ -11,10 +11,13 @@ struct RemoteControlDispatchAuthorization {
     std::string authorizationHeader;
 };
 
-class INovaIdSessionCapabilityProvider {
+// AegisCore is the sole owner of interactive identities and their ephemeral
+// bearer sessions.  Consumers may ask it to authorize one typed operation;
+// they must never receive a token through Canvas or configuration.
+class IAegisSessionCapabilityProvider {
 public:
-    virtual ~INovaIdSessionCapabilityProvider() = default;
-    virtual bool HasAuthenticatedNovaIdSession() const = 0;
+    virtual ~IAegisSessionCapabilityProvider() = default;
+    virtual bool HasAuthenticatedAegisSession() const = 0;
     virtual bool AuthorizeRemoteControlDispatch(const std::string& targetId,
                                                 const std::string& requiredCapability,
                                                 RemoteControlDispatchAuthorization& outAuthorization,

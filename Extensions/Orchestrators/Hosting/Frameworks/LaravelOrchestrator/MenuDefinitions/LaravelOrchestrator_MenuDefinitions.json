@@ -104,8 +104,8 @@
             },
             {
               "id": "openRemoteAndLogin",
-              "label": "Nova ID & Remote VM",
-              "description": "Open the separate Nova ID and remote lifecycle page.",
+              "label": "Aegis Login & Remote VM",
+              "description": "Open the remote lifecycle page. Authentication is managed from AegisCore.",
               "type": "ActionButton",
               "defaultValue": "laravel_remote",
               "valueStorage": "RuntimeOnly"
@@ -118,52 +118,20 @@
     {
       "id": "laravel_remote",
       "title": "Laravel Remote Control",
-      "subtitle": "Nova ID authorization and remote VM lifecycle",
+      "subtitle": "AegisCore-gated remote VM lifecycle",
       "icon": "NETWORK",
       "sections": [
         {
-          "id": "novaid_login",
-          "title": "Nova ID Login",
-          "description": "Remote control requires a Nova ID OAuth device session. Credential materialization is owned by KeyForge; tokens never appear in this menu.",
+          "id": "aegis_login_notice",
+          "title": "AegisCore Login",
+          "description": "Identity is owned by AegisCore. Open AegisCore from the extension menu to create or refresh the memory-only authentication session.",
           "fields": [
             {
-              "id": "novaIdStatus",
-              "label": "Nova ID Status",
-              "description": "Login becomes available after KeyForge can materialize the OAuth app credentials for the configured device flow.",
+              "id": "aegisStatus",
+              "label": "Authentication",
+              "description": "Login actions are intentionally owned by AegisCore, not by the Laravel orchestrator.",
               "type": "TextLabel",
-              "defaultValue": "Nova ID: Login Required",
-              "valueStorage": "RuntimeOnly"
-            },
-            {
-              "id": "novaIdLoginUrl",
-              "label": "Login API URL",
-              "description": "This URL is safe to open or copy into Postman. It contains only a short-lived login session identifier, never a token.",
-              "type": "TextLabel",
-              "defaultValue": "Login URL: Waiting for KeyForge OAuth credential materialization",
-              "valueStorage": "RuntimeOnly"
-            },
-            {
-              "id": "beginNovaIdLogin",
-              "label": "Start OAuth Device Login",
-              "description": "Fails closed until KeyForge can safely materialize the dedicated Celestia OAuth app credentials.",
-              "type": "ActionButton",
-              "defaultValue": "laravel.novaid.begin",
-              "valueStorage": "RuntimeOnly"
-            },
-            {
-              "id": "pollNovaIdLogin",
-              "label": "Refresh Login",
-              "description": "Queues a non-blocking device-token poll after a device login has been started.",
-              "type": "ActionButton",
-              "defaultValue": "laravel.novaid.poll",
-              "valueStorage": "RuntimeOnly"
-            },
-            {
-              "id": "logoutNovaId",
-              "label": "Forget Local Session",
-              "description": "Removes the in-memory Nova ID token from Celestia Nova. It does not revoke the API-side token.",
-              "type": "ActionButton",
-              "defaultValue": "laravel.novaid.logout",
+              "defaultValue": "AegisCore session required",
               "valueStorage": "RuntimeOnly"
             }
           ]

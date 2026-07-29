@@ -198,10 +198,10 @@ MeshCore::FRemoteCommandReceipt MeshCoreModule::SubmitRemoteCommand(const std::s
         return receipt;
     }
     auto* resolver = dynamic_cast<Core::IRemoteControlTargetResolver*>(Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("contentforge"));
-    auto* sessions = dynamic_cast<Core::INovaIdSessionCapabilityProvider*>(Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("laravelorchestrator"));
+    auto* sessions = dynamic_cast<Core::IAegisSessionCapabilityProvider*>(Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("aegiscore"));
     auto* transport = dynamic_cast<Core::IHTTPAgent*>(Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("httpagent"));
     if (!resolver || !sessions || !transport || !ClientDelegate_) {
-        receipt.message = "Rejected: ContentForge, Nova ID, HTTPAgent, and the Mesh queue are required.";
+        receipt.message = "Rejected: ContentForge, AegisCore, HTTPAgent, and the Mesh queue are required.";
         return receipt;
     }
 

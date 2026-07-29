@@ -12,7 +12,7 @@
         {
           "id": "remote_command",
           "title": "Remote Command",
-          "description": "Targets and commands are resolved from verified ContentForge content. Nova ID authentication is mandatory.",
+          "description": "Targets and commands are resolved from verified ContentForge content. An approved AegisCore session is mandatory.",
           "fields": [
             {"id": "targetId", "label": "Trusted Target", "description": "A content-defined Mesh target ID; arbitrary hosts are never accepted.", "type": "String", "defaultValue": "", "valueStorage": "RuntimeOnly"},
             {"id": "commandId", "label": "Allowed Command", "description": "An allowlisted command ID, for example node.status.", "type": "String", "defaultValue": "node.status", "valueStorage": "RuntimeOnly"},

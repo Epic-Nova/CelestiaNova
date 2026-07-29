@@ -76,14 +76,14 @@
   "remoteDeployment": {
     "targetManifest": "../RemoteTargets/VirtualBoxUbuntu.json",
     "releaseRoot": "/opt/celestia/releases",
-    "requiresNovaId": true
+    "requiresAegisSession": true
   },
-  "novaIdDeviceFlow": {
+  "aegisLogin": {
     "deviceAuthorizeUrl": "http://localhost:8000/api/v1/oauth/device-authorize",
     "deviceApproveUrl": "http://localhost:8000/api/v1/oauth/device-approve",
     "deviceTokenUrl": "http://localhost:8000/api/v1/oauth/device-token",
     "oauthApplication": {
-      "applicationId": "celestianova-laravel-orchestrator",
+      "applicationId": "celestianova-aegiscore",
       "authorizationServerId": "auth-api-local",
       "scopes": ["deployment.remote.control"],
       "audiences": ["celestianova"],

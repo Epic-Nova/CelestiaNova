@@ -47,7 +47,7 @@ struct FInstanceNotification {
  *    instead of the toast queue.
  *
  * Authoritative push rule: only instances holding a valid authoritative JWT
- * (from NovaID via AegisCore) should push notifications to avoid duplication
+ * (from AegisCore) should push notifications to avoid duplication
  * across the mesh.
  */
 class IInstanceNotificationBus {

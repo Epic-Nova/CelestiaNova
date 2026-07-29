@@ -5,7 +5,7 @@
 #include "Core/ExtensionRegistry.h"
 #include "ExtensionSpecific/IContentForge.h"
 #include "ExtensionSpecific/ICanvasRuntimeSurfaceProvider.h"
-#include "KeyForgeDeploymentContracts.h"
+#include "../../../../Core/KeyForge/Source/KeyForgeDeploymentContracts.h"
 #include "TerminalAgent.h"
 #include "DockerOrchestrator.h"
 #include "IComposerAgent.h"
@@ -212,60 +212,6 @@ struct RemoteTarget {
     std::string credentialReference;
 };
 
-struct NovaIdLoginContract {
-    std::string authorizationServerId;
-    std::string applicationId;
-    std::vector<std::string> scopes;
-    std::vector<std::string> audiences;
-};
-
-bool IsSafeHttpUrl(const std::string& value) {
-    if (value.rfind("http://", 0) != 0 && value.rfind("https://", 0) != 0) {
-        return false;
-    }
-    return value.find_first_of(" \t\r\n\"'`|&;<>") == std::string::npos;
-}
-
-bool LoadNovaIdLoginContract(const Core::LocalContentDescriptor& content,
-                             NovaIdLoginContract& outContract,
-                             bool& outRequired,
-                             std::string& outError) {
-    try {
-        std::ifstream contentFile(content.manifestPath);
-        nlohmann::json contentManifest;
-        contentFile >> contentManifest;
-        outRequired = contentManifest.value("remoteDeployment", nlohmann::json::object()).value("requiresNovaId", false);
-        const auto deviceFlow = contentManifest.value("novaIdDeviceFlow", nlohmann::json::object());
-        if (deviceFlow.empty()) {
-            if (!outRequired) {
-                return true;
-            }
-            outError = "This remote content pack requires Nova ID but has no OAuth device-flow contract.";
-            return false;
-        }
-        const auto authorizeUrl = deviceFlow.value("deviceAuthorizeUrl", "");
-        const auto approveUrl = deviceFlow.value("deviceApproveUrl", "");
-        const auto tokenUrl = deviceFlow.value("deviceTokenUrl", "");
-        if (!IsSafeHttpUrl(authorizeUrl) || !IsSafeHttpUrl(approveUrl) || !IsSafeHttpUrl(tokenUrl)) {
-            outError = "The OAuth device-flow endpoint declaration is unsafe or incomplete.";
-            return false;
-        }
-        const auto application = deviceFlow.value("oauthApplication", nlohmann::json::object());
-        outContract.authorizationServerId = application.value("authorizationServerId", "");
-        outContract.applicationId = application.value("applicationId", "");
-        outContract.scopes = application.value("scopes", std::vector<std::string>{});
-        outContract.audiences = application.value("audiences", std::vector<std::string>{});
-        if (outContract.authorizationServerId.empty() || outContract.applicationId.empty() || outContract.scopes.empty()) {
-            outError = "The OAuth device-flow application declaration is incomplete.";
-            return false;
-        }
-        return true;
-    } catch (const std::exception&) {
-        outError = "The selected content pack's Nova ID contract is invalid JSON.";
-        return false;
-    }
-}
-
 bool IsSafeRemoteDirectory(const std::string& value) {
     if (value.empty() || value.front() != '/' || value.find("..") != std::string::npos) {
         return false;
@@ -454,138 +400,6 @@ void LaravelOrchestratorModule::RememberActiveRelease(const std::string& content
         return;
     }
     stateFile << nlohmann::json{{"contentId", contentId}, {"releasePath", releasePath}}.dump(2) << '\n';
-}
-
-bool LaravelOrchestratorModule::BeginNovaIdLogin(const Core::LocalContentDescriptor& content,
-                                                  std::string& outLoginUrl,
-                                                  std::string& outError) {
-    NovaIdLoginContract contract;
-    bool required = false;
-    if (!LoadNovaIdLoginContract(content, contract, required, outError)) {
-        return false;
-    }
-    if (contract.applicationId.empty()) {
-        outError = "The selected content pack does not require a Nova ID device login.";
-        return false;
-    }
-    auto* keyForge = dynamic_cast<KeyForge::IDeploymentSecretBroker*>(
-        Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("keyforge"));
-    if (!keyForge) {
-        outError = "Nova ID device login requires the KeyForge credential broker.";
-        return false;
-    }
-    KeyForge::DeviceAuthorizationRequest request;
-    request.requestorExtensionId = "laravelorchestrator";
-    request.applicationId = contract.applicationId;
-    request.authorizationServerId = contract.authorizationServerId;
-    request.scopes = contract.scopes;
-    request.audiences = contract.audiences;
-    const auto response = keyForge->BeginDeviceAuthorization(request);
-    if (!response.accepted) {
-        outError = "Nova ID device login unavailable: " + response.receipt;
-        return false;
-    }
-    if (!IsSafeHttpUrl(response.verificationUri) || response.deviceCode.empty()) {
-        outError = "KeyForge returned an unsafe or incomplete device authorization response.";
-        return false;
-    }
-    {
-        std::lock_guard<std::mutex> lock(NovaIdSessionMutex_);
-        NovaIdSessions_[content.id] = {response.deviceCode, response.verificationUri, "Login Required - approve device code", ""};
-    }
-    outLoginUrl = response.verificationUri;
-    return true;
-}
-
-bool LaravelOrchestratorModule::PollNovaIdLogin(const Core::LocalContentDescriptor& content,
-                                                 std::string& outStatus,
-                                                 std::string& outError) {
-    NovaIdLoginContract contract;
-    bool required = false;
-    if (!LoadNovaIdLoginContract(content, contract, required, outError)) {
-        return false;
-    }
-    auto* keyForge = dynamic_cast<KeyForge::IDeploymentSecretBroker*>(
-        Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("keyforge"));
-    if (!keyForge) {
-        outError = "Nova ID device-token exchange requires KeyForge.";
-        return false;
-    }
-    std::string deviceCode;
-    {
-        std::lock_guard<std::mutex> lock(NovaIdSessionMutex_);
-        const auto session = NovaIdSessions_.find(content.id);
-        if (session == NovaIdSessions_.end() || session->second.sessionId.empty()) {
-            outError = "Begin Nova ID login before polling its device authorization.";
-            return false;
-        }
-        deviceCode = session->second.sessionId;
-    }
-    const auto response = keyForge->PollDeviceAuthorization({"laravelorchestrator", contract.applicationId,
-                                                              contract.authorizationServerId, deviceCode});
-    if (response.pending) {
-        outStatus = "Waiting for approval";
-        return true;
-    }
-    if (!response.accepted || response.accessToken.empty()) {
-        outError = "Nova ID device-token exchange failed: " + response.receipt;
-        return false;
-    }
-    {
-        std::lock_guard<std::mutex> lock(NovaIdSessionMutex_);
-        auto& session = NovaIdSessions_[content.id];
-        session.accessToken = response.accessToken;
-        session.status = "Authenticated";
-    }
-    outStatus = "Authenticated";
-    return true;
-}
-
-void LaravelOrchestratorModule::LogoutNovaId(const std::string& contentId) {
-    std::lock_guard<std::mutex> lock(NovaIdSessionMutex_);
-    NovaIdSessions_.erase(contentId);
-}
-
-bool LaravelOrchestratorModule::HasNovaIdToken(const std::string& contentId) const {
-    std::lock_guard<std::mutex> lock(NovaIdSessionMutex_);
-    const auto found = NovaIdSessions_.find(contentId);
-    return found != NovaIdSessions_.end() && !found->second.accessToken.empty();
-}
-
-bool LaravelOrchestratorModule::HasAuthenticatedNovaIdSession() const {
-    std::lock_guard<std::mutex> lock(NovaIdSessionMutex_);
-    for (const auto& [contentId, session] : NovaIdSessions_) {
-        (void)contentId;
-        if (!session.accessToken.empty()) {
-            return true;
-        }
-    }
-    return false;
-}
-
-bool LaravelOrchestratorModule::AuthorizeRemoteControlDispatch(
-    const std::string& targetId,
-    const std::string& requiredCapability,
-    Core::RemoteControlDispatchAuthorization& outAuthorization,
-    std::string& outError) const {
-    outAuthorization.authorizationHeader.clear();
-    if (targetId.empty() || requiredCapability != "mesh.remote.execute") {
-        outError = "Remote dispatch requires a declared target and the mesh.remote.execute capability.";
-        return false;
-    }
-    std::lock_guard<std::mutex> lock(NovaIdSessionMutex_);
-    for (const auto& [contentId, session] : NovaIdSessions_) {
-        (void)contentId;
-        if (!session.accessToken.empty()) {
-            // This is an in-process, one-request authorization bridge.  The
-            // caller must keep it transient and neither configuration nor UI
-            // receives the bearer value.
-            outAuthorization.authorizationHeader = "Bearer " + session.accessToken;
-            return true;
-        }
-    }
-    outError = "No approved in-memory Nova ID session is available.";
-    return false;
 }
 
 void LaravelOrchestratorModule::StartupModule() {
@@ -783,32 +597,6 @@ Core::CanvasMenuActionResult LaravelOrchestratorModule::OnMenuAction(const Core:
 
     const auto contentId = content.id;
     const std::string statusText = "Runtime Status: ";
-    if (request.ActionId == "laravel.novaid.begin") {
-        std::string loginUrl;
-        result.Success = BeginNovaIdLogin(content, loginUrl, result.ErrorMessage);
-        if (result.Success) {
-            result.ConfigUpdates["novaIdStatus"] = "Nova ID: Login Required - complete the external flow";
-            result.ConfigUpdates["novaIdLoginUrl"] = "OAuth Device URL: " + loginUrl;
-            PublishDeploymentToast("NOVAID_LOGIN_LINK_READY", "Nova ID login URL was generated. Complete it in the browser or Postman, then refresh login.", Core::CanvasNotificationSeverity::Info);
-        }
-        return result;
-    }
-    if (request.ActionId == "laravel.novaid.poll") {
-        std::string pollStatus;
-        result.Success = PollNovaIdLogin(content, pollStatus, result.ErrorMessage);
-        if (result.Success) {
-            result.ConfigUpdates["novaIdStatus"] = "Nova ID: " + pollStatus;
-            PublishDeploymentToast("NOVAID_POLL_QUEUED", "Nova ID status poll was queued; the menu remains usable.", Core::CanvasNotificationSeverity::Info);
-        }
-        return result;
-    }
-    if (request.ActionId == "laravel.novaid.logout") {
-        LogoutNovaId(contentId);
-        result.ConfigUpdates["novaIdStatus"] = "Nova ID: Login Required";
-        result.ConfigUpdates["novaIdLoginUrl"] = "Login URL: Waiting for KeyForge OAuth credential materialization";
-        PublishDeploymentToast("NOVAID_LOCAL_SESSION_FORGOTTEN", "The local in-memory Nova ID session was removed.", Core::CanvasNotificationSeverity::Info);
-        return result;
-    }
 
     auto* docker = dynamic_cast<IDockerOrchestrator*>(
         Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("dockerorchestrator"));
@@ -819,18 +607,11 @@ Core::CanvasMenuActionResult LaravelOrchestratorModule::OnMenuAction(const Core:
     }
 
     if (request.ActionId.rfind("laravel.remote.", 0) == 0) {
-        NovaIdLoginContract contract;
-        bool requiresNovaId = false;
-        std::string contractError;
-        if (!LoadNovaIdLoginContract(content, contract, requiresNovaId, contractError)) {
+        const auto* aegis = dynamic_cast<Core::IAegisSessionCapabilityProvider*>(
+            Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("aegiscore"));
+        if (!aegis || !aegis->HasAuthenticatedAegisSession()) {
             result.Success = false;
-            result.ErrorMessage = contractError;
-            return result;
-        }
-        if (requiresNovaId && !HasNovaIdToken(contentId)) {
-            result.Success = false;
-            result.ErrorMessage = "Remote control requires Nova ID login. Generate the login URL, complete it, then refresh login.";
-            result.ConfigUpdates["novaIdStatus"] = "Nova ID: Login Required for remote control";
+            result.ErrorMessage = "Remote control requires an authenticated AegisCore session.";
             return result;
         }
     }
@@ -1042,13 +823,10 @@ LaravelDeploymentResult LaravelOrchestratorModule::DeployRemoteContent(const std
         return deployment;
     }
 
-    NovaIdLoginContract contract;
-    bool requiresNovaId = false;
-    if (!LoadNovaIdLoginContract(content, contract, requiresNovaId, deployment.message)) {
-        return deployment;
-    }
-    if (requiresNovaId && !HasNovaIdToken(contentId)) {
-        deployment.message = "Remote deployment requires an authenticated Nova ID session.";
+    const auto* aegis = dynamic_cast<Core::IAegisSessionCapabilityProvider*>(
+        Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("aegiscore"));
+    if (!aegis || !aegis->HasAuthenticatedAegisSession()) {
+        deployment.message = "Remote deployment requires an authenticated AegisCore session.";
         return deployment;
     }
 
