@@ -376,7 +376,17 @@ KeyForge::OAuthApplicationLease KeyForgeModule::EnsureOAuthApplication(
     }
     const auto bootstrapReference = JsonString(config, "bootstrapSecretReference");
     if (!provisioningEndpoint.empty() && bootstrapReference && IsKeyForgeReference(*bootstrapReference)) {
-        const auto bootstrapSecret = ReadSecret(*bootstrapReference);
+        auto bootstrapSecret = ReadSecret(*bootstrapReference);
+        // Explicit local-test escape hatch: the provisioning key is supplied
+        // only by the developer's process environment, used once, then moved
+        // into the current-user DPAPI vault. Production never consults this.
+        if (!bootstrapSecret) {
+            const auto* localTestMode = std::getenv("CELESTIA_LOCAL_TEST_MODE");
+            const auto* localBootstrap = std::getenv("CELESTIA_LOCAL_AUTH_API_PROVISIONING_KEY");
+            if (localTestMode && std::string(localTestMode) == "1" && localBootstrap && *localBootstrap) {
+                if (StoreSecret(*bootstrapReference, localBootstrap)) bootstrapSecret = localBootstrap;
+            }
+        }
         if (bootstrapSecret) {
             const auto encode = [](const std::string& value) { return EncodeFormValue(value); };
             std::string body = "application_identity=" + encode(request.applicationId) +
