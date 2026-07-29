@@ -24,5 +24,16 @@ substitutions and must emit `client_id` plus `client_secret`. Its output stays
 in memory and is immediately DPAPI-protected.
 
 Device authorization requires an HTTPS `deviceAuthorizationEndpoint`; HTTP is
-rejected. Non-Windows systems fail closed until they receive a platform-native
-protected backend.
+rejected.
+
+## Linux service mode
+
+Linux production service mode uses systemd encrypted credentials, placed by an
+administrator below `/etc/celestianova/credentials`. systemd decrypts them only
+into the daemon's private credential directory. KeyForge reads references from
+that directory and fails closed when an expected credential is absent.
+
+KeyForge can broker an OAuth client-credentials request internally: it reads
+the registered client secret, obtains a short-lived token, then sends the
+authenticated resource request. Neither the client secret nor the access token
+crosses an extension ABI, reaches a menu, or is written into the status API.

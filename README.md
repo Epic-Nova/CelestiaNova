@@ -110,3 +110,19 @@ After a project generation, rebuild one extension directly:
   descriptor has a unique `id`, a module `file`, and valid `dependencies`.
 - Never remove broad project directories for a rebuild; target only the
   relevant `Intermediate` build directory.
+
+## Further documentation
+
+The `Docs` directory now contains only active design and operational contracts:
+
+- [Linux service mode](Docs/LINUX_SERVICE_MODE.md): daemon hardening,
+  Docker-bootstrap boundary, and loopback status API.
+- [Hosting test readiness](Docs/FINAL_HOST_TEST_READINESS.md): remaining gates
+  before the clean-VM Auth API test.
+- [KeyForge local vault](Docs/KEYFORGE_LOCAL_VAULT.md) and
+  [remote deployment contract](Docs/KEYFORGE_REMOTE_DEPLOYMENT_CONTRACT.md):
+  credential ownership and secret-materialization boundaries.
+- [MeshCore receiver work](Docs/MESHCORE_CONTROL_RECEIVER_TODO.md): the
+  intentionally pending authenticated remote-control receiver.
+- [Script/content migration](Docs/SCRIPT_CONTENT_MIGRATION.md): migration map
+  for legacy scripts into extension-owned content and typed actions.

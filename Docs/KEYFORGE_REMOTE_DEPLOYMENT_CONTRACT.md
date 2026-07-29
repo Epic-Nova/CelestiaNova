@@ -25,9 +25,9 @@ closed until both a vault backend and authenticated remote writer are present.
 It must not use command-line environment overrides, write a local staging
 file, return secret content, or write secrets to job output.
 
-The current repository implements the ABI and validation gate but deliberately
-does not include a vault backend or remote secret transport. Therefore a remote
+The repository provides protected local backends (Windows DPAPI and Linux
+systemd encrypted credentials) plus an OAuth-authenticated request broker.
+Remote secret transport is still deliberately absent. Therefore a remote
 Laravel release may be staged, but must not be compose-activated through this
-contract yet. The next implementation binds the KeyForge backend to the Auth
-API OAuth registration endpoint and adds a stdin-only, redacted remote writer
-to TerminalAgent.
+contract until a stdin-only, redacted remote writer is implemented in
+TerminalAgent.

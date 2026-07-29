@@ -1,4 +1,4 @@
-# Final host test readiness
+# Hosting test readiness
 
 ## Verified on the VirtualBox test VM
 
@@ -7,15 +7,19 @@
 - The service writes an atomic status snapshot below
   `/var/lib/celestianova/status/`.
 - ContentForge discovers the declarative `auth-api` pack.
-- ContentForge acquired the Auth API through the declared Git source and
-  materialized a non-secret release below
+- ContentForge can acquire the Auth API from its declared source and
+  materialize a non-secret release below
   `/var/lib/celestianova/content/auth-api/`.
 - Docker Engine and Docker Compose v2 were installed through the restricted,
   root-owned DockerOrchestrator bootstrap helper. The `celestianova` account
   can use both Docker and Compose.
 - Application releases exclude `.env` and private key material by design.
+- `celest` provides both an interactive FTXUI command console and a
+  non-interactive scripting surface.
+- NovaAPIService exposes daemon health, extension status, and progress on the
+  loopback-only status API (`127.0.0.1:9080`).
 
-## Required before the final local Auth API hosting test
+## Required before the clean-VM Auth API hosting test
 
 1. Install the current package on the VM.
 2. Create systemd-encrypted KeyForge credentials for the Auth API values
@@ -37,26 +41,19 @@
    KeyForge reads. Credential values are encrypted at rest and exposed only
    in the service's private credential directory at runtime.
 
-3. Complete LaravelOrchestrator's local production path:
-
-   - read the pack's `runtimeEnvironment` declaration;
-   - call KeyForge to materialize a release-local, mode-`0600` runtime file;
-   - make the Auth API Compose configuration consume that file without copying
-     it into Content or logging it;
-   - run Compose validation and activation as the `celestianova` service user.
-
-4. Supply all non-secret Auth API deployment values required by its Compose
+3. Supply all non-secret Auth API deployment values required by its Compose
    file, including database host/name/user and the chosen persistent-volume
    layout. These belong in declarative Content configuration, not in KeyForge.
 
-5. Run the final local lifecycle test:
+4. Run the final local lifecycle test:
 
    - materialize a new Auth API release;
    - inject the KeyForge runtime environment;
    - start the Compose project through DockerOrchestrator;
    - run migrations using the Auth API's two explicit migration connection
      paths;
-   - verify `/api/health`, Compose status, and the Celestia status snapshot;
+   - verify the Auth API health endpoint, Compose status, and
+     `http://127.0.0.1:9080/api/v1/status`;
    - stop and restart the release to confirm persistence and status recovery.
 
 The packaged installer also installs `celestianova-auth-api-deploy.service`.
