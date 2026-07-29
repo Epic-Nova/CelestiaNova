@@ -164,6 +164,16 @@ bool InjectRuntimeEnvironment(const Core::LocalContentDescriptor& content,
         request.remoteReleasePath = release.releasePath;
         request.publicValues = environment.value("publicValues", std::map<std::string, std::string>{});
         request.secretReferences = environment.value("secretReferences", std::map<std::string, std::string>{});
+        // A daemon calls its co-located Auth API over loopback, while a human
+        // device-login browser may need the VM's host-only address. Keep that
+        // public URL as explicit runtime configuration, never pack content.
+        if (const auto* publicAuthBase = std::getenv("CELESTIA_AUTH_API_PUBLIC_BASE_URL"); publicAuthBase) {
+            const std::string publicUrl(publicAuthBase);
+            if ((publicUrl.rfind("http://", 0) == 0 || publicUrl.rfind("https://", 0) == 0) &&
+                publicUrl.find_first_of(" \t\r\n\"'`|&;<>") == std::string::npos) {
+                request.publicValues["APP_URL"] = publicUrl;
+            }
+        }
 #if defined(__linux__)
         // Sail's bind-mounted PHP worker must use the same host identity as
         // the systemd service that owns the materialized release.  Do not

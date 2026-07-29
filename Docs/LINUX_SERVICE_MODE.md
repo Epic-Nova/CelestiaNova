@@ -64,6 +64,15 @@ and only below `/api/v1/`; it is never a production fallback. A Windows client
 must configure its own host-only VM URL with
 `Utilities/windows/configure_local_auth_api_test.ps1`.
 
+For a device-login link that opens from the Windows host, supply the VM's
+host-only address as the optional second argument. It becomes the Auth API
+container's `APP_URL`, while daemon-to-Auth calls still use loopback:
+
+```bash
+sudo /usr/local/lib/celestianova/configure-local-auth-api-test \
+  http://127.0.0.1:8081 http://192.168.50.162:8081
+```
+
 ## Status API/dashboard integration
 
 NexusCore owns normalized daemon-status aggregation: extension lifecycle and
