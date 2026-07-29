@@ -97,13 +97,19 @@ bool AegisCoreModule::ApproveLocalBypass(const Core::CanvasMenuActionRequest& re
         outError = "The local provider form contains an unsafe or incomplete value."; return false;
     }
     SessionState session; { std::lock_guard<std::mutex> lock(SessionMutex_); session = Session_; }
-    if (session.deviceCode.empty() || session.userCode.empty()) { outError = "Start an Aegis device login before approving it."; return false; }
     auto* http = dynamic_cast<Core::IHTTPAgent*>(Core::ExtensionRegistry::Instance().GetLoadedExtensionInstance("httpagent"));
     if (!http) { outError = "HTTPAgent is unavailable."; return false; }
     try {
         const auto login = http->Post(baseUrl + "/api/v1/authentication/login", nlohmann::json{{"authenticatable_identifier", identity}, {"provider_identifier", provider}, {"input", "local"}, {"login_bypass", true}}.dump(), {{"Content-Type", "application/json"}, {"Accept", "application/json"}});
         const auto token = nlohmann::json::parse(login).value("access_token", "");
         if (token.empty() || token.find_first_of(" \t\r\n\"'`|&;<>") != std::string::npos) { outError = "The local provider did not return a valid access token."; return false; }
+        if (session.deviceCode.empty() || session.userCode.empty()) {
+            std::lock_guard<std::mutex> lock(SessionMutex_);
+            Session_.contentId = read("contentId").empty() ? "auth-api" : read("contentId");
+            Session_.accessToken = token;
+            Session_.status = "Authenticated (local bypass)";
+            return true;
+        }
         const auto approval = http->Post(baseUrl + "/api/v1/oauth/device-approve", nlohmann::json{{"user_code", session.userCode}}.dump(), {{"Content-Type", "application/json"}, {"Accept", "application/json"}, {"Authorization", "Bearer " + token}});
         if (nlohmann::json::parse(approval).value("status", "") != "approved") { outError = "The authentication provider did not approve the device session."; return false; }
         return true;
@@ -159,7 +165,7 @@ Core::CanvasMenuActionResult AegisCoreModule::OnMenuAction(const Core::CanvasMen
         if (result.Success) result.ConfigUpdates["aegisStatus"] = "Aegis: " + status;
     } else if (request.ActionId == "aegis.login.approve-local") {
         result.Success = ApproveLocalBypass(request, result.ErrorMessage);
-        if (result.Success) result.ConfigUpdates["aegisStatus"] = "Aegis: Device approved — refresh login";
+        if (result.Success) result.ConfigUpdates["aegisStatus"] = "Aegis: Authenticated (local bypass)";
     } else if (request.ActionId == "aegis.login.logout") {
         Logout(contentId); result.ConfigUpdates["aegisStatus"] = "Aegis: Login Required"; result.ConfigUpdates["aegisLoginUrl"] = "Approval URL: Not generated";
     }
