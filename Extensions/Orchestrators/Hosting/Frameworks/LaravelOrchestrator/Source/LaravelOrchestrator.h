@@ -8,7 +8,9 @@
 #include "ExtensionSpecific/IRemoteControl.h"
 #include <map>
 #include <mutex>
+#include <set>
 #include <string>
+#include <thread>
 #include <vector>
 
 struct LaravelDeploymentResult {
@@ -59,11 +61,15 @@ private:
     bool PollNovaIdLogin(const Core::LocalContentDescriptor& content, std::string& outStatus, std::string& outError);
     void LogoutNovaId(const std::string& contentId);
     bool HasNovaIdToken(const std::string& contentId) const;
+    bool QueueLocalDeployment(const std::string& contentId, const std::string& profile, std::string& outJobId);
 
     mutable std::mutex ActiveReleaseMutex_;
     std::map<std::string, std::string> ActiveReleasePaths_;
     mutable std::mutex NovaIdSessionMutex_;
     std::map<std::string, NovaIdSessionState> NovaIdSessions_;
+    std::mutex DeploymentMutex_;
+    std::set<std::string> QueuedDeployments_;
+    std::vector<std::thread> DeploymentWorkers_;
 };
 
 #ifdef LaravelOrchestrator_EXPORTS

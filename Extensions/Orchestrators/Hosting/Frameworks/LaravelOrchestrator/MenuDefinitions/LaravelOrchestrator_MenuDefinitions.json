@@ -70,6 +70,15 @@
               "valueStorage": "RuntimeOnly"
             },
             {
+              "id": "contentProgress",
+              "label": "Deployment Progress",
+              "description": "Live progress reported by the queued Laravel deployment.",
+              "type": "ProgressGauge",
+              "defaultValue": "0",
+              "dataRequirementKey": "core.progress.percent",
+              "valueStorage": "RuntimeOnly"
+            },
+            {
               "id": "startContent",
               "label": "Start Content",
               "description": "Start the selected local Compose stack through DockerOrchestrator.",

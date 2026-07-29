@@ -476,6 +476,37 @@ void LaravelOrchestratorModule::StartupModule() {
 
 void LaravelOrchestratorModule::ShutdownModule() {
     NOVA_LOG("[LaravelOrchestrator] ShutdownModule called", LogType::Log);
+    std::vector<std::thread> workers;
+    {
+        std::lock_guard<std::mutex> lock(DeploymentMutex_);
+        workers.swap(DeploymentWorkers_);
+    }
+    for (auto& worker : workers) {
+        if (worker.joinable()) worker.join();
+    }
+}
+
+bool LaravelOrchestratorModule::QueueLocalDeployment(const std::string& contentId,
+                                                      const std::string& profile,
+                                                      std::string& outJobId) {
+    {
+        std::lock_guard<std::mutex> lock(DeploymentMutex_);
+        if (!QueuedDeployments_.insert(contentId).second) {
+            outJobId = "deploy:" + contentId;
+            return false;
+        }
+        outJobId = "deploy:" + contentId;
+        Core::ProgressTracker::Publish({outJobId, "laravelorchestrator", "Queued for background deployment", 5, true});
+        DeploymentWorkers_.emplace_back([this, contentId, profile, outJobId] {
+            const auto deployment = DeployLocalContent(contentId, profile);
+            PublishDeploymentToast(deployment.succeeded ? "CONTENT_STARTED" : "CONTENT_START_FAILED",
+                                  deployment.message.empty() ? "Deployment completed." : deployment.message,
+                                  deployment.succeeded ? Core::CanvasNotificationSeverity::Success : Core::CanvasNotificationSeverity::Error);
+            std::lock_guard<std::mutex> lock(DeploymentMutex_);
+            QueuedDeployments_.erase(contentId);
+        });
+    }
+    return true;
 }
 
 std::vector<Core::FExtensionCliArgDescriptor> LaravelOrchestratorModule::GetCliArgDescriptors() const {
@@ -731,24 +762,14 @@ Core::CanvasMenuActionResult LaravelOrchestratorModule::OnMenuAction(const Core:
     }
 
     if (request.ActionId == "laravel.content.start") {
-        Core::LocalContentRelease release;
-        Core::LocalContentDescriptor releaseContent;
-        if (!MaterializeLaravelRelease(contentForge, content, release, releaseContent, result.ErrorMessage)) {
-            result.Success = false;
-            return result;
-        }
-        if (!InjectRuntimeEnvironment(content, release, result.ErrorMessage)) {
-            result.Success = false;
-            return result;
-        }
-        const auto job = docker->SubmitComposeJob(DockerComposeJobAction::Start, release.releasePath, content.composeFile);
-        result.Success = job.state == DockerComposeJobState::Accepted || job.state == DockerComposeJobState::Running;
-        result.ErrorMessage = result.Success ? "" : job.output;
-        result.ConfigUpdates["contentStatus"] = result.Success ? statusText + "Starting (job " + job.id + ")" : statusText + "Start failed";
-        result.ConfigUpdates["contentDetails"] = DescribeContent(releaseContent) + " Release: " + release.releaseId;
+        std::string jobId;
+        result.Success = QueueLocalDeployment(contentId, "auto", jobId);
+        result.ErrorMessage = result.Success ? "" : "A deployment for this content is already queued.";
+        result.ConfigUpdates["contentStatus"] = result.Success ? statusText + "Queued (job " + jobId + ")" : statusText + "Already queued";
+        result.ConfigUpdates["contentDetails"] = DescribeContent(content) + " Deployment runs in the background.";
+        result.ConfigUpdates["contentProgress"] = "5";
         if (result.Success) {
-            RememberActiveRelease(contentId, release.releasePath);
-            PublishDeploymentToast("CONTENT_STARTING", "Release '" + release.releaseId + "' for '" + contentId + "' was validated and queued as " + job.id + ".", Core::CanvasNotificationSeverity::Info);
+            PublishDeploymentToast("CONTENT_START_QUEUED", "Deployment for '" + contentId + "' was queued as " + jobId + ".", Core::CanvasNotificationSeverity::Info);
         }
         return result;
     }

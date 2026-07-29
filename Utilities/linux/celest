@@ -2,5 +2,14 @@
 # Installed command surface for the Celestia Nova daemon.
 set -euo pipefail
 export CELESTIA_LOG_DIRECTORY="${CELESTIA_LOG_DIRECTORY:-${XDG_STATE_HOME:-$HOME/.local/state}/celestianova/logs}"
+
+# Auth API deployment needs systemd's private KeyForge credentials. Queue the
+# dedicated unit instead of running a synchronous child from the shell.
+if [[ ( "${1:-}" == "deploy" || "${1:-}" == "start" ) && "${2:-}" == "auth-api" ]]; then
+  sudo systemctl start --no-block celestianova-auth-api-deploy
+  printf 'Auth API deployment queued. Follow it with: celest progress\n'
+  exit 0
+fi
+
 cd /opt/celestianova
 exec /opt/celestianova/bin/CelestiaNova --celest "$@"

@@ -19,6 +19,7 @@
 #include "Core/ExtensionRegistry.h"
 #include "Core/RequirementResolver.h"
 #include "Core/StatusApiSurface.h"
+#include "Core/ProgressTracker.h"
 #include "ExtensionSpecific/IInstanceConnectivityProvider.h"
 #include "ExtensionSpecific/INovaCapabilityProvider.h"
 #include "ExtensionSpecific/IOrchestrationSurfaces.h"
@@ -1868,23 +1869,26 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
 
                     case ECanvasFieldType::ProgressGauge:
                     case ECanvasFieldType::DirectionalGauge: {
-                        std::string sourceValue = field.DefaultValue;
-                        const auto valueIt = menuValues.find(field.Id);
-                        if (valueIt != menuValues.end() && !valueIt->second.empty()) {
-                            sourceValue = valueIt->second;
-                        }
-
-                        double progressValue = ParseDoubleOrDefault(sourceValue, 0.0);
-                        if (progressValue > 1.0) {
-                            progressValue /= 100.0;
-                        }
-                        const float progress = Clamp01(progressValue);
-
                         contentComponents.push_back(Renderer([
-                            progress,
+                            &menuValues,
+                            fieldId = field.Id,
+                            defaultValue = field.DefaultValue,
+                            dataRequirementKey = field.DataRequirementKey,
                             label = field.Label,
                             isDirectional = field.Type == ECanvasFieldType::DirectionalGauge,
                             templateName = field.RenderTemplate] {
+                            std::string sourceValue = defaultValue;
+                            std::string renderedLabel = label;
+                            if (dataRequirementKey == "core.progress.percent") {
+                                const auto snapshot = Core::ProgressTracker::Read();
+                                sourceValue = std::to_string(snapshot.percent);
+                                if (!snapshot.phase.empty()) renderedLabel += ": " + snapshot.phase;
+                            } else if (const auto valueIt = menuValues.find(fieldId); valueIt != menuValues.end() && !valueIt->second.empty()) {
+                                sourceValue = valueIt->second;
+                            }
+                            double progressValue = ParseDoubleOrDefault(sourceValue, 0.0);
+                            if (progressValue > 1.0) progressValue /= 100.0;
+                            const float progress = Clamp01(progressValue);
                             Element meter;
                             if (isDirectional) {
                                 const std::string lowerTemplate = ToLower(templateName);
@@ -1902,7 +1906,7 @@ bool CanvasCoreModule::RunCanvasMenuLoop(const std::string& startMenuId,
                             }
 
                             return vbox({
-                                text(label.empty() ? std::string("Gauge") : label) | color(Color::White) | bold,
+                                text(renderedLabel.empty() ? std::string("Gauge") : renderedLabel) | color(Color::White) | bold,
                                 meter | color(Color::Green),
                             });
                         }));
