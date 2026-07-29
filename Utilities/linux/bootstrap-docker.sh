@@ -15,6 +15,10 @@ missing_packages=()
 command -v docker >/dev/null 2>&1 || missing_packages+=(docker.io)
 docker compose version >/dev/null 2>&1 || missing_packages+=(docker-compose-v2)
 command -v composer >/dev/null 2>&1 || missing_packages+=(composer php-cli)
+# Composer resolves Auth API's locked development graph to materialize Sail's
+# build context. That graph requires DOM/XML even though the application later
+# runs inside the container's PHP runtime.
+php -m 2>/dev/null | grep -qx 'dom' || missing_packages+=(php-xml)
 
 if [[ "${#missing_packages[@]}" -gt 0 ]]; then
     export DEBIAN_FRONTEND=noninteractive
